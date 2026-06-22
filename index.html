@@ -7843,6 +7843,8 @@
                 this.canvas.style.height = '100%';
                 this.canvas.style.zIndex = '-1';
                 this.canvas.style.pointerEvents = 'none';
+                this.canvas.style.transform = 'translateZ(0)';
+                this.canvas.style.willChange = 'transform';
                 document.body.appendChild(this.canvas);
                 this.ctx = this.canvas.getContext('2d');
                 this.resize();
