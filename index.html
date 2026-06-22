@@ -3488,89 +3488,97 @@
                         </div>
 
                         <!-- COMPACT METRIC TABLE -->
-                        <div class="mb-4 overflow-hidden rounded-xl shadow-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card">
-                            <table class="w-full text-xs text-left border-collapse">
-                                <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
-                                    <!-- Row 1 -->
-                                    <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                                        <td class="p-2 border-r border-slate-100 dark:border-slate-700 w-1/4">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-slate-500 font-bold uppercase tracking-tight">Total Target (proj)</span>
-                                                <span class="font-bold text-slate-800 dark:text-white">${parseInt(metrics.presetProjTotal).toLocaleString()}</span>
-                                            </div>
-                                        </td>
-                                        <td class="p-2 border-r border-slate-100 dark:border-slate-700 w-1/4">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-slate-500 font-bold uppercase tracking-tight">Total Files</span>
-                                                <span class="font-bold text-slate-800 dark:text-white">${metrics.targetFiles}</span>
-                                            </div>
-                                        </td>
-                                        <td class="p-2 border-r border-slate-100 dark:border-slate-700 w-1/4">
-                                             <div class="flex justify-between items-center">
-                                                <span class="text-slate-500 font-bold uppercase tracking-tight">Today Proj</span>
-                                                <span class="font-bold text-slate-800 dark:text-white">${parseInt(metrics.todayProj).toLocaleString()}</span>
-                                            </div>
-                                        </td>
-                                        <td class="p-2 w-1/4">
-                                             <div class="flex justify-between items-center">
-                                                <span class="text-slate-500 font-bold uppercase tracking-tight">Remaining</span>
-                                                <span class="font-bold text-amber-600">${parseInt(metrics.remainingAmt).toLocaleString()}</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <!-- Row 2 -->
-                                    <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                                        <td class="p-2 border-r border-slate-100 dark:border-slate-700">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-slate-500 font-bold uppercase tracking-tight">Till Date Coll</span>
-                                                <span class="font-bold text-emerald-600">${parseInt(metrics.mtdColl).toLocaleString()}</span>
-                                            </div>
-                                        </td>
-                                        <td class="p-2 border-r border-slate-100 dark:border-slate-700">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-slate-500 font-bold uppercase tracking-tight">Coll Files</span>
-                                                <span class="font-bold text-emerald-600">${metrics.uniquePaidCodes}</span>
-                                            </div>
-                                        </td>
-                                        <td class="p-2 border-r border-slate-100 dark:border-slate-700">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-slate-500 font-bold uppercase tracking-tight">Collection</span>
-                                                <span class="font-bold text-emerald-600">${parseInt(metrics.todayColl).toLocaleString()}</span>
-                                            </div>
-                                        </td>
-                                        <td class="p-2">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-slate-500 font-bold uppercase tracking-tight">Daily Req</span>
-                                                <span class="font-bold text-red-600">${parseInt(Math.round(metrics.rdrr)).toLocaleString()}</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <!-- Row 3 -->
-                                    <tr class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                                        <td class="p-2 border-r border-slate-100 dark:border-slate-700">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-slate-500 font-bold uppercase tracking-tight">Ach % (MTD)</span>
-                                                <span class="font-bold text-indigo-600">${metrics.tillDayAchievement}%</span>
-                                            </div>
-                                        </td>
-                                        <td class="p-2 border-r border-slate-100 dark:border-slate-700">
-                                             <div class="flex justify-between items-center">
-                                                <span class="text-slate-500 font-bold uppercase tracking-tight">Uncollected</span>
-                                                <span class="font-bold text-rose-600">${metrics.tillDateNonPayFiles}</span>
-                                            </div>
-                                        </td>
-                                        <td class="p-2 border-r border-slate-100 dark:border-slate-700">
-                                             <div class="flex justify-between items-center">
-                                                <span class="text-slate-500 font-bold uppercase tracking-tight">Ach % (Today)</span>
-                                                <span class="font-bold text-fuchsia-600">${todayAch}%</span>
-                                            </div>
-                                        </td>
-                                        <td class="p-2 flex justify-center opacity-30">
-                                            <i class="fa-solid fa-globe text-slate-400"></i>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div class="mb-6 relative overflow-hidden rounded-2xl shadow-xl bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 border border-blue-700/50 group">
+                            <!-- Abstract shapes for creative look -->
+                            <div class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-blue-500/20 blur-3xl transition-transform duration-1000 group-hover:scale-110"></div>
+                            <div class="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 rounded-full bg-indigo-500/20 blur-3xl transition-transform duration-1000 group-hover:scale-110"></div>
+                            
+                            <div class="relative z-10 p-1 md:p-2">
+                                <table class="w-full text-sm text-left border-collapse">
+                                    <tbody class="divide-y divide-blue-800/50">
+                                        <!-- Row 1 -->
+                                        <tr class="transition-colors hover:bg-white/5 rounded-xl">
+                                            <td class="p-3 md:p-4 border-r border-blue-800/50 w-1/4">
+                                                <div class="flex flex-col justify-center">
+                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Total Target (proj)</span>
+                                                    <span class="font-black text-lg md:text-xl text-white tracking-tight">${parseInt(metrics.presetProjTotal).toLocaleString()}</span>
+                                                </div>
+                                            </td>
+                                            <td class="p-3 md:p-4 border-r border-blue-800/50 w-1/4">
+                                                <div class="flex flex-col justify-center">
+                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Total Files</span>
+                                                    <span class="font-black text-lg md:text-xl text-white tracking-tight">${metrics.targetFiles}</span>
+                                                </div>
+                                            </td>
+                                            <td class="p-3 md:p-4 border-r border-blue-800/50 w-1/4">
+                                                 <div class="flex flex-col justify-center">
+                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Today Proj</span>
+                                                    <span class="font-black text-lg md:text-xl text-white tracking-tight">${parseInt(metrics.todayProj).toLocaleString()}</span>
+                                                </div>
+                                            </td>
+                                            <td class="p-3 md:p-4 w-1/4">
+                                                 <div class="flex flex-col justify-center">
+                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Remaining</span>
+                                                    <span class="font-black text-lg md:text-xl text-amber-400 tracking-tight">${parseInt(metrics.remainingAmt).toLocaleString()}</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <!-- Row 2 -->
+                                        <tr class="transition-colors hover:bg-white/5 rounded-xl">
+                                            <td class="p-3 md:p-4 border-r border-blue-800/50">
+                                                <div class="flex flex-col justify-center">
+                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Till Date Coll</span>
+                                                    <span class="font-black text-lg md:text-xl text-emerald-400 tracking-tight">${parseInt(metrics.mtdColl).toLocaleString()}</span>
+                                                </div>
+                                            </td>
+                                            <td class="p-3 md:p-4 border-r border-blue-800/50">
+                                                <div class="flex flex-col justify-center">
+                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Coll Files</span>
+                                                    <span class="font-black text-lg md:text-xl text-emerald-400 tracking-tight">${metrics.uniquePaidCodes}</span>
+                                                </div>
+                                            </td>
+                                            <td class="p-3 md:p-4 border-r border-blue-800/50">
+                                                <div class="flex flex-col justify-center">
+                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Collection</span>
+                                                    <span class="font-black text-lg md:text-xl text-emerald-400 tracking-tight">${parseInt(metrics.todayColl).toLocaleString()}</span>
+                                                </div>
+                                            </td>
+                                            <td class="p-3 md:p-4">
+                                                <div class="flex flex-col justify-center">
+                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Daily Req</span>
+                                                    <span class="font-black text-lg md:text-xl text-rose-400 tracking-tight">${parseInt(Math.round(metrics.rdrr)).toLocaleString()}</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <!-- Row 3 -->
+                                        <tr class="transition-colors hover:bg-white/5 rounded-xl">
+                                            <td class="p-3 md:p-4 border-r border-blue-800/50">
+                                                <div class="flex flex-col justify-center">
+                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Ach % (MTD)</span>
+                                                    <span class="font-black text-lg md:text-xl text-indigo-300 tracking-tight">${metrics.tillDayAchievement}%</span>
+                                                </div>
+                                            </td>
+                                            <td class="p-3 md:p-4 border-r border-blue-800/50">
+                                                 <div class="flex flex-col justify-center">
+                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Uncollected</span>
+                                                    <span class="font-black text-lg md:text-xl text-rose-400 tracking-tight">${metrics.tillDateNonPayFiles}</span>
+                                                </div>
+                                            </td>
+                                            <td class="p-3 md:p-4 border-r border-blue-800/50">
+                                                 <div class="flex flex-col justify-center">
+                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Ach % (Today)</span>
+                                                    <span class="font-black text-lg md:text-xl text-fuchsia-400 tracking-tight">${todayAch}%</span>
+                                                </div>
+                                            </td>
+                                            <td class="p-3 md:p-4 flex items-center justify-center">
+                                                <div class="w-10 h-10 bg-blue-800/40 rounded-full border border-blue-600/30 shadow-inner flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity">
+                                                    <i class="fa-solid fa-chart-pie text-blue-300 text-lg"></i>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                          
                         <!-- PART-WISE EXECUTIVE SUMMARY (NEW) -->
