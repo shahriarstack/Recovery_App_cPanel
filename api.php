@@ -2,6 +2,11 @@
 // api.php
 require_once 'config.php';
 
+// Enable Gzip compression if supported by browser/server
+if (!headers_sent() && extension_loaded('zlib') && !ini_get('zlib.output_compression')) {
+    ob_start('ob_gzhandler');
+}
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *'); // Adjust in production
 header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
@@ -14,6 +19,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $pdo = getDbConnection();
 
+// Cache management helper
+$cacheFile = __DIR__ . '/db_cache.json';
+function invalidateCache() {
+    global $cacheFile;
+    if (file_exists($cacheFile)) {
+        @unlink($cacheFile);
+    }
+}
+
 // Get the route from the URL rewritten by .htaccess
 $route = isset($_GET['route']) ? $_GET['route'] : '';
 
@@ -24,6 +38,12 @@ try {
     switch ($route) {
         case 'db':
             if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Method Not Allowed");
+
+            // Return cached data if available (Super fast read!)
+            if (file_exists($cacheFile)) {
+                echo file_get_contents($cacheFile);
+                break;
+            }
 
             $tables = ['users', 'territories', 'targets', 'projections', 'collections', 'offroad_vehicles', 'settlements', 'vehicle_performance'];
             $result = [];
@@ -50,7 +70,12 @@ try {
             }
             $result['unlocks'] = $unlocks;
 
-            echo json_encode($result);
+            $jsonResponse = json_encode($result);
+            
+            // Save to cache for subsequent page loads
+            @file_put_contents($cacheFile, $jsonResponse);
+
+            echo $jsonResponse;
             break;
 
         case 'update':
@@ -73,6 +98,8 @@ try {
 
                 $stmt = $pdo->prepare("UPDATE `$collection` SET $setClause WHERE id = ?");
                 $stmt->execute($values);
+                
+                invalidateCache(); // Clear cache on modification
                 echo json_encode($item);
             } else {
                 // INSERT
@@ -87,6 +114,8 @@ try {
                 $stmt = $pdo->prepare("INSERT INTO `$collection` ($columns) VALUES ($placeholders)");
                 $stmt->execute($values);
                 $item['id'] = $pdo->lastInsertId();
+                
+                invalidateCache(); // Clear cache on modification
                 echo json_encode($item);
             }
             break;
@@ -101,6 +130,8 @@ try {
 
             $stmt = $pdo->prepare("DELETE FROM `$collection` WHERE id = ?");
             $stmt->execute([$id]);
+            
+            invalidateCache(); // Clear cache on modification
             echo json_encode(['success' => true]);
             break;
 
@@ -145,6 +176,7 @@ try {
             }
 
             $pdo->commit();
+            invalidateCache(); // Clear cache on modification
             echo json_encode(['success' => true]);
             break;
 
@@ -164,6 +196,7 @@ try {
             }
 
             $pdo->commit();
+            invalidateCache(); // Clear cache on modification
             echo json_encode(['success' => true]);
             break;
 
@@ -182,6 +215,7 @@ try {
             }
 
             $pdo->commit();
+            invalidateCache(); // Clear cache on modification
             echo json_encode(['success' => true]);
             break;
 
@@ -192,6 +226,8 @@ try {
 
             $stmt = $pdo->prepare("INSERT INTO system_settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)");
             $stmt->execute([$key, $value]);
+            
+            invalidateCache(); // Clear cache on modification
             echo json_encode(['success' => true]);
             break;
 
@@ -202,6 +238,8 @@ try {
 
             $stmt = $pdo->prepare("INSERT INTO admin_unlocks (territory_id, unlock_until) VALUES (?, ?) ON DUPLICATE KEY UPDATE unlock_until = VALUES(unlock_until)");
             $stmt->execute([$territoryId, $unlockUntil]);
+            
+            invalidateCache(); // Clear cache on modification
             echo json_encode(['success' => true]);
             break;
 
@@ -212,7 +250,7 @@ try {
     }
 
 } catch (Exception $e) {
-    if ($pdo->inTransaction()) {
+    if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
     error_log($e->getMessage());
