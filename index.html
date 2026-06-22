@@ -101,6 +101,15 @@
             animation: bottomPerformancePulse 1.6s infinite ease-in-out;
             transition: all 0.3s ease;
         }
+        @keyframes overflowShimmer {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .animate-overflow {
+            background-size: 200% auto;
+            animation: overflowShimmer 1.8s infinite linear;
+        }
 
         /* Creative Global Row Height Reduction & Row Hover Glows */
         table tr td {
@@ -3916,13 +3925,29 @@
                                         <h4 class="font-bold mb-2 text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                                             LMNP Efficiency
                                         </h4>
-                                        <div class="flex justify-between items-end mb-2">
-                                            <span class="text-3xl font-bold text-slate-800 dark:text-white">${metrics.lmNpRecPct}%</span>
-                                            <span class="text-xs text-rose-500 font-medium">Rec. of Last Month NP</span>
-                                        </div>
-                                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 mb-2">
-                                            <div class="bg-rose-500 h-2 rounded-full transition-all duration-1000" style="width: ${metrics.lmNpRecPct}%"></div>
-                                        </div>
+                                        ${(() => {
+                                            const pct = parseFloat(metrics.lmNpRecPct) || 0;
+                                            const clamped = Math.min(100, pct);
+                                            const overflow = pct > 100 ? (pct - 100).toFixed(1) : 0;
+                                            let barClass = "bg-rose-500";
+                                            let badge = "";
+                                            if (pct > 100) {
+                                                barClass = "bg-gradient-to-r from-rose-500 via-amber-500 to-yellow-400 animate-overflow";
+                                                badge = `<span class="inline-flex items-center gap-1 bg-amber-500/10 text-amber-500 dark:text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-500/20 animate-pulse"><i class="fa-solid fa-fire text-xs"></i> +${overflow}%</span>`;
+                                            }
+                                            return `
+                                                <div class="flex justify-between items-end mb-2">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="text-3xl font-bold text-slate-800 dark:text-white">${metrics.lmNpRecPct}%</span>
+                                                        ${badge}
+                                                    </div>
+                                                    <span class="text-xs text-rose-500 font-medium">Rec. of Last Month NP</span>
+                                                </div>
+                                                <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 mb-2 overflow-hidden">
+                                                    <div class="${barClass} h-2 rounded-full transition-all duration-1000" style="width: ${clamped}%"></div>
+                                                </div>
+                                            `;
+                                        })()}
                                         <p class="text-xs text-slate-400">Target: <span class="font-medium text-slate-600 dark:text-slate-300">${parseInt(metrics.lmNpTargetAmt).toLocaleString()}</span></p>
                                     </div>
                                 </div>
