@@ -16,19 +16,27 @@ echo "Server Document Root (DOCUMENT_ROOT): " . $_SERVER['DOCUMENT_ROOT'] . "\n"
 echo "PHP Version: " . phpversion() . "\n";
 echo "\n--- GIT REPOSITORY STATUS ---\n";
 
-$gitLog = shell_exec('git log -n 3 --oneline 2>&1');
-if ($gitLog) {
-    echo "Recent Commits:\n" . trim($gitLog) . "\n";
-} else {
-    echo "Warning: 'git log' command failed or shell_exec is disabled on this server.\n";
+function runCommandSafe($cmd) {
+    if (!function_exists('shell_exec')) {
+        return "[Warning: shell_exec is not enabled on this PHP server]";
+    }
+    $disabled = array_map('trim', explode(',', ini_get('disable_functions')));
+    if (in_array('shell_exec', $disabled)) {
+        return "[Warning: shell_exec is disabled in disable_functions]";
+    }
+    try {
+        $result = @shell_exec($cmd);
+        return $result ? trim($result) : "[No output from command]";
+    } catch (Throwable $e) {
+        return "[Error running command: " . $e->getMessage() . "]";
+    }
 }
 
-$gitStatus = shell_exec('git status 2>&1');
-if ($gitStatus) {
-    echo "\nGit Status:\n" . trim($gitStatus) . "\n";
-} else {
-    echo "Warning: 'git status' command failed or shell_exec is disabled on this server.\n";
-}
+$gitLog = runCommandSafe('git log -n 3 --oneline 2>&1');
+echo "Recent Commits:\n" . $gitLog . "\n";
+
+$gitStatus = runCommandSafe('git status 2>&1');
+echo "\nGit Status:\n" . $gitStatus . "\n";
 
 echo "\n--- CACHE VERIFICATION ---\n";
 $cacheFile = __DIR__ . '/db_cache.json';
