@@ -3497,91 +3497,91 @@
                         </div>
 
                         <!-- COMPACT METRIC TABLE -->
-                        <div class="mb-4 overflow-hidden rounded-xl shadow-2xl shadow-blue-900/20 border border-blue-400/30 bg-gradient-to-br from-[#0a192f] via-blue-900 to-indigo-950 text-blue-50 relative group">
+                        <div class="mb-4 overflow-hidden rounded-xl shadow-2xl shadow-emerald-950/20 border border-emerald-500/20 bg-gradient-to-br from-emerald-950 via-teal-950 to-blue-950 text-teal-50 relative group">
                             <!-- Creative premium lighting effects -->
                             <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+')] opacity-20 pointer-events-none"></div>
-                            <div class="absolute -top-24 -right-24 w-48 h-48 bg-blue-500 rounded-full mix-blend-screen filter blur-[64px] opacity-30 group-hover:opacity-50 transition-opacity duration-700 pointer-events-none"></div>
-                            <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-indigo-500 rounded-full mix-blend-screen filter blur-[64px] opacity-30 group-hover:opacity-50 transition-opacity duration-700 pointer-events-none"></div>
+                            <div class="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500 rounded-full mix-blend-screen filter blur-[64px] opacity-20 group-hover:opacity-40 transition-opacity duration-700 pointer-events-none"></div>
+                            <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-500 rounded-full mix-blend-screen filter blur-[64px] opacity-20 group-hover:opacity-40 transition-opacity duration-700 pointer-events-none"></div>
                             
                             <table class="w-full text-xs text-left border-collapse relative z-10 backdrop-blur-sm">
-                                <tbody class="divide-y divide-blue-400/20">
+                                <tbody class="divide-y divide-emerald-500/20">
                                     <!-- Row 1 -->
-                                    <tr class="hover:bg-blue-800/40 transition duration-300">
-                                        <td class="p-2.5 border-r border-blue-400/20 w-1/4">
+                                    <tr class="hover:bg-teal-900/40 transition duration-300">
+                                        <td class="p-2.5 border-r border-emerald-500/20 w-1/4">
                                             <div class="flex justify-between items-center">
-                                                <span class="text-blue-300/80 font-bold uppercase tracking-widest text-[10px]">Total Target (proj)</span>
+                                                <span class="text-teal-300/80 font-bold uppercase tracking-widest text-[10px]">Total Target (proj)</span>
                                                 <span class="font-black text-white">${parseInt(metrics.presetProjTotal).toLocaleString()}</span>
                                             </div>
                                         </td>
-                                        <td class="p-2.5 border-r border-blue-400/20 w-1/4">
+                                        <td class="p-2.5 border-r border-emerald-500/20 w-1/4">
                                             <div class="flex justify-between items-center">
-                                                <span class="text-blue-300/80 font-bold uppercase tracking-widest text-[10px]">Total Files</span>
+                                                <span class="text-teal-300/80 font-bold uppercase tracking-widest text-[10px]">Total Files</span>
                                                 <span class="font-black text-white">${metrics.targetFiles}</span>
                                             </div>
                                         </td>
-                                        <td class="p-2.5 border-r border-blue-400/20 w-1/4">
+                                        <td class="p-2.5 border-r border-emerald-500/20 w-1/4">
                                              <div class="flex justify-between items-center">
-                                                <span class="text-blue-300/80 font-bold uppercase tracking-widest text-[10px]">Today Proj</span>
+                                                <span class="text-teal-300/80 font-bold uppercase tracking-widest text-[10px]">Today Proj</span>
                                                 <span class="font-black text-white">${parseInt(metrics.todayProj).toLocaleString()}</span>
                                              </div>
                                         </td>
                                         <td class="p-2.5 w-1/4">
                                              <div class="flex justify-between items-center">
-                                                <span class="text-blue-300/80 font-bold uppercase tracking-widest text-[10px]">Remaining</span>
+                                                <span class="text-teal-300/80 font-bold uppercase tracking-widest text-[10px]">Remaining</span>
                                                 <span class="font-black text-amber-400">${parseInt(metrics.remainingAmt).toLocaleString()}</span>
                                              </div>
                                         </td>
                                     </tr>
                                     <!-- Row 2 -->
-                                    <tr class="hover:bg-blue-800/40 transition duration-300">
-                                        <td class="p-2.5 border-r border-blue-400/20">
+                                    <tr class="hover:bg-teal-900/40 transition duration-300">
+                                        <td class="p-2.5 border-r border-emerald-500/20">
                                             <div class="flex justify-between items-center">
-                                                <span class="text-blue-300/80 font-bold uppercase tracking-widest text-[10px]">Till Date Coll</span>
+                                                <span class="text-teal-300/80 font-bold uppercase tracking-widest text-[10px]">Till Date Coll</span>
                                                 <span class="font-black text-emerald-400">${parseInt(metrics.mtdColl).toLocaleString()}</span>
                                             </div>
                                         </td>
-                                        <td class="p-2.5 border-r border-blue-400/20">
+                                        <td class="p-2.5 border-r border-emerald-500/20">
                                             <div class="flex justify-between items-center">
-                                                <span class="text-blue-300/80 font-bold uppercase tracking-widest text-[10px]">Coll Files</span>
+                                                <span class="text-teal-300/80 font-bold uppercase tracking-widest text-[10px]">Coll Files</span>
                                                 <span class="font-black text-emerald-400">${metrics.uniquePaidCodes}</span>
                                             </div>
                                         </td>
-                                        <td class="p-2.5 border-r border-blue-400/20">
+                                        <td class="p-2.5 border-r border-emerald-500/20">
                                             <div class="flex justify-between items-center">
-                                                <span class="text-blue-300/80 font-bold uppercase tracking-widest text-[10px]">Collection</span>
+                                                <span class="text-teal-300/80 font-bold uppercase tracking-widest text-[10px]">Collection</span>
                                                 <span class="font-black text-emerald-400">${parseInt(metrics.todayColl).toLocaleString()}</span>
                                             </div>
                                         </td>
                                         <td class="p-2.5">
                                             <div class="flex justify-between items-center">
-                                                <span class="text-blue-300/80 font-bold uppercase tracking-widest text-[10px]">Daily Req</span>
+                                                <span class="text-teal-300/80 font-bold uppercase tracking-widest text-[10px]">Daily Req</span>
                                                 <span class="font-black text-rose-400">${parseInt(Math.round(metrics.rdrr)).toLocaleString()}</span>
                                             </div>
                                         </td>
                                     </tr>
                                     <!-- Row 3 -->
-                                    <tr class="hover:bg-blue-800/40 transition duration-300">
-                                        <td class="p-2.5 border-r border-blue-400/20">
+                                    <tr class="hover:bg-teal-900/40 transition duration-300">
+                                        <td class="p-2.5 border-r border-emerald-500/20">
                                             <div class="flex justify-between items-center">
-                                                <span class="text-blue-300/80 font-bold uppercase tracking-widest text-[10px]">Ach % (MTD)</span>
-                                                <span class="font-black text-indigo-300">${metrics.tillDayAchievement}%</span>
+                                                <span class="text-teal-300/80 font-bold uppercase tracking-widest text-[10px]">Ach % (MTD)</span>
+                                                <span class="font-black text-teal-300">${metrics.tillDayAchievement}%</span>
                                             </div>
                                         </td>
-                                        <td class="p-2.5 border-r border-blue-400/20">
+                                        <td class="p-2.5 border-r border-emerald-500/20">
                                              <div class="flex justify-between items-center">
-                                                <span class="text-blue-300/80 font-bold uppercase tracking-widest text-[10px]">Uncollected</span>
+                                                <span class="text-teal-300/80 font-bold uppercase tracking-widest text-[10px]">Uncollected</span>
                                                 <span class="font-black text-rose-400">${metrics.tillDateNonPayFiles}</span>
                                              </div>
                                         </td>
-                                        <td class="p-2.5 border-r border-blue-400/20">
+                                        <td class="p-2.5 border-r border-emerald-500/20">
                                              <div class="flex justify-between items-center">
-                                                <span class="text-blue-300/80 font-bold uppercase tracking-widest text-[10px]">Ach % (Today)</span>
+                                                <span class="text-teal-300/80 font-bold uppercase tracking-widest text-[10px]">Ach % (Today)</span>
                                                 <span class="font-black text-fuchsia-400">${todayAch}%</span>
                                              </div>
                                         </td>
                                         <td class="p-2.5 flex justify-center items-center opacity-80">
-                                            <div class="h-1.5 w-16 bg-blue-950 rounded-full overflow-hidden border border-blue-800 mt-1">
-                                                <div class="h-full bg-gradient-to-r from-blue-500 to-indigo-400 rounded-full" style="width: ${Math.min(100, Math.max(0, todayAch))}%"></div>
+                                            <div class="h-1.5 w-16 bg-emerald-950 rounded-full overflow-hidden border border-teal-800 mt-1">
+                                                <div class="h-full bg-gradient-to-r from-emerald-500 to-blue-500 rounded-full" style="width: ${Math.min(100, Math.max(0, todayAch))}%"></div>
                                             </div>
                                         </td>
                                     </tr>
