@@ -17,8 +17,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-$pdo = getDbConnection();
-
 // Cache management helper
 $cacheFile = __DIR__ . '/db_cache.json';
 function invalidateCache() {
@@ -34,16 +32,19 @@ $route = isset($_GET['route']) ? $_GET['route'] : '';
 // Parse JSON body for POST/DELETE
 $input = json_decode(file_get_contents('php://input'), true);
 
+// FAST PATH: Return cached data if available (Super fast read, bypasses database connection completely!)
+if ($route === 'db' && $_SERVER['REQUEST_METHOD'] === 'GET' && file_exists($cacheFile)) {
+    echo file_get_contents($cacheFile);
+    exit;
+}
+
+// Connect to Database (only if we didn't hit the cached fast path)
+$pdo = getDbConnection();
+
 try {
     switch ($route) {
         case 'db':
             if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Method Not Allowed");
-
-            // Return cached data if available (Super fast read!)
-            if (file_exists($cacheFile)) {
-                echo file_get_contents($cacheFile);
-                break;
-            }
 
             $tables = ['users', 'territories', 'targets', 'projections', 'collections', 'offroad_vehicles', 'settlements', 'vehicle_performance'];
             $result = [];

@@ -699,7 +699,7 @@
         // GLOBAL FETCH INTERCEPTOR: Generic Retry Mechanism
         const originalFetch = window.fetch;
         window.fetch = async function(url, options) {
-            let retries = 5;
+            let retries = 3;
             let lastError = null;
             for (let i = 0; i < retries; i++) {
                 try {
@@ -707,6 +707,10 @@
                     
                     if (typeof url === 'string' && url.includes('/api')) {
                         if (!res.ok) {
+                            // If it's a client error (400-499), do not retry as it will never succeed.
+                            if (res.status >= 400 && res.status < 500) {
+                                return res;
+                            }
                             throw new Error("Server error " + res.status);
                         }
                     }
@@ -715,7 +719,7 @@
                     lastError = err;
                     console.warn(`Fetch attempt ${i + 1} failed for ${url}:`, err.message);
                     if (i < retries - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
+                        await new Promise(resolve => setTimeout(resolve, 1000));
                     }
                 }
             }
