@@ -11,6 +11,8 @@ echo "==================================================\n";
 echo "RECOVERY APP DEPLOYMENT DIAGNOSTICS\n";
 echo "==================================================\n";
 echo "Current Server Time: " . date('Y-m-d H:i:s T') . "\n";
+echo "Server Script Directory (__DIR__): " . __DIR__ . "\n";
+echo "Server Document Root (DOCUMENT_ROOT): " . $_SERVER['DOCUMENT_ROOT'] . "\n";
 echo "PHP Version: " . phpversion() . "\n";
 echo "\n--- GIT REPOSITORY STATUS ---\n";
 
