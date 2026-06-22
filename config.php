@@ -4,7 +4,7 @@
 
 // Define database connection constants
 // Replace these with your actual cPanel MySQL database details
-define('DB_HOST', '127.0.0.1'); // Using 127.0.0.1 instead of localhost avoids slow IPv6 name resolution lookup on cPanel
+define('DB_HOST', 'localhost'); // Usually 'localhost' on cPanel
 define('DB_NAME', 'cvacimot_recovery'); // e.g., 'cvacimot_recovery'
 define('DB_USER', 'cvacimot_dbuser'); // e.g., 'cvacimot_user'
 define('DB_PASS', 'Shahriar@0123');

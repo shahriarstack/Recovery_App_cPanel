@@ -17,15 +17,6 @@
     </IfModule>
 </Files>
 
-# Disable Caching for HTML and PHP pages to prevent outdated UI caching
-<FilesMatch "\.(html|htm|php)$">
-    <IfModule mod_headers.c>
-        Header set Cache-Control "no-cache, no-store, must-revalidate"
-        Header set Pragma "no-cache"
-        Header set Expires 0
-    </IfModule>
-</FilesMatch>
-
 # Enable Gzip Compression at the Apache Level
 <IfModule mod_deflate.c>
     # Compress HTML, CSS, JavaScript, Text, XML and fonts

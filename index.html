@@ -699,7 +699,7 @@
         // GLOBAL FETCH INTERCEPTOR: Generic Retry Mechanism
         const originalFetch = window.fetch;
         window.fetch = async function(url, options) {
-            let retries = 3;
+            let retries = 5;
             let lastError = null;
             for (let i = 0; i < retries; i++) {
                 try {
@@ -707,10 +707,6 @@
                     
                     if (typeof url === 'string' && url.includes('/api')) {
                         if (!res.ok) {
-                            // If it's a client error (400-499), do not retry as it will never succeed.
-                            if (res.status >= 400 && res.status < 500) {
-                                return res;
-                            }
                             throw new Error("Server error " + res.status);
                         }
                     }
@@ -719,7 +715,7 @@
                     lastError = err;
                     console.warn(`Fetch attempt ${i + 1} failed for ${url}:`, err.message);
                     if (i < retries - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
                     }
                 }
             }
@@ -3445,301 +3441,284 @@
                     <div class="animate-entry space-y-4"> 
                         
                         <!-- DASHBOARD HEADER -->
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
                             <div>
-                                <div class="flex items-center gap-3 mb-3">
+                                <div class="flex items-center gap-2 mb-2">
                                     ${cutoffHours > 0 ? `
-                                        <div class="flex items-center px-3 py-1.5 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl text-amber-600 dark:text-amber-400 text-[10px] font-black tracking-wider shadow-sm backdrop-blur-md">
-                                            <span class="relative flex h-2 w-2 mr-2.5">
+                                        <div class="flex items-center px-2.5 py-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-lg text-amber-700 dark:text-amber-400 text-[10px] font-black tracking-wide shadow-sm">
+                                            <span class="relative flex h-2 w-2 mr-2">
                                                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                                                 <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
                                             </span>
                                             EXTENDED CUTOFF: +${cutoffHours}H (0${cutoffHours}:00 AM)
                                         </div>
                                     ` : ''}
-                                    <div class="flex items-center px-3 py-1.5 bg-gradient-to-r from-brand-500/10 to-indigo-500/10 border border-brand-500/20 rounded-xl text-brand-700 dark:text-brand-400 text-[10px] font-black tracking-wider shadow-sm backdrop-blur-md">
-                                        <i class="fa-solid fa-calendar-day mr-2 opacity-80"></i>
+                                    <div class="flex items-center px-2.5 py-1 bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-700/30 rounded-lg text-brand-700 dark:text-brand-400 text-[10px] font-black tracking-wide shadow-sm">
+                                        <i class="fa-solid fa-calendar-day mr-2 opacity-70"></i>
                                         ACTIVE OPS MONTH: ${activeMonth}
                                     </div>
                                 </div>
-                                <h2 class="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-500 dark:from-white dark:to-slate-400 tracking-tight">Admin Intelligence Dashboard</h2>
-                                <p class="text-xs text-slate-500 font-medium mt-1 tracking-wide uppercase">Monthly Recovery Performance Metrics & Strategic Analytics</p>
+                                <h2 class="text-2xl font-black text-slate-800 dark:text-white">Admin Intelligence Dashboard</h2>
+                                <p class="text-xs text-slate-500 font-medium">Monthly Recovery Performance Metrics & Strategic Analytics</p>
                             </div>
                             <div class="flex items-center gap-3">
-                                <button onclick="UI.openSystemSettingsModal()" class="group flex items-center px-4 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-brand-50 hover:text-brand-600 hover:border-brand-200 dark:hover:bg-brand-900/30 dark:hover:border-brand-800/50 transition-all font-bold text-sm shadow-sm hover-lift">
-                                    <i class="fa-solid fa-gear mr-2 group-hover:rotate-90 transition-transform duration-500"></i> Settings
+                                <button onclick="UI.openSystemSettingsModal()" class="flex items-center px-4 py-2 bg-white dark:bg-slate-800 border-2 border-brand-500 text-brand-600 dark:text-brand-400 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-all font-bold text-sm shadow-lg shadow-brand-500/10 hover-lift">
+                                    <i class="fa-solid fa-gear mr-2"></i> Settings
                                 </button>
-                                <button onclick="UI.captureDashboard()" class="group hidden md:flex items-center px-4 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 dark:hover:bg-indigo-900/30 dark:hover:border-indigo-800/50 transition-all font-bold text-sm shadow-sm hover-lift">
-                                    <i class="fa-solid fa-camera-retro mr-2 group-hover:scale-110 transition-transform"></i> Capture
+                                <button onclick="UI.captureDashboard()" class="flex items-center px-4 py-2 bg-white dark:bg-slate-800 border-2 border-brand-500 text-brand-600 dark:text-brand-400 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-all font-bold text-sm shadow-lg shadow-brand-500/10 hover-lift hidden md:flex">
+                                    <i class="fa-solid fa-camera-retro mr-2"></i> Capture
                                 </button>
-                                <button onclick="UI.downloadAdminSummaryCSV()" class="flex items-center px-4 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg border border-slate-200 dark:border-slate-700 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-50 hover:border-emerald-200 dark:hover:bg-emerald-900/30 dark:hover:border-emerald-800/50 transition-all font-bold text-sm shadow-sm hover-lift">
-                                    <i class="fa-solid fa-cloud-arrow-down mr-2"></i> Summary Data
+                                <button onclick="UI.downloadAdminSummaryCSV()" class="flex items-center px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all font-bold text-sm shadow-lg shadow-emerald-500/20 hover-lift relative overflow-hidden group">
+                                    <div class="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                                    <i class="fa-solid fa-cloud-arrow-down mr-2 relative z-10"></i> <span class="relative z-10">Summary Data</span>
                                 </button>
-                                <button onclick="Router.navigate('admin-performance')" class="flex items-center px-4 py-2 bg-gradient-to-r from-brand-600 to-brand-500 text-white rounded-xl hover:from-brand-700 hover:to-brand-600 transition-all font-bold text-sm shadow-lg shadow-brand-500/25 hover-lift">
+                                <button onclick="Router.navigate('admin-performance')" class="flex items-center px-4 py-2 bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-all font-bold text-sm shadow-lg shadow-brand-500/20 hover-lift">
                                     <i class="fa-solid fa-chart-line mr-2"></i> Performance Analytics
                                 </button>
                             </div>
                         </div>
                         
                         <!-- GLOBAL RPI BANNER -->
-                        <div class="relative overflow-hidden mb-8 p-5 rounded-2xl border border-white/20 dark:border-slate-700/50 backdrop-blur-xl ${Calc.getRPIBg(metrics.rpi)} flex items-center justify-between shadow-lg shadow-slate-200/50 dark:shadow-none hover-lift group">
-                            <div class="absolute -right-10 -top-10 w-32 h-32 bg-white/20 dark:bg-white/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-                            <div class="relative z-10">
-                                <h3 class="text-lg font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
-                                    <i class="fa-solid fa-chart-pie opacity-70 text-slate-500 dark:text-slate-400"></i> Global Recovery Index (RPI)
-                                </h3>
-                                <p class="text-[10px] font-bold opacity-75 mt-1 uppercase tracking-widest text-slate-600 dark:text-slate-300">Aggregate Performance Across All Territories</p>
+                        <div class="p-4 rounded-2xl border ${Calc.getRPIBg(metrics.rpi)} flex items-center justify-between shadow-sm hover-lift">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-800 dark:text-white leading-tight">Global Recovery Index (RPI)</h3>
+                                <p class="text-[11px] opacity-80">Aggregate Performance across all territories</p>
                             </div>
-                            <div class="relative z-10 text-4xl font-black drop-shadow-sm ${Calc.getRPIColor(metrics.rpi)} tracking-tighter">${metrics.rpi}</div>
+                            <div class="text-3xl font-black ${Calc.getRPIColor(metrics.rpi)}">${metrics.rpi}</div>
                         </div>
 
                         <!-- COMPACT METRIC TABLE -->
-                        <div class="mb-6 relative overflow-hidden rounded-2xl shadow-xl bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 border border-blue-700/50 group">
-                            <!-- Abstract shapes for creative look -->
-                            <div class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-blue-500/20 blur-3xl transition-transform duration-1000 group-hover:scale-110"></div>
-                            <div class="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 rounded-full bg-indigo-500/20 blur-3xl transition-transform duration-1000 group-hover:scale-110"></div>
-                            
-                            <div class="relative z-10 p-1 md:p-2">
-                                <table class="w-full text-sm text-left border-collapse">
-                                    <tbody class="divide-y divide-blue-800/50">
-                                        <!-- Row 1 -->
-                                        <tr class="transition-colors hover:bg-white/5 rounded-xl">
-                                            <td class="p-3 md:p-4 border-r border-blue-800/50 w-1/4">
-                                                <div class="flex flex-col justify-center">
-                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Total Target (proj)</span>
-                                                    <span class="font-black text-lg md:text-xl text-white tracking-tight">${parseInt(metrics.presetProjTotal).toLocaleString()}</span>
-                                                </div>
-                                            </td>
-                                            <td class="p-3 md:p-4 border-r border-blue-800/50 w-1/4">
-                                                <div class="flex flex-col justify-center">
-                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Total Files</span>
-                                                    <span class="font-black text-lg md:text-xl text-white tracking-tight">${metrics.targetFiles}</span>
-                                                </div>
-                                            </td>
-                                            <td class="p-3 md:p-4 border-r border-blue-800/50 w-1/4">
-                                                 <div class="flex flex-col justify-center">
-                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Today Proj</span>
-                                                    <span class="font-black text-lg md:text-xl text-white tracking-tight">${parseInt(metrics.todayProj).toLocaleString()}</span>
-                                                </div>
-                                            </td>
-                                            <td class="p-3 md:p-4 w-1/4">
-                                                 <div class="flex flex-col justify-center">
-                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Remaining</span>
-                                                    <span class="font-black text-lg md:text-xl text-amber-400 tracking-tight">${parseInt(metrics.remainingAmt).toLocaleString()}</span>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <!-- Row 2 -->
-                                        <tr class="transition-colors hover:bg-white/5 rounded-xl">
-                                            <td class="p-3 md:p-4 border-r border-blue-800/50">
-                                                <div class="flex flex-col justify-center">
-                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Till Date Coll</span>
-                                                    <span class="font-black text-lg md:text-xl text-emerald-400 tracking-tight">${parseInt(metrics.mtdColl).toLocaleString()}</span>
-                                                </div>
-                                            </td>
-                                            <td class="p-3 md:p-4 border-r border-blue-800/50">
-                                                <div class="flex flex-col justify-center">
-                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Coll Files</span>
-                                                    <span class="font-black text-lg md:text-xl text-emerald-400 tracking-tight">${metrics.uniquePaidCodes}</span>
-                                                </div>
-                                            </td>
-                                            <td class="p-3 md:p-4 border-r border-blue-800/50">
-                                                <div class="flex flex-col justify-center">
-                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Collection</span>
-                                                    <span class="font-black text-lg md:text-xl text-emerald-400 tracking-tight">${parseInt(metrics.todayColl).toLocaleString()}</span>
-                                                </div>
-                                            </td>
-                                            <td class="p-3 md:p-4">
-                                                <div class="flex flex-col justify-center">
-                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Daily Req</span>
-                                                    <span class="font-black text-lg md:text-xl text-rose-400 tracking-tight">${parseInt(Math.round(metrics.rdrr)).toLocaleString()}</span>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <!-- Row 3 -->
-                                        <tr class="transition-colors hover:bg-white/5 rounded-xl">
-                                            <td class="p-3 md:p-4 border-r border-blue-800/50">
-                                                <div class="flex flex-col justify-center">
-                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Ach % (MTD)</span>
-                                                    <span class="font-black text-lg md:text-xl text-indigo-300 tracking-tight">${metrics.tillDayAchievement}%</span>
-                                                </div>
-                                            </td>
-                                            <td class="p-3 md:p-4 border-r border-blue-800/50">
-                                                 <div class="flex flex-col justify-center">
-                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Uncollected</span>
-                                                    <span class="font-black text-lg md:text-xl text-rose-400 tracking-tight">${metrics.tillDateNonPayFiles}</span>
-                                                </div>
-                                            </td>
-                                            <td class="p-3 md:p-4 border-r border-blue-800/50">
-                                                 <div class="flex flex-col justify-center">
-                                                    <span class="text-blue-300/80 font-bold text-[10px] md:text-xs uppercase tracking-wider mb-1">Ach % (Today)</span>
-                                                    <span class="font-black text-lg md:text-xl text-fuchsia-400 tracking-tight">${todayAch}%</span>
-                                                </div>
-                                            </td>
-                                            <td class="p-3 md:p-4 flex items-center justify-center">
-                                                <div class="w-10 h-10 bg-blue-800/40 rounded-full border border-blue-600/30 shadow-inner flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity">
-                                                    <i class="fa-solid fa-chart-pie text-blue-300 text-lg"></i>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                        <div class="mb-4 overflow-hidden rounded-xl shadow-md border border-blue-100 dark:border-blue-900/30 bg-gradient-to-br from-blue-50/40 via-indigo-50/20 to-white dark:from-slate-900 dark:via-blue-950/10 dark:to-dark-card">
+                            <table class="w-full text-xs text-left border-collapse">
+                                <tbody class="divide-y divide-blue-100/60 dark:divide-blue-900/20">
+                                    <!-- Row 1 -->
+                                    <tr class="group hover:bg-blue-50/55 dark:hover:bg-blue-950/25 transition">
+                                        <td class="p-2 border-r border-blue-100/60 dark:border-blue-900/20 w-1/4">
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-slate-500 dark:text-blue-300/70 font-bold uppercase tracking-tight">Total Target (proj)</span>
+                                                <span class="font-bold text-slate-800 dark:text-white">${parseInt(metrics.presetProjTotal).toLocaleString()}</span>
+                                            </div>
+                                        </td>
+                                        <td class="p-2 border-r border-blue-100/60 dark:border-blue-900/20 w-1/4">
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-slate-500 dark:text-blue-300/70 font-bold uppercase tracking-tight">Total Files</span>
+                                                <span class="font-bold text-slate-800 dark:text-white">${metrics.targetFiles}</span>
+                                            </div>
+                                        </td>
+                                        <td class="p-2 border-r border-blue-100/60 dark:border-blue-900/20 w-1/4">
+                                             <div class="flex justify-between items-center">
+                                                <span class="text-slate-500 dark:text-blue-300/70 font-bold uppercase tracking-tight">Today Proj</span>
+                                                <span class="font-bold text-slate-800 dark:text-white">${parseInt(metrics.todayProj).toLocaleString()}</span>
+                                             </div>
+                                        </td>
+                                        <td class="p-2 w-1/4">
+                                             <div class="flex justify-between items-center">
+                                                <span class="text-slate-500 dark:text-blue-300/70 font-bold uppercase tracking-tight">Remaining</span>
+                                                <span class="font-bold text-amber-600">${parseInt(metrics.remainingAmt).toLocaleString()}</span>
+                                             </div>
+                                        </td>
+                                    </tr>
+                                    <!-- Row 2 -->
+                                    <tr class="group hover:bg-blue-50/55 dark:hover:bg-blue-950/25 transition">
+                                        <td class="p-2 border-r border-blue-100/60 dark:border-blue-900/20">
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-slate-500 dark:text-blue-300/70 font-bold uppercase tracking-tight">Till Date Coll</span>
+                                                <span class="font-bold text-emerald-600">${parseInt(metrics.mtdColl).toLocaleString()}</span>
+                                            </div>
+                                        </td>
+                                        <td class="p-2 border-r border-blue-100/60 dark:border-blue-900/20">
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-slate-500 dark:text-blue-300/70 font-bold uppercase tracking-tight">Coll Files</span>
+                                                <span class="font-bold text-emerald-600">${metrics.uniquePaidCodes}</span>
+                                            </div>
+                                        </td>
+                                        <td class="p-2 border-r border-blue-100/60 dark:border-blue-900/20">
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-slate-500 dark:text-blue-300/70 font-bold uppercase tracking-tight">Collection</span>
+                                                <span class="font-bold text-emerald-600">${parseInt(metrics.todayColl).toLocaleString()}</span>
+                                            </div>
+                                        </td>
+                                        <td class="p-2">
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-slate-500 dark:text-blue-300/70 font-bold uppercase tracking-tight">Daily Req</span>
+                                                <span class="font-bold text-red-600">${parseInt(Math.round(metrics.rdrr)).toLocaleString()}</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <!-- Row 3 -->
+                                    <tr class="group hover:bg-blue-50/55 dark:hover:bg-blue-950/25 transition">
+                                        <td class="p-2 border-r border-blue-100/60 dark:border-blue-900/20">
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-slate-500 dark:text-blue-300/70 font-bold uppercase tracking-tight">Ach % (MTD)</span>
+                                                <span class="font-bold text-indigo-600">${metrics.tillDayAchievement}%</span>
+                                            </div>
+                                        </td>
+                                        <td class="p-2 border-r border-blue-100/60 dark:border-blue-900/20">
+                                             <div class="flex justify-between items-center">
+                                                <span class="text-slate-500 dark:text-blue-300/70 font-bold uppercase tracking-tight">Uncollected</span>
+                                                <span class="font-bold text-rose-600">${metrics.tillDateNonPayFiles}</span>
+                                             </div>
+                                        </td>
+                                        <td class="p-2 border-r border-blue-100/60 dark:border-blue-900/20">
+                                             <div class="flex justify-between items-center">
+                                                <span class="text-slate-500 dark:text-blue-300/70 font-bold uppercase tracking-tight">Ach % (Today)</span>
+                                                <span class="font-bold text-fuchsia-600">${todayAch}%</span>
+                                             </div>
+                                        </td>
+                                        <td class="p-2 flex justify-center opacity-30">
+                                            <i class="fa-solid fa-globe text-slate-400 dark:text-blue-300"></i>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                          
                         <!-- PART-WISE EXECUTIVE SUMMARY (NEW) -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
                             <!-- Part A Card -->
-                            <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-50/80 to-teal-50/50 dark:from-emerald-950/40 dark:to-teal-950/20 backdrop-blur-xl border border-emerald-100 dark:border-emerald-800/30 shadow-xl shadow-emerald-500/5 group hover-lift">
-                                 <div class="absolute -right-8 -top-8 w-40 h-40 bg-emerald-400/20 dark:bg-emerald-500/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-1000"></div>
-                                 <div class="absolute -left-8 -bottom-8 w-40 h-40 bg-teal-400/20 dark:bg-teal-500/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-1000"></div>
-                                 
-                                 <div class="p-6 relative z-10">
-                                    <div class="flex items-center justify-between mb-6">
-                                        <div class="flex items-center gap-4">
-                                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center font-black text-xl shadow-lg shadow-emerald-500/30 transform group-hover:rotate-12 transition-transform">A</div>
+                            <div class="relative overflow-hidden rounded-2xl bg-white dark:bg-dark-card border border-emerald-100 dark:border-emerald-900/30 shadow-lg group hover-lift">
+                                 <div class="absolute -right-4 -top-4 opacity-5 transform rotate-12 transition-transform group-hover:scale-110 group-hover:opacity-10">
+                                    <span class="text-8xl font-black text-emerald-900">A</span>
+                                 </div>
+                                 <div class="p-4 relative z-10">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 flex items-center justify-center font-black text-lg shadow-sm border border-emerald-100 dark:border-emerald-800">A</div>
                                             <div>
-                                                <h3 class="text-lg font-black text-slate-800 dark:text-white tracking-tight">Part A Recovery</h3>
-                                                <p class="text-[10px] uppercase tracking-widest text-emerald-600/80 dark:text-emerald-400/80 font-bold mt-0.5">North & Central Portfolio</p>
+                                                <h3 class="text-base font-bold text-slate-800 dark:text-white leading-tight">Part A Recovery</h3>
+                                                <p class="text-[10px] text-slate-500 font-medium">North & Central Portfolio</p>
                                             </div>
                                         </div>
-                                        <div class="text-right bg-white/50 dark:bg-slate-900/50 backdrop-blur-md px-3 py-1.5 rounded-xl border border-emerald-100 dark:border-emerald-800/30">
-                                            <p class="text-[9px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">RPI Score</p>
-                                            <p class="text-2xl font-black text-emerald-600 dark:text-emerald-400 leading-none mt-0.5">${totalA.rpi}</p>
+                                        <div class="text-right">
+                                            <p class="text-[9px] uppercase font-bold text-slate-400 tracking-wider">RPI Score</p>
+                                            <p class="text-xl font-black text-emerald-600">${totalA.rpi}</p>
                                         </div>
                                     </div>
                                     
-                                    <div class="grid grid-cols-2 gap-3 mb-5">
-                                        <div class="bg-white/60 dark:bg-slate-900/40 backdrop-blur-sm p-3 rounded-2xl border border-emerald-100 dark:border-emerald-800/30">
-                                            <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold mb-1 tracking-wider">Target Amt</p>
-                                            <p class="text-lg font-black text-slate-800 dark:text-slate-200 tracking-tight">${parseInt(totalA.presetProjTotal).toLocaleString()}</p>
+                                    <div class="grid grid-cols-2 gap-x-3 gap-y-2 mb-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                                        <div>
+                                            <p class="text-[9px] text-slate-400 uppercase font-bold mb-0.5">Target Amt</p>
+                                            <p class="text-base font-bold text-slate-700 dark:text-slate-300">${parseInt(totalA.presetProjTotal).toLocaleString()}</p>
                                         </div>
-                                        <div class="bg-emerald-500/10 dark:bg-emerald-500/20 backdrop-blur-sm p-3 rounded-2xl border border-emerald-200/50 dark:border-emerald-700/50 text-right">
-                                            <p class="text-[10px] text-emerald-700 dark:text-emerald-300 uppercase font-bold mb-1 tracking-wider">Coll Amt</p>
-                                            <p class="text-lg font-black text-emerald-700 dark:text-emerald-400 tracking-tight">${parseInt(totalA.mtdColl).toLocaleString()}</p>
+                                        <div class="text-right">
+                                            <p class="text-[9px] text-slate-400 uppercase font-bold mb-0.5">Coll Amt</p>
+                                            <p class="text-base font-bold text-emerald-600">${parseInt(totalA.mtdColl).toLocaleString()}</p>
                                         </div>
-                                        <div class="bg-white/60 dark:bg-slate-900/40 backdrop-blur-sm p-3 rounded-2xl border border-emerald-100 dark:border-emerald-800/30">
-                                            <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold mb-1 tracking-wider">Today Proj</p>
-                                            <p class="text-lg font-black text-slate-800 dark:text-slate-200 tracking-tight">${parseInt(totalA.todayProj).toLocaleString()}</p>
+                                        <div class="border-t border-slate-200 dark:border-slate-700 pt-1">
+                                            <p class="text-[9px] text-slate-400 uppercase font-bold mb-0.5">Today Proj</p>
+                                            <p class="text-base font-bold text-slate-700 dark:text-slate-300">${parseInt(totalA.todayProj).toLocaleString()}</p>
                                         </div>
-                                        <div class="bg-emerald-500/10 dark:bg-emerald-500/20 backdrop-blur-sm p-3 rounded-2xl border border-emerald-200/50 dark:border-emerald-700/50 text-right">
-                                            <p class="text-[10px] text-emerald-700 dark:text-emerald-300 uppercase font-bold mb-1 tracking-wider">Today Coll</p>
-                                            <p class="text-lg font-black text-emerald-700 dark:text-emerald-400 tracking-tight">${parseInt(totalA.todayColl).toLocaleString()}</p>
+                                        <div class="text-right border-t border-slate-200 dark:border-slate-700 pt-1">
+                                            <p class="text-[9px] text-slate-400 uppercase font-bold mb-0.5">Today Coll</p>
+                                            <p class="text-base font-bold text-emerald-600">${parseInt(totalA.todayColl).toLocaleString()}</p>
                                         </div>
-                                        <div class="bg-white/60 dark:bg-slate-900/40 backdrop-blur-sm p-3 rounded-2xl border border-emerald-100 dark:border-emerald-800/30">
-                                            <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold mb-1 tracking-wider">Last Day Proj</p>
-                                            <p class="text-lg font-black text-slate-800 dark:text-slate-200 tracking-tight">${parseInt(totalA.yestProjAmt).toLocaleString()}</p>
+                                        <div class="border-t border-slate-200 dark:border-slate-700 pt-1">
+                                            <p class="text-[9px] text-slate-400 uppercase font-bold mb-0.5">Last Day Proj</p>
+                                            <p class="text-base font-bold text-slate-700 dark:text-slate-300">${parseInt(totalA.yestProjAmt).toLocaleString()}</p>
                                         </div>
-                                        <div class="bg-emerald-500/10 dark:bg-emerald-500/20 backdrop-blur-sm p-3 rounded-2xl border border-emerald-200/50 dark:border-emerald-700/50 text-right">
-                                            <p class="text-[10px] text-emerald-700 dark:text-emerald-300 uppercase font-bold mb-1 tracking-wider">Last Day Coll</p>
-                                            <p class="text-lg font-black text-emerald-700 dark:text-emerald-400 tracking-tight">${parseInt(totalA.yestCollAmt).toLocaleString()}</p>
+                                        <div class="text-right border-t border-slate-200 dark:border-slate-700 pt-1">
+                                            <p class="text-[9px] text-slate-400 uppercase font-bold mb-0.5">Last Day Coll</p>
+                                            <p class="text-base font-bold text-emerald-600">${parseInt(totalA.yestCollAmt).toLocaleString()}</p>
                                         </div>
                                     </div>
                                     
-                                    <div class="bg-white/50 dark:bg-slate-900/30 rounded-2xl p-4 border border-emerald-100 dark:border-emerald-800/30">
-                                        <div class="flex justify-between items-end mb-2">
-                                            <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Achievement</span>
-                                            <span class="text-xl font-black text-emerald-600 dark:text-emerald-400">${totalA.tillDayAchievement}%</span>
+                                    <div class="space-y-1.5">
+                                        <div class="flex justify-between text-[11px] font-bold">
+                                            <span class="text-slate-600 dark:text-slate-400">Achievement</span>
+                                            <span class="text-emerald-600">${totalA.tillDayAchievement}%</span>
                                         </div>
-                                        <div class="w-full bg-slate-200/50 dark:bg-slate-700/50 rounded-full h-2.5 overflow-hidden shadow-inner border border-black/5 dark:border-white/5">
-                                            <div class="bg-gradient-to-r from-emerald-400 to-teal-500 h-full rounded-full shadow-[0_0_10px_rgba(52,211,153,0.5)] transition-all duration-1000 relative" style="width: ${Math.min(parseFloat(totalA.tillDayAchievement), 100)}%">
-                                                <div class="absolute inset-0 bg-white/20 w-full h-full animate-[shimmer_2s_infinite]"></div>
-                                            </div>
+                                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden shadow-inner">
+                                            <div class="bg-gradient-to-r from-emerald-400 to-emerald-600 h-full rounded-full transition-all duration-1000 shadow-lg" style="width: ${Math.min(parseFloat(totalA.tillDayAchievement), 100)}%"></div>
                                         </div>
                                     </div>
                                  </div>
                             </div>
 
                             <!-- Part B Card -->
-                            <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-50/80 to-indigo-50/50 dark:from-blue-950/40 dark:to-indigo-950/20 backdrop-blur-xl border border-blue-100 dark:border-blue-800/30 shadow-xl shadow-blue-500/5 group hover-lift">
-                                 <div class="absolute -right-8 -top-8 w-40 h-40 bg-blue-400/20 dark:bg-blue-500/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-1000"></div>
-                                 <div class="absolute -left-8 -bottom-8 w-40 h-40 bg-indigo-400/20 dark:bg-indigo-500/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-1000"></div>
-                                 
-                                 <div class="p-6 relative z-10">
-                                    <div class="flex items-center justify-between mb-6">
-                                        <div class="flex items-center gap-4">
-                                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-500 text-white flex items-center justify-center font-black text-xl shadow-lg shadow-blue-500/30 transform group-hover:rotate-12 transition-transform">B</div>
+                            <div class="relative overflow-hidden rounded-2xl bg-white dark:bg-dark-card border border-blue-100 dark:border-blue-900/30 shadow-lg group hover-lift">
+                                 <div class="absolute -right-4 -top-4 opacity-5 transform rotate-12 transition-transform group-hover:scale-110 group-hover:opacity-10">
+                                    <span class="text-8xl font-black text-blue-900">B</span>
+                                 </div>
+                                 <div class="p-4 relative z-10">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center font-black text-lg shadow-sm border border-blue-100 dark:border-blue-800">B</div>
                                             <div>
-                                                <h3 class="text-lg font-black text-slate-800 dark:text-white tracking-tight">Part B Recovery</h3>
-                                                <p class="text-[10px] uppercase tracking-widest text-blue-600/80 dark:text-blue-400/80 font-bold mt-0.5">South & East Portfolio</p>
+                                                <h3 class="text-base font-bold text-slate-800 dark:text-white leading-tight">Part B Recovery</h3>
+                                                <p class="text-[10px] text-slate-500 font-medium">South & East Portfolio</p>
                                             </div>
                                         </div>
-                                        <div class="text-right bg-white/50 dark:bg-slate-900/50 backdrop-blur-md px-3 py-1.5 rounded-xl border border-blue-100 dark:border-blue-800/30">
-                                            <p class="text-[9px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">RPI Score</p>
-                                            <p class="text-2xl font-black text-blue-600 dark:text-blue-400 leading-none mt-0.5">${totalB.rpi}</p>
+                                        <div class="text-right">
+                                            <p class="text-[9px] uppercase font-bold text-slate-400 tracking-wider">RPI Score</p>
+                                            <p class="text-xl font-black text-blue-600">${totalB.rpi}</p>
                                         </div>
                                     </div>
                                     
-                                    <div class="grid grid-cols-2 gap-3 mb-5">
-                                        <div class="bg-white/60 dark:bg-slate-900/40 backdrop-blur-sm p-3 rounded-2xl border border-blue-100 dark:border-blue-800/30">
-                                            <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold mb-1 tracking-wider">Target Amt</p>
-                                            <p class="text-lg font-black text-slate-800 dark:text-slate-200 tracking-tight">${parseInt(totalB.presetProjTotal).toLocaleString()}</p>
+                                    <div class="grid grid-cols-2 gap-x-3 gap-y-2 mb-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                                        <div>
+                                            <p class="text-[9px] text-slate-400 uppercase font-bold mb-0.5">Target Amt</p>
+                                            <p class="text-base font-bold text-slate-700 dark:text-slate-300">${parseInt(totalB.presetProjTotal).toLocaleString()}</p>
                                         </div>
-                                        <div class="bg-blue-500/10 dark:bg-blue-500/20 backdrop-blur-sm p-3 rounded-2xl border border-blue-200/50 dark:border-blue-700/50 text-right">
-                                            <p class="text-[10px] text-blue-700 dark:text-blue-300 uppercase font-bold mb-1 tracking-wider">Coll Amt</p>
-                                            <p class="text-lg font-black text-blue-700 dark:text-blue-400 tracking-tight">${parseInt(totalB.mtdColl).toLocaleString()}</p>
+                                        <div class="text-right">
+                                            <p class="text-[9px] text-slate-400 uppercase font-bold mb-0.5">Coll Amt</p>
+                                            <p class="text-base font-bold text-blue-600">${parseInt(totalB.mtdColl).toLocaleString()}</p>
                                         </div>
-                                        <div class="bg-white/60 dark:bg-slate-900/40 backdrop-blur-sm p-3 rounded-2xl border border-blue-100 dark:border-blue-800/30">
-                                            <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold mb-1 tracking-wider">Today Proj</p>
-                                            <p class="text-lg font-black text-slate-800 dark:text-slate-200 tracking-tight">${parseInt(totalB.todayProj).toLocaleString()}</p>
+                                        <div class="border-t border-slate-200 dark:border-slate-700 pt-1">
+                                            <p class="text-[9px] text-slate-400 uppercase font-bold mb-0.5">Today Proj</p>
+                                            <p class="text-base font-bold text-slate-700 dark:text-slate-300">${parseInt(totalB.todayProj).toLocaleString()}</p>
                                         </div>
-                                        <div class="bg-blue-500/10 dark:bg-blue-500/20 backdrop-blur-sm p-3 rounded-2xl border border-blue-200/50 dark:border-blue-700/50 text-right">
-                                            <p class="text-[10px] text-blue-700 dark:text-blue-300 uppercase font-bold mb-1 tracking-wider">Today Coll</p>
-                                            <p class="text-lg font-black text-blue-700 dark:text-blue-400 tracking-tight">${parseInt(totalB.todayColl).toLocaleString()}</p>
+                                        <div class="text-right border-t border-slate-200 dark:border-slate-700 pt-1">
+                                            <p class="text-[9px] text-slate-400 uppercase font-bold mb-0.5">Today Coll</p>
+                                            <p class="text-base font-bold text-blue-600">${parseInt(totalB.todayColl).toLocaleString()}</p>
                                         </div>
-                                        <div class="bg-white/60 dark:bg-slate-900/40 backdrop-blur-sm p-3 rounded-2xl border border-blue-100 dark:border-blue-800/30">
-                                            <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold mb-1 tracking-wider">Last Day Proj</p>
-                                            <p class="text-lg font-black text-slate-800 dark:text-slate-200 tracking-tight">${parseInt(totalB.yestProjAmt).toLocaleString()}</p>
+                                        <div class="border-t border-slate-200 dark:border-slate-700 pt-1">
+                                            <p class="text-[9px] text-slate-400 uppercase font-bold mb-0.5">Last Day Proj</p>
+                                            <p class="text-base font-bold text-slate-700 dark:text-slate-300">${parseInt(totalB.yestProjAmt).toLocaleString()}</p>
                                         </div>
-                                        <div class="bg-blue-500/10 dark:bg-blue-500/20 backdrop-blur-sm p-3 rounded-2xl border border-blue-200/50 dark:border-blue-700/50 text-right">
-                                            <p class="text-[10px] text-blue-700 dark:text-blue-300 uppercase font-bold mb-1 tracking-wider">Last Day Coll</p>
-                                            <p class="text-lg font-black text-blue-700 dark:text-blue-400 tracking-tight">${parseInt(totalB.yestCollAmt).toLocaleString()}</p>
+                                        <div class="text-right border-t border-slate-200 dark:border-slate-700 pt-1">
+                                            <p class="text-[9px] text-slate-400 uppercase font-bold mb-0.5">Last Day Coll</p>
+                                            <p class="text-base font-bold text-blue-600">${parseInt(totalB.yestCollAmt).toLocaleString()}</p>
                                         </div>
                                     </div>
                                     
-                                    <div class="bg-white/50 dark:bg-slate-900/30 rounded-2xl p-4 border border-blue-100 dark:border-blue-800/30">
-                                        <div class="flex justify-between items-end mb-2">
-                                            <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Achievement</span>
-                                            <span class="text-xl font-black text-blue-600 dark:text-blue-400">${totalB.tillDayAchievement}%</span>
+                                    <div class="space-y-1.5">
+                                        <div class="flex justify-between text-[11px] font-bold">
+                                            <span class="text-slate-600 dark:text-slate-400">Achievement</span>
+                                            <span class="text-blue-600">${totalB.tillDayAchievement}%</span>
                                         </div>
-                                        <div class="w-full bg-slate-200/50 dark:bg-slate-700/50 rounded-full h-2.5 overflow-hidden shadow-inner border border-black/5 dark:border-white/5">
-                                            <div class="bg-gradient-to-r from-blue-400 to-indigo-500 h-full rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all duration-1000 relative" style="width: ${Math.min(parseFloat(totalB.tillDayAchievement), 100)}%">
-                                                <div class="absolute inset-0 bg-white/20 w-full h-full animate-[shimmer_2s_infinite]"></div>
-                                            </div>
+                                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden shadow-inner">
+                                            <div class="bg-gradient-to-r from-blue-400 to-blue-600 h-full rounded-full transition-all duration-1000 shadow-lg" style="width: ${Math.min(parseFloat(totalB.tillDayAchievement), 100)}%"></div>
                                         </div>
                                     </div>
                                  </div>
                             </div>
                         </div>
 
-                        <div class="mb-8 relative overflow-hidden bg-white/70 dark:bg-dark-card/70 backdrop-blur-2xl p-6 md:p-8 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/50 dark:border-slate-700/50">
-                            <!-- Premium glow effect -->
-                            <div class="absolute top-0 right-1/4 w-96 h-96 bg-brand-400/5 dark:bg-brand-500/5 rounded-full blur-3xl -z-10"></div>
-                            
-                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <div class="glass-panel p-6 rounded-xl shadow-lg dark:bg-dark-card border-t-4 border-brand-500">
+                            <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                                 <div>
-                                    <h3 class="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3 tracking-tight">
+                                    <h3 class="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
                                         Territory Performance Ranking
-                                        <span class="text-[10px] font-black bg-gradient-to-r from-brand-100 to-indigo-100 dark:from-brand-900/40 dark:to-indigo-900/40 text-brand-700 dark:text-brand-300 px-3 py-1 rounded-xl border border-brand-200/50 dark:border-brand-700/30 shadow-sm backdrop-blur-sm">
+                                        <span class="text-xs font-black bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-400 px-2 py-0.5 rounded-md border border-brand-200/50 dark:border-brand-800/30">
                                             MTD Daily Target: ${expectedTarget.toFixed(1)}%
                                         </span>
                                     </h3>
-                                    <div class="text-[11px] font-bold text-slate-500/80 uppercase tracking-widest mt-1">Sorted by achievement from top to bottom. Color indicates status relative to current daily target.</div>
+                                    <div class="text-xs text-slate-500 italic">Sorted by achievement from top to bottom. Color indicates status relative to current daily target.</div>
                                 </div>
-                                <div class="flex items-center space-x-2 bg-slate-200/50 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner backdrop-blur-sm">
-                                    <button onclick="UI.renderAdminDashboard('compact')" class="px-4 py-2 text-xs font-bold rounded-lg transition-all ${isCompact ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-md shadow-brand-500/10 scale-105' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-700/50'}">
-                                        <i class="fa-solid fa-compress mr-1.5"></i> Focused
+                                <div class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
+                                    <button onclick="UI.renderAdminDashboard('compact')" class="px-3 py-1.5 text-xs font-bold rounded-md transition-all ${isCompact ? 'bg-white dark:bg-slate-600 text-brand-600 shadow' : 'text-slate-500 hover:text-slate-700'}">
+                                        <i class="fa-solid fa-compress mr-1"></i> Focused
                                     </button>
-                                    <button onclick="UI.renderAdminDashboard('full')" class="px-4 py-2 text-xs font-bold rounded-lg transition-all ${!isCompact ? 'bg-white dark:bg-slate-700 text-brand-600 shadow-md shadow-brand-500/10 scale-105' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-700/50'}">
-                                        <i class="fa-solid fa-expand mr-1.5"></i> Detailed
+                                    <button onclick="UI.renderAdminDashboard('full')" class="px-3 py-1.5 text-xs font-bold rounded-md transition-all ${!isCompact ? 'bg-white dark:bg-slate-600 text-brand-600 shadow' : 'text-slate-500 hover:text-slate-700'}">
+                                        <i class="fa-solid fa-expand mr-1"></i> Detailed
                                     </button>
                                 </div>
                             </div>
                             
-                            <div class="overflow-auto max-h-[600px] border border-slate-200/80 dark:border-slate-700/80 rounded-2xl relative shadow-inner scrollbar-thin bg-white/40 dark:bg-slate-900/40 backdrop-blur-md">
+                            <div class="overflow-auto max-h-[600px] border border-slate-200 dark:border-slate-700 rounded-xl relative shadow-inner scrollbar-thin">
                                 <table class="w-full text-xs text-left border-collapse whitespace-nowrap">
-                                    <thead class="text-slate-600 dark:text-slate-300 uppercase tracking-widest font-black text-[10px]">
-                                        <tr class="bg-slate-50/90 dark:bg-slate-800/90 backdrop-blur-xl border-b border-slate-200 dark:border-slate-700 shadow-sm">
+                                    <thead class="text-slate-600 dark:text-slate-200 uppercase tracking-wider font-bold">
+                                        <tr class="bg-slate-100 dark:bg-slate-700">
                                             <th class="p-2 border dark:border-slate-600 sticky top-0 left-0 bg-slate-100 dark:bg-slate-700 z-30 shadow-sm text-center">Part</th>
                                             <th class="p-2 border dark:border-slate-600 sticky top-0 left-10 bg-slate-100 dark:bg-slate-700 z-30 shadow-sm">Territory</th>
                                             <th class="p-2 border dark:border-slate-600 bg-blue-50 dark:bg-slate-800 sticky top-0 z-20">Total Files</th>
@@ -3778,48 +3757,46 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-                            <div class="relative bg-white/70 dark:bg-dark-card/70 backdrop-blur-2xl p-6 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/50 dark:border-slate-700/50 hover-lift group overflow-hidden">
-                                <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-brand-400/10 dark:bg-brand-500/5 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
-                                <h3 class="text-lg font-black mb-6 text-slate-800 dark:text-white tracking-tight flex items-center gap-2"><i class="fa-solid fa-chart-line text-brand-500 opacity-80"></i> Part A vs Part B</h3>
-                                <div class="h-48 flex justify-center relative z-10">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="glass-panel p-6 rounded-xl shadow-lg dark:bg-dark-card hover-lift">
+                                <h3 class="text-lg font-bold mb-4">Part A vs Part B</h3>
+                                <div class="h-48 flex justify-center">
                                     <canvas id="chart-part-comparison"></canvas>
                                 </div>
                             </div>
                             
-                            <div class="relative bg-white/70 dark:bg-dark-card/70 backdrop-blur-2xl p-6 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/50 dark:border-slate-700/50 hover-lift flex flex-col justify-center group overflow-hidden">
-                                <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-indigo-400/10 dark:bg-indigo-500/5 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
-                                <h3 class="text-lg font-black mb-6 text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
-                                    <i class="fa-solid fa-file-export text-indigo-500 opacity-80"></i> Reports & Exports
+                            <div class="glass-panel p-6 rounded-xl shadow-lg dark:bg-dark-card hover-lift flex flex-col justify-center">
+                                <h3 class="text-lg font-bold mb-4 text-slate-800 dark:text-white flex items-center">
+                                    <i class="fa-solid fa-file-export mr-2 text-brand-500"></i> Reports & Exports
                                 </h3>
                                 
-                                <div class="space-y-4 relative z-10">
-                                    <div class="flex items-center justify-between p-4 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-200/50 dark:border-slate-700/50 transition-all hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md">
+                                <div class="space-y-4">
+                                    <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700 transition hover:border-brand-200 dark:hover:border-brand-800">
                                         <div class="flex items-center">
-                                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-100 to-blue-100 dark:from-indigo-900/40 dark:to-blue-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mr-4 shadow-sm border border-indigo-200/50 dark:border-indigo-800/30">
-                                                <i class="fa-solid fa-chart-simple text-lg"></i>
+                                            <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-4 shadow-sm">
+                                                <i class="fa-solid fa-chart-simple"></i>
                                             </div>
                                             <div>
-                                                <p class="font-black text-slate-800 dark:text-slate-200 text-sm tracking-tight">Performance Summary</p>
-                                                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Current Month Ranking</p>
+                                                <p class="font-bold text-slate-700 dark:text-slate-200 text-sm">Performance Summary</p>
+                                                <p class="text-xs text-slate-500">Current Month Territory Ranking</p>
                                             </div>
                                         </div>
-                                        <button onclick="UI.exportCSV()" class="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-black text-slate-700 dark:text-slate-300 hover:text-indigo-600 hover:border-indigo-500 transition-all shadow-sm hover:shadow hover:-translate-y-0.5">
+                                        <button onclick="UI.exportCSV()" class="px-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-brand-600 hover:border-brand-500 transition-all shadow-sm">
                                             Download
                                         </button>
                                     </div>
 
-                                    <div class="flex items-center justify-between p-4 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-200/50 dark:border-slate-700/50 transition-all hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-md">
+                                    <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700 transition hover:border-brand-200 dark:hover:border-brand-800">
                                         <div class="flex items-center">
-                                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-100 to-indigo-100 dark:from-brand-900/40 dark:to-indigo-900/40 text-brand-600 dark:text-brand-400 flex items-center justify-center mr-4 shadow-sm border border-brand-200/50 dark:border-brand-800/30">
-                                                <i class="fa-solid fa-database text-lg"></i>
+                                            <div class="w-10 h-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center mr-4 shadow-sm">
+                                                <i class="fa-solid fa-database"></i>
                                             </div>
                                             <div>
-                                                <p class="font-black text-slate-800 dark:text-slate-200 text-sm tracking-tight">Raw Collection Data</p>
-                                                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Customer-wise Detailed</p>
+                                                <p class="font-bold text-slate-700 dark:text-slate-200 text-sm">Raw Collection Data</p>
+                                                <p class="text-xs text-slate-500">Customer-wise Detailed Report</p>
                                             </div>
                                         </div>
-                                        <button onclick="UI.openRawExportModal()" class="px-5 py-2.5 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-brand-500/20 hover:shadow-lg hover:-translate-y-0.5">
+                                        <button onclick="UI.openRawExportModal()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-brand-500/20">
                                             Select Period
                                         </button>
                                     </div>
@@ -3828,17 +3805,13 @@
                         </div>
 
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-                            <div class="relative bg-white/70 dark:bg-dark-card/70 backdrop-blur-2xl p-6 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/50 dark:border-slate-700/50 hover-lift overflow-hidden group">
-                                <div class="absolute -left-10 -top-10 w-32 h-32 bg-green-400/10 dark:bg-green-500/5 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
-                                <h3 class="text-lg font-black mb-6 text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
-                                    <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 shadow-inner">
-                                        <i class="fa-solid fa-trophy text-sm"></i> 
-                                    </div>
-                                    Top Performing Territories
+                            <div class="glass-panel p-6 rounded-xl shadow-lg dark:bg-dark-card border-l-4 border-green-500 hover-lift">
+                                <h3 class="text-lg font-bold mb-4 text-slate-800 dark:text-white flex items-center">
+                                    <i class="fa-solid fa-trophy text-yellow-500 mr-2"></i> Top Performing Territories
                                 </h3>
-                                <div class="overflow-hidden rounded-2xl border border-slate-200/50 dark:border-slate-700/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm relative z-10">
+                                <div class="overflow-hidden rounded-lg border border-slate-100 dark:border-slate-700">
                                     <table class="w-full text-sm text-left">
-                                        <thead class="bg-green-50/80 dark:bg-green-900/20 text-[10px] uppercase tracking-widest font-black text-green-800 dark:text-green-400 border-b border-green-100/50 dark:border-green-800/30">
+                                        <thead class="bg-green-50 dark:bg-green-900/20 text-xs font-bold text-green-800 dark:text-green-300">
                                             <tr>
                                                 <th class="px-4 py-2">Territory</th>
                                                 <th class="px-4 py-2">Officer</th>
@@ -3861,17 +3834,13 @@
                                 </div>
                             </div>
 
-                            <div class="relative bg-white/70 dark:bg-dark-card/70 backdrop-blur-2xl p-6 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/50 dark:border-slate-700/50 hover-lift overflow-hidden group">
-                                <div class="absolute -right-10 -top-10 w-32 h-32 bg-red-400/10 dark:bg-red-500/5 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
-                                <h3 class="text-lg font-black mb-6 text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
-                                    <div class="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-500 shadow-inner">
-                                        <i class="fa-solid fa-triangle-exclamation text-sm"></i> 
-                                    </div>
-                                    Critical Attention Needed
+                            <div class="glass-panel p-6 rounded-xl shadow-lg dark:bg-dark-card border-l-4 border-red-500 hover-lift">
+                                <h3 class="text-lg font-bold mb-4 text-slate-800 dark:text-white flex items-center">
+                                    <i class="fa-solid fa-triangle-exclamation text-red-500 mr-2"></i> Critical Attention Needed
                                 </h3>
-                                <div class="overflow-hidden rounded-2xl border border-slate-200/50 dark:border-slate-700/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm relative z-10">
+                                <div class="overflow-hidden rounded-lg border border-slate-100 dark:border-slate-700">
                                     <table class="w-full text-sm text-left">
-                                        <thead class="bg-red-50/80 dark:bg-red-900/20 text-[10px] uppercase tracking-widest font-black text-red-800 dark:text-red-400 border-b border-red-100/50 dark:border-red-800/30">
+                                        <thead class="bg-red-50 dark:bg-red-900/20 text-xs font-bold text-red-800 dark:text-red-300">
                                             <tr>
                                                 <th class="px-4 py-2">Territory</th>
                                                 <th class="px-4 py-2">Officer</th>
@@ -3895,25 +3864,17 @@
                             </div>
                         </div>
 
-                        <div class="mt-12 pt-8 border-t border-slate-200/60 dark:border-slate-700/60">
-                            <div class="flex items-center gap-3 mb-8">
-                                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-indigo-100 dark:from-brand-900/40 dark:to-indigo-900/40 text-brand-600 flex items-center justify-center font-black text-xl shadow-inner border border-brand-200/50 dark:border-brand-800/30">
-                                    <i class="fa-solid fa-brain"></i>
-                                </div>
-                                <div>
-                                    <h3 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Strategic Analytics</h3>
-                                    <p class="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Momentum & Efficiency Drivers</p>
-                                </div>
-                            </div>
-                            
+                        <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
+                            <h3 class="text-xl font-bold mb-6 text-slate-800 dark:text-white flex items-center">
+                                <i class="fa-solid fa-brain text-brand-500 mr-2"></i> Strategic Analytics
+                            </h3>
                             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                <div class="relative bg-white/70 dark:bg-dark-card/70 backdrop-blur-2xl p-6 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/50 dark:border-slate-700/50 lg:col-span-2 hover-lift group overflow-hidden">
-                                    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-brand-400/5 dark:bg-brand-500/5 rounded-full blur-3xl -z-10 group-hover:scale-150 transition-transform duration-1000"></div>
+                                <div class="glass-panel p-6 rounded-xl shadow-lg dark:bg-dark-card lg:col-span-2 hover-lift">
                                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                                        <h4 class="font-black text-slate-800 dark:text-slate-200 tracking-tight flex items-center gap-2">
-                                            <i class="fa-solid fa-arrow-trend-up text-brand-500"></i> Collection Momentum
+                                        <h4 class="font-bold text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wide flex items-center">
+                                            <i class="fa-solid fa-arrow-trend-up mr-2 text-brand-500"></i> Collection Momentum
                                         </h4>
-                                        <div class="flex flex-wrap items-center gap-2 bg-slate-100/50 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm">
+                                        <div class="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
                                             <div class="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
                                                 <i class="fa-solid fa-map-location-dot text-[10px] text-brand-500 opacity-70"></i>
                                                 <select id="momentum-territory" onchange="UI.updateMomentumChart()" class="bg-transparent border-none text-[10px] font-black outline-none cursor-pointer">
@@ -3933,26 +3894,26 @@
                                         <canvas id="admin-global-trend"></canvas>
                                     </div>
                                 </div>
+
                                 <div class="space-y-6">
-                                    <div class="relative bg-white/70 dark:bg-dark-card/70 backdrop-blur-2xl p-6 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/50 dark:border-slate-700/50 hover-lift group overflow-hidden">
-                                        <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-blue-400/10 dark:bg-blue-500/5 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
-                                        <h4 class="font-black text-slate-800 dark:text-slate-200 tracking-tight flex items-center gap-2 mb-6">
-                                            <i class="fa-solid fa-wallet text-blue-500"></i> Channel Mix (MTD)
+                                    <div class="glass-panel p-6 rounded-xl shadow-lg dark:bg-dark-card hover-lift">
+                                        <h4 class="font-bold mb-4 text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                                            <i class="fa-solid fa-wallet mr-2 text-blue-500"></i> Channel Mix (MTD)
                                         </h4>
-                                        <div class="relative h-48 z-10">
+                                        <div class="relative h-48">
                                             <canvas id="admin-mode-chart"></canvas>
                                         </div>
                                     </div>
-                                    <div class="relative bg-white/70 dark:bg-dark-card/70 backdrop-blur-2xl p-6 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/50 dark:border-slate-700/50 hover-lift group overflow-hidden border-l-4 border-l-rose-500">
-                                        <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-rose-400/10 dark:bg-rose-500/5 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
-                                        <h4 class="font-black text-slate-800 dark:text-slate-200 tracking-tight flex items-center gap-2 mb-4">
+
+                                    <div class="glass-panel p-6 rounded-xl shadow-lg dark:bg-dark-card hover-lift border-l-4 border-rose-500">
+                                        <h4 class="font-bold mb-2 text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                                             LMNP Efficiency
                                         </h4>
-                                        <div class="flex justify-between items-end mb-3 relative z-10">
-                                            <span class="text-4xl font-black text-slate-800 dark:text-white tracking-tighter">${metrics.lmNpRecPct}%</span>
-                                            <span class="text-[10px] uppercase font-black text-rose-500 tracking-widest">Rec. of Last Month NP</span>
+                                        <div class="flex justify-between items-end mb-2">
+                                            <span class="text-3xl font-bold text-slate-800 dark:text-white">${metrics.lmNpRecPct}%</span>
+                                            <span class="text-xs text-rose-500 font-medium">Rec. of Last Month NP</span>
                                         </div>
-                                        <div class="w-full bg-slate-200/50 dark:bg-slate-700/50 rounded-full h-3 overflow-hidden shadow-inner mb-3 border border-black/5 dark:border-white/5 relative z-10">
+                                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 mb-2">
                                             <div class="bg-rose-500 h-2 rounded-full transition-all duration-1000" style="width: ${metrics.lmNpRecPct}%"></div>
                                         </div>
                                         <p class="text-xs text-slate-400">Target: <span class="font-medium text-slate-600 dark:text-slate-300">${parseInt(metrics.lmNpTargetAmt).toLocaleString()}</span></p>
