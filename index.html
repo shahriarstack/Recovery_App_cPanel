@@ -7893,7 +7893,7 @@
             Auth.login(username, password, role);
         });
 
-        window.onload = async () => {
+        (async () => {
             const hasSession = !!localStorage.getItem('currentUser');
             if (hasSession) {
                 // If we have a session, keep login hidden and show generic loader
@@ -7937,7 +7937,7 @@
 
             ParticleEngine.init();
             UI.toggleLoader(false);
-        };
+        })();
 
     </script>
 </body>
