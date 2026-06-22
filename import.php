@@ -1,6 +1,6 @@
 <?php
 // import.php
-// This script imports data from neon_backup.json into the MySQL database.
+// This script imports both database schema and data from neon_backup.json into the MySQL database.
 // RUN THIS ONCE AFTER UPLOADING TO CPANEL.
 
 require_once 'config.php';
@@ -14,6 +14,28 @@ echo "<h1>Data Import Tool</h1>";
 echo "<p>Starting import...</p>";
 ob_flush(); flush();
 
+$pdo = getDbConnection();
+
+// STEP 1: Import Schema
+$schemaFile = __DIR__ . '/schema_mysql.sql';
+if (file_exists($schemaFile)) {
+    echo "<p>Found schema file. Creating tables...</p>";
+    ob_flush(); flush();
+    try {
+        $sql = file_get_contents($schemaFile);
+        
+        // Execute the entire SQL script
+        $pdo->exec($sql);
+        echo "<p style='color: green;'>Successfully created database tables!</p>";
+    } catch (Exception $e) {
+        die("<p style='color: red;'>Error creating tables: " . $e->getMessage() . "</p>");
+    }
+} else {
+    echo "<p style='color: orange;'>Warning: schema_mysql.sql not found. Assuming tables already exist.</p>";
+}
+ob_flush(); flush();
+
+// STEP 2: Import JSON Data
 $backupFile = __DIR__ . '/neon_backup.json';
 
 if (!file_exists($backupFile)) {
@@ -26,8 +48,6 @@ $data = json_decode($json, true);
 if (json_last_error() !== JSON_ERROR_NONE) {
     die("Error parsing JSON: " . json_last_error_msg());
 }
-
-$pdo = getDbConnection();
 
 // Disable foreign key checks for the import
 $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
@@ -75,5 +95,5 @@ foreach ($tablesToImport as $table) {
 $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
 
 echo "<h2>Import Complete!</h2>";
-echo "<p>Please delete neon_backup.json and import.php from your server for security.</p>";
+echo "<p>Please delete neon_backup.json, schema_mysql.sql, and import.php from your server for security.</p>";
 ?>
