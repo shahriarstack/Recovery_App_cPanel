@@ -59,10 +59,11 @@ foreach ($tablesToImport as $table) {
         echo "<p>Importing table: <b>$table</b> (" . count($data[$table]) . " rows)...</p>";
         ob_flush(); flush();
         
-        $pdo->beginTransaction();
-        
-        // Empty the table first
+        // TRUNCATE TABLE is a DDL statement and implicitly commits any active transaction in MySQL.
+        // Therefore, we must run TRUNCATE outside the transaction block.
         $pdo->exec("TRUNCATE TABLE `$table`");
+        
+        $pdo->beginTransaction();
         
         if (count($data[$table]) > 0) {
             // Get columns from the first row
