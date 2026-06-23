@@ -1,8 +1,20 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # Route all requests starting with /api/ to api.php
-    # Example: /api/db -> api.php?route=db
+    # 1. Redirect www.recovery.cv-acimotors.com to non-www https
+    RewriteCond %{HTTP_HOST} ^www\.recovery\.cv-acimotors\.com$ [NC]
+    RewriteRule ^(.*)$ https://recovery.cv-acimotors.com/$1 [R=301,L]
+
+    # 2. Redirect recovery-cv-acimotors.com (with or without www) to https://recovery.cv-acimotors.com
+    RewriteCond %{HTTP_HOST} ^(www\.)?recovery-cv-acimotors\.com$ [NC]
+    RewriteRule ^(.*)$ https://recovery.cv-acimotors.com/$1 [R=301,L]
+
+    # 3. Force HTTPS for recovery.cv-acimotors.com
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP_HOST} ^recovery\.cv-acimotors\.com$ [NC]
+    RewriteRule ^(.*)$ https://recovery.cv-acimotors.com/$1 [R=301,L]
+
+    # 4. Route all requests starting with /api/ to api.php
     RewriteRule ^api/(.*)$ api.php?route=$1 [QSA,L]
 </IfModule>
 
