@@ -1274,7 +1274,7 @@
                 const remainingAmt = Math.max(0, presetProjTotal - mtdColl);
                 const rdrr = daysLeft > 0 ? remainingAmt / daysLeft : remainingAmt;
 
-                const rpi = (achievement * 0.4) + (projAcc * 0.2) + (lmNpRecPct * 0.2) + (cureRate * 0.2);
+                const rpi = Math.min(100, (achievement * 0.4) + (projAcc * 0.2) + (lmNpRecPct * 0.2) + (cureRate * 0.2));
 
                 return {
                     targetAmt, targetFiles,
@@ -3442,7 +3442,7 @@
                     }
 
                     // Weighted RPI for Group
-                    sums.rpi = ((parseFloat(sums.achievement) * 0.4) + (projAcc * 0.2) + (lmNpRecPct * 0.2) + (cureRate * 0.2)).toFixed(1);
+                    sums.rpi = Math.min(100, (parseFloat(sums.achievement) * 0.4) + (projAcc * 0.2) + (lmNpRecPct * 0.2) + (cureRate * 0.2)).toFixed(1);
                     
                     // App Use Group Average
                     sums.appUsePct = data.length > 0 ? Number((data.reduce((sum, item) => sum + (parseFloat(item.appUsePct) || 0), 0) / data.length).toFixed(1)) : 0;
@@ -3593,12 +3593,12 @@
                         </div>
                         
                         <!-- GLOBAL RPI BANNER -->
-                        <div class="p-4 rounded-2xl border ${Calc.getRPIBg(metrics.rpi)} flex items-center justify-between shadow-sm hover-lift">
+                        <div class="py-2.5 px-4 rounded-xl border ${Calc.getRPIBg(metrics.rpi)} flex items-center justify-between shadow-sm hover-lift">
                             <div>
-                                <h3 class="text-base font-bold text-slate-800 dark:text-white leading-tight">Global Recovery Index (RPI)</h3>
-                                <p class="text-[11px] opacity-80">Aggregate Performance across all territories</p>
+                                <h3 class="text-sm font-bold text-slate-800 dark:text-white leading-tight">Global Recovery Index (RPI)</h3>
+                                <p class="text-[10px] opacity-80">Aggregate Performance across all territories</p>
                             </div>
-                            <div class="text-3xl font-black ${Calc.getRPIColor(metrics.rpi)}">${metrics.rpi}</div>
+                            <div class="text-xl font-black ${Calc.getRPIColor(metrics.rpi)}">${metrics.rpi}</div>
                         </div>
 
                         <!-- COMPACT METRIC TABLE -->
