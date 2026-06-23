@@ -42,10 +42,17 @@ try {
         case 'db':
             if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception("Method Not Allowed");
 
+            date_default_timezone_set('Asia/Dhaka');
+
             // Return cached data if available (Super fast read!)
             if (file_exists($cacheFile)) {
-                echo file_get_contents($cacheFile);
-                break;
+                $cachedData = json_decode(file_get_contents($cacheFile), true);
+                if (is_array($cachedData)) {
+                    $cachedData['server_date'] = date('Y-m-d');
+                    $cachedData['server_time'] = date('Y-m-d H:i:s');
+                    echo json_encode($cachedData);
+                    break;
+                }
             }
 
             $tables = ['users', 'territories', 'targets', 'projections', 'collections', 'offroad_vehicles', 'settlements', 'vehicle_performance'];
@@ -72,6 +79,10 @@ try {
                 $unlocks[$row['territory_id']] = $row['unlock_until'];
             }
             $result['unlocks'] = $unlocks;
+
+            // Inject server time as well for fresh responses
+            $result['server_date'] = date('Y-m-d');
+            $result['server_time'] = date('Y-m-d H:i:s');
 
             $jsonResponse = json_encode($result);
             

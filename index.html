@@ -830,7 +830,7 @@
 
                 let targetDate;
                 if (!d) {
-                    const now = new Date();
+                    const now = new Date(Date.now() + (Store.clientServerDiff || 0));
                     now.setHours(now.getHours() - cutoffHours);
                     targetDate = now;
                 } else {
@@ -882,6 +882,7 @@
         const Store = {
             cache: null,
             apiUrl: '/api',
+            clientServerDiff: 0,
 
             convertKeys(arr) {
                 if (!arr) return;
@@ -920,6 +921,14 @@
                     if (data.error) {
                         console.error("Backend Error:", data.error);
                         return null;
+                    }
+
+                    // Calculate client-server clock difference if serverTime is provided
+                    if (data.serverTime) {
+                        const serverMs = new Date(data.serverTime.replace(' ', 'T') + '+06:00').getTime();
+                        if (!isNaN(serverMs)) {
+                            Store.clientServerDiff = serverMs - Date.now();
+                        }
                     }
 
                     // If DB is empty (based on territories), seed it
@@ -2161,7 +2170,7 @@
 
                 document.getElementById('user-name').innerText = Auth.currentUser.officerName || Auth.currentUser.username;
                 document.getElementById('user-avatar').innerText = Auth.currentUser.username.charAt(0).toUpperCase();
-                document.getElementById('current-date-display').innerText = new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Dhaka', weekday: 'short', month: 'long', day: 'numeric' });
+                document.getElementById('current-date-display').innerText = new Date(Date.now() + (Store.clientServerDiff || 0)).toLocaleDateString('en-US', { timeZone: 'Asia/Dhaka', weekday: 'short', month: 'long', day: 'numeric' });
 
                 if (Auth.currentUser.role === 'admin') {
                     document.getElementById('admin-nav').classList.remove('hidden');
@@ -5364,9 +5373,9 @@
                         timeZone: 'Asia/Dhaka',
                         hour: 'numeric',
                         hour12: false
-                    }).format(new Date())) || 0;
+                    }).format(new Date(Date.now() + (Store.clientServerDiff || 0)))) || 0;
                 } catch (e) {
-                    hour = new Date().getHours();
+                    hour = new Date(Date.now() + (Store.clientServerDiff || 0)).getHours();
                 }
                 // Check if time is >= 10:00 AM
                 let isLate = hour >= 10;

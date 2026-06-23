@@ -6,6 +6,15 @@
     RewriteRule ^api/(.*)$ api.php?route=$1 [QSA,L]
 </IfModule>
 
+# Prevent caching of index.html and other static files
+<FilesMatch "\.(html|htm|js|css)$">
+    <IfModule mod_headers.c>
+        Header set Cache-Control "max-age=0, no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "Wed, 11 Jan 1984 05:00:00 GMT"
+    </IfModule>
+</FilesMatch>
+
 # Block direct access to cache files for security
 <Files "db_cache.json">
     <IfModule mod_authz_core.c>
