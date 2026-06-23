@@ -828,12 +828,29 @@
                     if (setting) cutoffHours = parseFloat(setting.value) || 0;
                 }
 
+                let targetDate;
                 if (!d) {
                     const now = new Date();
                     now.setHours(now.getHours() - cutoffHours);
-                    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                    targetDate = now;
                 } else {
-                    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                    targetDate = new Date(d);
+                }
+
+                try {
+                    const formatter = new Intl.DateTimeFormat('en-US', {
+                        timeZone: 'Asia/Dhaka',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    });
+                    const parts = formatter.formatToParts(targetDate);
+                    const year = parts.find(p => p.type === 'year').value;
+                    const month = parts.find(p => p.type === 'month').value;
+                    const day = parts.find(p => p.type === 'day').value;
+                    return `${year}-${month}-${day}`;
+                } catch (e) {
+                    return new Date(targetDate.getTime() - targetDate.getTimezoneOffset() * 60000).toISOString().split('T')[0];
                 }
             },
             getActiveMonth() {
@@ -846,14 +863,13 @@
             },
             getMonthBounds() {
                 const activeMonth = this.getActiveMonth();
-                const [year, month] = activeMonth.split('-');
+                const [year, month] = activeMonth.split('-').map(Number);
                 const lastDay = new Date(year, month, 0);
-                const lastDayStr = new Date(lastDay.getTime() - lastDay.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                const lastDayStr = this.getLocalDate(lastDay);
                 
                 // UX Optimization: If physically in next month but active month hasn't changed (extended month),
                 // dynamically extend the endOfMonth boundary to today's date so collections display in history forms.
-                const realToday = new Date();
-                const realTodayStr = new Date(realToday.getTime() - realToday.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                const realTodayStr = this.getLocalDate();
                 const end = realTodayStr > lastDayStr && realTodayStr.startsWith(activeMonth.slice(0, 4)) ? realTodayStr : lastDayStr;
                 
                 return { startOfMonth: `${activeMonth}-01`, endOfMonth: end };
@@ -895,7 +911,7 @@
                         }, 2000);
                     }
 
-                    const res = await fetch(`${this.apiUrl}/db`);
+                    const res = await fetch(`${this.apiUrl}/db?t=${Date.now()}`);
                     if (waitTimeout) clearTimeout(waitTimeout);
                     if (loaderText) loaderText.innerText = "Processing";
 
@@ -1025,7 +1041,7 @@
 
                                 if (migrated) {
                                     console.log("Auto-migration complete. Refreshing UI cache...");
-                                    const refreshRes = await fetch(`${this.apiUrl}/db`);
+                                    const refreshRes = await fetch(`${this.apiUrl}/db?t=${Date.now()}`);
                                     const refreshData = await refreshRes.json();
                                     ['users', 'targets', 'projections', 'collections', 'offroad_vehicles', 'settlements', 'vehicle_performance'].forEach(collection => {
                                         if (refreshData[collection]) this.convertKeys(refreshData[collection]);
@@ -1153,11 +1169,13 @@
                 const db = Store.get();
                 const todayStr = Utils.getLocalDate();
                 const currentMonth = Utils.getActiveMonth();
-                const todayParts = todayStr.split('-');
-                const todayDateObj = new Date(parseInt(todayParts[0]), parseInt(todayParts[1]) - 1, parseInt(todayParts[2]));
-                const yesterdayDateObj = new Date(todayDateObj);
-                yesterdayDateObj.setDate(yesterdayDateObj.getDate() - 1);
-                const yesterdayStr = Utils.getLocalDate(yesterdayDateObj);
+                const todayParts = todayStr.split('-').map(Number);
+                
+                // Pure UTC calendar calculations to avoid client timezone offset shift bugs
+                const todayUTC = new Date(Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2]));
+                const yesterdayUTC = new Date(todayUTC);
+                yesterdayUTC.setUTCDate(yesterdayUTC.getUTCDate() - 1);
+                const yesterdayStr = yesterdayUTC.toISOString().split('T')[0];
 
                 let collections = db.collections.filter(c => (c.activeMonth || c.active_month || c.date.slice(0, 7)) === currentMonth);
                 let targets = db.targets.filter(t => t.month === currentMonth);
@@ -1230,13 +1248,12 @@
 
                 // Rigorous Days Left & Run Rate math for both standard and extended months
                 const [activeYear, activeMonthNum] = currentMonth.split('-').map(Number);
-                const realToday = new Date();
-                const realTodayStr = new Date(realToday.getTime() - realToday.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                const realTodayStr = Utils.getLocalDate();
                 
                 let daysLeft = 0;
                 if (realTodayStr.slice(0, 7) === currentMonth) {
                     const daysInMonth = new Date(activeYear, activeMonthNum, 0).getDate();
-                    const dayOfMonth = todayDateObj.getDate();
+                    const dayOfMonth = todayParts[2];
                     daysLeft = daysInMonth - dayOfMonth;
                 } else if (realTodayStr.slice(0, 7) < currentMonth) {
                     const daysInMonth = new Date(activeYear, activeMonthNum, 0).getDate();
@@ -1338,7 +1355,17 @@
                         for (const proj of projs) {
                             if (proj.timestamp) {
                                 const pTime = new Date(Number(proj.timestamp));
-                                if (pTime.getHours() < 10) {
+                                let pHour = 12;
+                                try {
+                                    pHour = parseInt(new Intl.DateTimeFormat('en-US', {
+                                        timeZone: 'Asia/Dhaka',
+                                        hour: 'numeric',
+                                        hour12: false
+                                    }).format(pTime)) || 0;
+                                } catch (e) {
+                                    pHour = pTime.getHours();
+                                }
+                                if (pHour < 10) {
                                     isOnTime = true;
                                     break;
                                 }
@@ -1420,7 +1447,17 @@
                         for (const proj of projs) {
                             if (proj.timestamp) {
                                 const pTime = new Date(Number(proj.timestamp));
-                                if (pTime.getHours() < 10) {
+                                let pHour = 12;
+                                try {
+                                    pHour = parseInt(new Intl.DateTimeFormat('en-US', {
+                                        timeZone: 'Asia/Dhaka',
+                                        hour: 'numeric',
+                                        hour12: false
+                                    }).format(pTime)) || 0;
+                                } catch (e) {
+                                    pHour = pTime.getHours();
+                                }
+                                if (pHour < 10) {
                                     isOnTime = true;
                                     break;
                                 }
@@ -2000,8 +2037,25 @@
                 const startDateVal = document.getElementById('momentum-start')?.value;
                 const endDateVal = document.getElementById('momentum-end')?.value;
 
-                const start = startDateVal ? new Date(startDateVal) : new Date(Date.now() - 29 * 24 * 60 * 60 * 1000);
-                const end = endDateVal ? new Date(endDateVal) : new Date(Date.now());
+                let start, end;
+                if (startDateVal) {
+                    const [y, m, d] = startDateVal.split('-').map(Number);
+                    start = new Date(Date.UTC(y, m - 1, d));
+                } else {
+                    const todayStr = Utils.getLocalDate();
+                    const [y, m, d] = todayStr.split('-').map(Number);
+                    start = new Date(Date.UTC(y, m - 1, d));
+                    start.setUTCDate(start.getUTCDate() - 29);
+                }
+
+                if (endDateVal) {
+                    const [y, m, d] = endDateVal.split('-').map(Number);
+                    end = new Date(Date.UTC(y, m - 1, d));
+                } else {
+                    const todayStr = Utils.getLocalDate();
+                    const [y, m, d] = todayStr.split('-').map(Number);
+                    end = new Date(Date.UTC(y, m - 1, d));
+                }
 
                 if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
 
@@ -2009,15 +2063,13 @@
                 const data = [];
 
                 let current = new Date(start);
-                current.setHours(0, 0, 0, 0);
-                const endOfDay = new Date(end);
-                endOfDay.setHours(23, 59, 59, 999);
+                const endVal = end.getTime();
 
-                while (current <= endOfDay) {
-                    const dateStr = Utils.getLocalDate(current);
-                    const day = String(current.getDate()).padStart(2, '0');
+                while (current.getTime() <= endVal) {
+                    const dateStr = current.toISOString().split('T')[0];
+                    const day = String(current.getUTCDate()).padStart(2, '0');
                     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                    const month = monthNames[current.getMonth()];
+                    const month = monthNames[current.getUTCMonth()];
                     labels.push(`${day} ${month}`);
 
                     const dailySum = db.collections.filter(c => {
@@ -2027,7 +2079,7 @@
                     }).reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
 
                     data.push(dailySum);
-                    current.setDate(current.getDate() + 1);
+                    current.setUTCDate(current.getUTCDate() + 1);
                 }
 
                 Charts.renderLine('admin-global-trend', labels, data);
@@ -2109,7 +2161,7 @@
 
                 document.getElementById('user-name').innerText = Auth.currentUser.officerName || Auth.currentUser.username;
                 document.getElementById('user-avatar').innerText = Auth.currentUser.username.charAt(0).toUpperCase();
-                document.getElementById('current-date-display').innerText = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' });
+                document.getElementById('current-date-display').innerText = new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Dhaka', weekday: 'short', month: 'long', day: 'numeric' });
 
                 if (Auth.currentUser.role === 'admin') {
                     document.getElementById('admin-nav').classList.remove('hidden');
@@ -3295,7 +3347,9 @@
                 const activeMonth = db.system_settings?.find(s => s.key === 'active_month')?.value || 'N/A';
 
                 // Calculate dynamic expected target achievement for the current day of the month
-                const todayDate = new Date();
+                const todayStr = Utils.getLocalDate();
+                const [y, m, d] = todayStr.split('-').map(Number);
+                const todayDate = new Date(y, m - 1, d);
                 let expectedTarget = 100;
                 if (activeMonth && activeMonth !== 'N/A') {
                     const activeLower = activeMonth.toLowerCase();
@@ -5304,7 +5358,16 @@
             },
 
             renderProjectionForm() {
-                const hour = new Date().getHours();
+                let hour = 9; // default
+                try {
+                    hour = parseInt(new Intl.DateTimeFormat('en-US', {
+                        timeZone: 'Asia/Dhaka',
+                        hour: 'numeric',
+                        hour12: false
+                    }).format(new Date())) || 0;
+                } catch (e) {
+                    hour = new Date().getHours();
+                }
                 // Check if time is >= 10:00 AM
                 let isLate = hour >= 10;
 
@@ -6341,14 +6404,14 @@
             getDailyTrendData(tId) {
                 const db = Store.get();
                 const todayStr = Utils.getLocalDate();
-                const todayParts = todayStr.split('-');
-                const today = new Date(parseInt(todayParts[0]), parseInt(todayParts[1]) - 1, parseInt(todayParts[2]));
+                const todayParts = todayStr.split('-').map(Number);
+                const todayUTC = new Date(Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2]));
                 const labels = [];
                 const data = [];
                 for (let i = 6; i >= 0; i--) {
-                    const d = new Date(today);
-                    d.setDate(today.getDate() - i);
-                    const dateStr = Utils.getLocalDate(d);
+                    const tempUTC = new Date(todayUTC);
+                    tempUTC.setUTCDate(todayUTC.getUTCDate() - i);
+                    const dateStr = tempUTC.toISOString().split('T')[0];
                     labels.push(dateStr.slice(5));
                     const sum = db.collections.filter(c => (c.territoryId === tId || c.territory_id === tId) && c.date === dateStr).reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
                     data.push(sum);
