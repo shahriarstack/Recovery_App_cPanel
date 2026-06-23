@@ -2472,11 +2472,11 @@
                 const territoryId = formData.get('assignedTerritories');
 
                 const payload = {
-                    officerName,
+                    officer_name: officerName,
                     username,
                     password,
                     role: 'area_head',
-                    territoryId
+                    territory_id: territoryId
                 };
 
                 if (userId) {

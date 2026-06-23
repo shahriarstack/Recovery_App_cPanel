@@ -100,14 +100,34 @@ try {
             $validTables = ['collections', 'projections', 'offroad_vehicles', 'settlements', 'territories', 'users', 'system_settings'];
             if (!in_array($collection, $validTables)) throw new Exception("Invalid collection specified");
 
-            // Filter out 'id' from keys for UPDATE/INSERT
-            $keys = array_filter(array_keys($item), function($k) { return $k !== 'id'; });
+            // Get valid columns for the table dynamically to prevent SQL errors from frontend properties
+            $q = $pdo->query("DESCRIBE `$collection`");
+            $validColumns = $q->fetchAll(PDO::FETCH_COLUMN);
+
+            // Filter and map item keys to actual database columns
+            $dbItem = [];
+            foreach ($item as $key => $val) {
+                if ($key === 'id') continue;
+                
+                if (in_array($key, $validColumns)) {
+                    $dbItem[$key] = $val;
+                    continue;
+                }
+                
+                // Convert camelCase to snake_case
+                $snakeKey = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $key));
+                if (in_array($snakeKey, $validColumns)) {
+                    $dbItem[$snakeKey] = $val;
+                }
+            }
+
+            $keys = array_keys($dbItem);
             
             if (!empty($item['id']) && strpos((string)$item['id'], 'new_') !== 0) {
                 // UPDATE
                 $setClause = implode(', ', array_map(function($k) { return "`$k` = ?"; }, $keys));
                 $values = [];
-                foreach ($keys as $k) $values[] = $item[$k];
+                foreach ($keys as $k) $values[] = $dbItem[$k];
                 $values[] = $item['id'];
 
                 $stmt = $pdo->prepare("UPDATE `$collection` SET $setClause WHERE id = ?");
@@ -117,15 +137,13 @@ try {
                 echo json_encode($item);
             } else {
                 // INSERT
-                unset($item['id']);
-                $insertKeys = array_keys($item);
-                $columns = implode(', ', array_map(function($k) { return "`$k`"; }, $insertKeys));
-                $placeholders = implode(', ', array_fill(0, count($insertKeys), '?'));
+                $columnsList = implode(', ', array_map(function($k) { return "`$k`"; }, $keys));
+                $placeholders = implode(', ', array_fill(0, count($keys), '?'));
                 
                 $values = [];
-                foreach ($insertKeys as $k) $values[] = $item[$k];
+                foreach ($keys as $k) $values[] = $dbItem[$k];
 
-                $stmt = $pdo->prepare("INSERT INTO `$collection` ($columns) VALUES ($placeholders)");
+                $stmt = $pdo->prepare("INSERT INTO `$collection` ($columnsList) VALUES ($placeholders)");
                 $stmt->execute($values);
                 $item['id'] = $pdo->lastInsertId();
                 

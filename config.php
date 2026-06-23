@@ -24,7 +24,12 @@ function getDbConnection() {
     ];
 
     try {
-        return new PDO($dsn, DB_USER, DB_PASS, $options);
+        $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+        // Automatically check and add the requested_territories column to users table if missing
+        try {
+            $pdo->exec("ALTER TABLE users ADD COLUMN requested_territories VARCHAR(1000) DEFAULT NULL");
+        } catch (\Exception $ex) {}
+        return $pdo;
     } catch (\PDOException $e) {
         // Return a JSON error if connection fails
         header('Content-Type: application/json');

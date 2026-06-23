@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
     officer_name VARCHAR(255),
     role VARCHAR(20) DEFAULT 'officer',
     password VARCHAR(255) NOT NULL,
-    territory_id VARCHAR(1000) -- Increased size to accommodate multiple comma-separated IDs
+    territory_id VARCHAR(1000), -- Increased size to accommodate multiple comma-separated IDs
+    requested_territories VARCHAR(1000)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Territories table
