@@ -23,6 +23,11 @@
 
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Flatpickr Datepicker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
     <script>
         tailwind.config = {
@@ -372,6 +377,67 @@
         .floating-dock.visible {
             transform: translateX(-50%) translateY(0);
             opacity: 1;
+        }
+
+        /* Flatpickr Premium Dark Mode Overrides */
+        .dark .flatpickr-calendar {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5) !important;
+        }
+        .dark .flatpickr-months .flatpickr-month {
+            background: #1e293b !important;
+            color: #f1f5f9 !important;
+        }
+        .dark .flatpickr-current-month .flatpickr-monthDropdown-months {
+            background: #1e293b !important;
+            color: #f1f5f9 !important;
+        }
+        .dark .flatpickr-calendar .flatpickr-innerContainer {
+            background: #1e293b !important;
+        }
+        .dark .flatpickr-calendar .flatpickr-weekdays {
+            background: #1e293b !important;
+        }
+        .dark span.flatpickr-weekday {
+            background: #1e293b !important;
+            color: #94a3b8 !important;
+        }
+        .dark .flatpickr-day {
+            color: #cbd5e1 !important;
+        }
+        .dark .flatpickr-day.flatpickr-disabled, 
+        .dark .flatpickr-day.flatpickr-disabled:hover {
+            color: #475569 !important;
+        }
+        .dark .flatpickr-day:hover,
+        .dark .flatpickr-day:focus {
+            background: #334155 !important;
+            border-color: #334155 !important;
+            color: #fff !important;
+        }
+        .dark .flatpickr-day.selected,
+        .dark .flatpickr-day.startRange,
+        .dark .flatpickr-day.endRange,
+        .dark .flatpickr-day.selected.inRange,
+        .dark .flatpickr-day.startRange.inRange,
+        .dark .flatpickr-day.endRange.inRange,
+        .dark .flatpickr-day.selected:focus,
+        .dark .flatpickr-day.startRange:focus,
+        .dark .flatpickr-day.endRange:focus,
+        .dark .flatpickr-day.selected:hover,
+        .dark .flatpickr-day.startRange:hover,
+        .dark .flatpickr-day.endRange:hover,
+        .dark .flatpickr-day.selected.prevMonthDay,
+        .dark .flatpickr-day.selected.nextMonthDay {
+            background: #10b981 !important;
+            border-color: #10b981 !important;
+            color: #fff !important;
+        }
+        .dark .flatpickr-months .flatpickr-prev-month, 
+        .dark .flatpickr-months .flatpickr-next-month {
+            color: #cbd5e1 !important;
+            fill: #cbd5e1 !important;
         }
     </style>
 </head>
@@ -5479,33 +5545,62 @@
                     </div>
 
                     <form id="collection-form" onsubmit="UI.handleCollectionSubmit(event)" class="space-y-3 sm:space-y-4 relative z-10">
-                        <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1 flex items-center justify-between">
                                     <span>Date</span>
                                     <span id="date-badge" class="text-[9px] font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30 px-1.5 py-0.5 rounded border border-brand-200/50 dark:border-brand-800/30">Today</span>
                                 </label>
-                                <input type="date" id="coll-date" class="w-full px-3 py-0 h-10 rounded-lg border bg-white dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-xs sm:text-sm block m-0 font-medium text-slate-700 dark:text-slate-200" onchange="UI.handleCollectionDateChange(this)">
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500">
+                                        <i class="fa-solid fa-calendar"></i>
+                                    </span>
+                                    <input type="text" id="coll-date" class="w-full pl-9 pr-3 py-0 h-10 rounded-lg border bg-white dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-xs sm:text-sm block m-0 font-semibold text-slate-700 dark:text-slate-200 shadow-sm cursor-pointer">
+                                </div>
+                                <div class="flex items-center gap-2 mt-1.5">
+                                    <button type="button" onclick="UI.quickSetCollectionDate('today')" class="text-[9px] font-bold px-2 py-0.5 rounded bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:hover:bg-brand-800/40 dark:text-brand-400 border border-brand-200/50 dark:border-brand-800/30 transition flex items-center gap-1">
+                                        Today
+                                    </button>
+                                    <button type="button" onclick="UI.quickSetCollectionDate('yesterday')" class="text-[9px] font-bold px-2 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:hover:bg-amber-800/40 dark:text-amber-400 border border-amber-200/50 dark:border-amber-800/30 transition flex items-center gap-1">
+                                        Yesterday
+                                    </button>
+                                </div>
                             </div>
                             <div>
                                 <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Customer Code</label>
-                                <input type="text" id="coll-code" class="w-full px-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-xs sm:text-sm appearance-none block m-0" placeholder="C-1052" required>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500">
+                                        <i class="fa-solid fa-user-tag text-xs"></i>
+                                    </span>
+                                    <input type="text" id="coll-code" class="w-full pl-9 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-xs sm:text-sm appearance-none block m-0 font-semibold text-slate-700 dark:text-slate-200 shadow-sm" placeholder="C-1052" required>
+                                </div>
                             </div>
                         </div>
 
                         <div>
                             <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Money Receipt No</label>
-                            <input type="text" id="coll-receipt" class="w-full px-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-xs sm:text-sm appearance-none block m-0">
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500">
+                                    <i class="fa-solid fa-file-invoice text-xs"></i>
+                                </span>
+                                <input type="text" id="coll-receipt" class="w-full pl-9 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-xs sm:text-sm appearance-none block m-0 font-semibold text-slate-700 dark:text-slate-200 shadow-sm">
+                            </div>
                         </div>
 
                         <div class="grid grid-cols-2 gap-3 sm:gap-4">
                             <div>
                                 <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Regular Amount</label>
-                                <input type="number" id="coll-reg-amount" class="w-full px-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-sm sm:text-base font-bold text-slate-700 dark:text-slate-200 appearance-none block m-0" placeholder="0.00">
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500 font-bold text-xs">৳</span>
+                                    <input type="number" id="coll-reg-amount" class="w-full pl-7 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-sm sm:text-base font-bold text-slate-700 dark:text-slate-200 appearance-none block m-0 shadow-sm" placeholder="0.00">
+                                </div>
                             </div>
                             <div>
                                 <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Advance Amount</label>
-                                <input type="number" id="coll-adv-amount" class="w-full px-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-sm sm:text-base font-bold text-slate-700 dark:text-slate-200 appearance-none block m-0" placeholder="0.00">
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500 font-bold text-xs">৳</span>
+                                    <input type="number" id="coll-adv-amount" class="w-full pl-7 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-sm sm:text-base font-bold text-slate-700 dark:text-slate-200 appearance-none block m-0 shadow-sm" placeholder="0.00">
+                                </div>
                             </div>
                         </div>
 
@@ -5537,7 +5632,17 @@
                 const collDateInput = document.getElementById('coll-date');
                 const today = Utils.getLocalDate();
                 collDateInput.value = today;
-                collDateInput.max = today;
+                
+                // Initialize Flatpickr
+                flatpickr(collDateInput, {
+                    maxDate: today,
+                    dateFormat: "Y-m-d",
+                    defaultDate: today,
+                    disableMobile: "true",
+                    onChange: function(selectedDates, dateStr, instance) {
+                        UI.handleCollectionDateChange({ value: dateStr });
+                    }
+                });
             },
 
             // --- DATA ENTRY PANEL ---
@@ -5951,6 +6056,25 @@
                 })();
             },
 
+            quickSetCollectionDate(dateType) {
+                const today = Utils.getLocalDate();
+                let targetDate = today;
+                if (dateType === 'yesterday') {
+                    const yesterday = new Date(new Date(today) - 24 * 60 * 60 * 1000);
+                    targetDate = Utils.getLocalDate(yesterday);
+                }
+                
+                const collDateInput = document.getElementById('coll-date');
+                if (collDateInput) {
+                    if (collDateInput._flatpickr) {
+                        collDateInput._flatpickr.setDate(targetDate, true);
+                    } else {
+                        collDateInput.value = targetDate;
+                        UI.handleCollectionDateChange(collDateInput);
+                    }
+                }
+            },
+
             handleCollectionDateChange(input) {
                 const badge = document.getElementById('date-badge');
                 if (!badge) return;
@@ -6035,7 +6159,9 @@
                         
                         const collDateInput = document.getElementById('coll-date');
                         collDateInput.value = todayStr;
-                        collDateInput.max = todayStr;
+                        if (collDateInput._flatpickr) {
+                            collDateInput._flatpickr.setDate(todayStr, false);
+                        }
                         const badge = document.getElementById('date-badge');
                         if (badge) {
                             badge.innerText = 'Today';
