@@ -6414,6 +6414,30 @@
                     return;
                 }
 
+                const todayStr = Utils.getLocalDate();
+                const selectedDate = document.getElementById('coll-date').value || todayStr;
+                
+                if (selectedDate > todayStr) {
+                    alert("Future dates are not allowed for collection entry.");
+                    return;
+                }
+
+                const tId = this.getCurrentTerritoryId();
+
+                const regAmt = parseFloat(document.getElementById('coll-reg-amount').value) || 0;
+                const advAmt = parseFloat(document.getElementById('coll-adv-amount').value) || 0;
+                const totalAmt = regAmt + advAmt;
+
+                if (totalAmt <= 0) {
+                    alert("Please enter a valid amount (Regular or Advance).");
+                    return;
+                }
+
+                const customerCode = document.getElementById('coll-code').value;
+                const receipt = document.getElementById('coll-receipt').value;
+                const mode = document.getElementById('coll-mode').value;
+                const isLmNp = document.getElementById('coll-lmnp').checked;
+
                 // Single Entry Mode (Existing logic)
                 UI.toggleLoader(true);
                 (async () => {
