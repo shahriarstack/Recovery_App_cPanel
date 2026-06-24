@@ -5554,11 +5554,12 @@
                         </button>
                     </div>
 
-                    <form id="collection-form" onsubmit="UI.handleCollectionSubmit(event)" class="space-y-3 sm:space-y-4 relative z-10">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <form id="collection-form" onsubmit="UI.handleCollectionSubmit(event)" class="space-y-4 relative z-10">
+                        <!-- Global Shared Fields: Date & Payment Mode -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-slate-200/60 dark:border-slate-700/50">
                             <div>
                                 <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1 flex items-center justify-between">
-                                    <span>Date</span>
+                                    <span>Collection Date</span>
                                     <span id="date-badge" class="text-[9px] font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30 px-1.5 py-0.5 rounded border border-brand-200/50 dark:border-brand-800/30">Today</span>
                                 </label>
                                 <div class="relative">
@@ -5577,107 +5578,88 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Customer Code</label>
+                                <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Payment Mode</label>
                                 <div class="relative">
                                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500">
-                                        <i class="fa-solid fa-user-tag text-xs"></i>
+                                        <i class="fa-solid fa-money-bill-wave text-xs"></i>
                                     </span>
-                                    <input type="text" id="coll-code" class="w-full pl-9 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-xs sm:text-sm appearance-none block m-0 font-semibold text-slate-700 dark:text-slate-200 shadow-sm" placeholder="C-1052" required>
+                                    <select id="coll-mode" class="w-full pl-9 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 bg-white dark:bg-slate-800 text-xs sm:text-sm appearance-none block m-0 font-semibold text-slate-700 dark:text-slate-200">
+                                        <option>Bank Transfer</option>
+                                        <option>bKash</option>
+                                        <option>Cheque</option>
+                                        <option>Cash</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Money Receipt No</label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500">
-                                    <i class="fa-solid fa-file-invoice text-xs"></i>
-                                </span>
-                                <input type="text" id="coll-receipt" class="w-full pl-9 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-xs sm:text-sm appearance-none block m-0 font-semibold text-slate-700 dark:text-slate-200 shadow-sm">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3 sm:gap-4">
-                            <div>
-                                <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Regular Amount</label>
-                                <div class="relative">
-                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500 font-bold text-xs">৳</span>
-                                    <input type="number" id="coll-reg-amount" class="w-full pl-7 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-sm sm:text-base font-bold text-slate-700 dark:text-slate-200 appearance-none block m-0 shadow-sm" placeholder="0.00">
+                        <!-- 1. SINGLE ENTRY VIEW -->
+                        <div id="single-entry-fields" class="space-y-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Customer Code</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500">
+                                            <i class="fa-solid fa-user-tag text-xs"></i>
+                                        </span>
+                                        <input type="text" id="coll-code" class="w-full pl-9 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-xs sm:text-sm appearance-none block m-0 font-semibold text-slate-700 dark:text-slate-200 shadow-sm" placeholder="C-1052">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Money Receipt No</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500">
+                                            <i class="fa-solid fa-file-invoice text-xs"></i>
+                                        </span>
+                                        <input type="text" id="coll-receipt" class="w-full pl-9 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-xs sm:text-sm appearance-none block m-0 font-semibold text-slate-700 dark:text-slate-200 shadow-sm">
+                                    </div>
                                 </div>
                             </div>
-                            <div>
-                                <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Advance Amount</label>
-                                <div class="relative">
-                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500 font-bold text-xs">৳</span>
-                                    <input type="number" id="coll-adv-amount" class="w-full pl-7 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-sm sm:text-base font-bold text-slate-700 dark:text-slate-200 appearance-none block m-0 shadow-sm" placeholder="0.00">
+
+                            <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                                <div>
+                                    <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Regular Amount</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500 font-bold text-xs">৳</span>
+                                        <input type="number" id="coll-reg-amount" class="w-full pl-7 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-sm sm:text-base font-bold text-slate-700 dark:text-slate-200 appearance-none block m-0 shadow-sm" placeholder="0.00">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Advance Amount</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500 font-bold text-xs">৳</span>
+                                        <input type="number" id="coll-adv-amount" class="w-full pl-7 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-sm sm:text-base font-bold text-slate-700 dark:text-slate-200 appearance-none block m-0 shadow-sm" placeholder="0.00">
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                            <div>
-                                <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Payment Mode</label>
-                                <select id="coll-mode" class="w-full px-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 bg-white dark:bg-slate-800 text-xs sm:text-sm appearance-none block m-0">
-                                    <option>Bank Transfer</option>
-                                    <option>bKash</option>
-                                    <option>Cheque</option>
-                                    <option>Cash</option>
-                                </select>
-                            </div>
-                            <div class="flex items-end">
-                                <label class="flex items-center space-x-2 px-3 h-10 border rounded-lg w-full cursor-pointer hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800 transition">
+                            <div class="flex justify-end pt-1">
+                                <label class="flex items-center space-x-2 cursor-pointer">
                                     <input type="checkbox" id="coll-lmnp" class="w-4 h-4 text-brand-600 rounded focus:ring-brand-500 shadow-sm m-0">
                                     <span class="text-[10px] sm:text-xs font-bold text-slate-600 dark:text-slate-300">Last Month NP Recovery?</span>
                                 </label>
                             </div>
-                        </div>
 
-                        <button type="submit" id="coll-submit-btn" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold h-12 rounded-lg shadow-lg mt-4 transition transform active:scale-95 text-sm sm:text-base flex items-center justify-center">
-                            Save Entry
-                        </button>
-                    </form>
-
-                    <!-- Batch Queue Panel (Hidden by default) -->
-                    <div id="batch-queue-container" class="hidden mt-6 pt-6 border-t border-slate-200 dark:border-slate-700/50 relative z-10">
-                        <div class="flex justify-between items-center mb-3">
-                            <h3 class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                                <i class="fa-solid fa-list-ul text-brand-500"></i>
-                                Pending Batch Queue (<span id="batch-count">0</span>)
-                            </h3>
-                            <button type="button" onclick="UI.clearBatchQueue()" class="text-[10px] text-rose-500 hover:text-rose-600 font-bold flex items-center gap-1 transition">
-                                <i class="fa-solid fa-trash-can"></i> Clear All
+                            <button type="submit" id="coll-submit-btn" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold h-12 rounded-lg shadow-lg mt-4 transition transform active:scale-95 text-sm sm:text-base flex items-center justify-center">
+                                Save Entry
                             </button>
                         </div>
-                        
-                        <div class="overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-700/50 max-h-[220px] scrollbar-thin">
-                            <table class="w-full text-xs text-left border-collapse">
-                                <thead class="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[9px]">
-                                    <tr>
-                                        <th class="p-2.5">Date</th>
-                                        <th class="p-2.5">Cust. Code</th>
-                                        <th class="p-2.5 text-right">Reg (৳)</th>
-                                        <th class="p-2.5 text-right">Adv (৳)</th>
-                                        <th class="p-2.5 text-center">Mode</th>
-                                        <th class="p-2.5 text-center">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="batch-queue-body" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-600 dark:text-slate-300">
-                                    <tr>
-                                        <td colspan="6" class="p-8 text-center text-slate-400 font-medium italic">No pending items in queue</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+
+                        <!-- 2. BATCH/MULTIPLE ENTRY VIEW (Hidden by default) -->
+                        <div id="bulk-entry-fields" class="hidden space-y-4">
+                            <div id="bulk-customers-container" class="space-y-4">
+                                <!-- Dynamically populated by UI.renderBulkCustomerInputs() -->
+                            </div>
+                            
+                            <button type="button" onclick="UI.addBulkCustomer()" class="w-full py-3 border-2 border-dashed border-slate-300 hover:border-brand-500 dark:border-slate-600 dark:hover:border-brand-500 text-slate-500 hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-400 rounded-xl transition text-xs font-bold flex items-center justify-center gap-1.5 hover-lift">
+                                <i class="fa-solid fa-plus-circle text-sm"></i> Add Another Customer
+                            </button>
+                            
+                            <button type="button" onclick="UI.submitBulkCustomers()" id="bulk-submit-btn" class="w-full bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-700 hover:to-emerald-600 text-white font-bold h-12 rounded-lg shadow-lg mt-4 transition transform active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-cloud-arrow-up"></i> Submit Batch Collections
+                            </button>
                         </div>
-                        
-                        <div class="flex justify-between items-center mt-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-750/30 text-xs font-bold text-slate-700 dark:text-slate-300">
-                            <span>Total Batch Amount:</span>
-                            <span class="text-brand-600 dark:text-brand-400 text-sm">৳<span id="batch-total">0.00</span></span>
-                        </div>
-                        
-                        <button type="button" onclick="UI.submitBatchQueue()" id="batch-submit-btn" class="w-full bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-700 hover:to-emerald-600 text-white font-bold h-12 rounded-lg shadow-lg mt-4 transition transform active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-2" disabled>
-                            <i class="fa-solid fa-cloud-arrow-up"></i> Submit Batch (0 Entries)
-                        </button>
-                    </div>
+                    </form>
                 </div>
             </div>
             `;
@@ -5697,7 +5679,11 @@
                 });
 
                 // Reset batch queue state on load
-                UI.collectionBatchQueue = [];
+                UI.batchCustomers = [
+                    { code: '', receipt: '', reg: '', adv: '', lmnp: false },
+                    { code: '', receipt: '', reg: '', adv: '', lmnp: false },
+                    { code: '', receipt: '', reg: '', adv: '', lmnp: false }
+                ];
                 UI.collectionEntryMode = 'single';
             },
 
@@ -6164,143 +6150,256 @@
                 UI.collectionEntryMode = mode;
                 const tabSingle = document.getElementById('tab-single');
                 const tabBulk = document.getElementById('tab-bulk');
-                const queueContainer = document.getElementById('batch-queue-container');
-                const submitBtn = document.getElementById('coll-submit-btn');
+                const singleFields = document.getElementById('single-entry-fields');
+                const bulkFields = document.getElementById('bulk-entry-fields');
 
                 if (mode === 'single') {
                     if (tabSingle) {
-                        tabSingle.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm flex items-center justify-center gap-2";
+                        tabSingle.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-white dark:bg-slate-750 text-brand-600 dark:text-brand-400 shadow-sm flex items-center justify-center gap-2";
                     }
                     if (tabBulk) {
                         tabBulk.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 flex items-center justify-center gap-2";
                     }
-                    if (queueContainer) queueContainer.classList.add('hidden');
-                    if (submitBtn) {
-                        submitBtn.innerHTML = "Save Entry";
-                        submitBtn.className = "w-full bg-brand-600 hover:bg-brand-700 text-white font-bold h-12 rounded-lg shadow-lg mt-4 transition transform active:scale-95 text-sm sm:text-base flex items-center justify-center";
-                    }
+                    if (singleFields) singleFields.classList.remove('hidden');
+                    if (bulkFields) bulkFields.classList.add('hidden');
                 } else {
                     if (tabSingle) {
                         tabSingle.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 flex items-center justify-center gap-2";
                     }
                     if (tabBulk) {
-                        tabBulk.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm flex items-center justify-center gap-2";
+                        tabBulk.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-white dark:bg-slate-750 text-brand-600 dark:text-brand-400 shadow-sm flex items-center justify-center gap-2";
                     }
-                    if (queueContainer) queueContainer.classList.remove('hidden');
-                    if (submitBtn) {
-                        submitBtn.innerHTML = "<i class='fa-solid fa-plus mr-1.5'></i> Add to Batch Queue";
-                        submitBtn.className = "w-full bg-gradient-to-r from-brand-500 to-emerald-600 hover:from-brand-600 hover:to-emerald-700 text-white font-bold h-12 rounded-lg shadow-lg mt-4 transition transform active:scale-95 text-sm sm:text-base flex items-center justify-center";
-                    }
-                    UI.renderBatchQueue();
+                    if (singleFields) singleFields.classList.add('hidden');
+                    if (bulkFields) bulkFields.classList.remove('hidden');
+                    
+                    UI.renderBulkCustomerInputs();
                 }
             },
 
-            renderBatchQueue() {
-                const body = document.getElementById('batch-queue-body');
-                const countSpan = document.getElementById('batch-count');
-                const totalSpan = document.getElementById('batch-total');
-                const batchSubmitBtn = document.getElementById('batch-submit-btn');
+            renderBulkCustomerInputs() {
+                const container = document.getElementById('bulk-customers-container');
+                if (!container) return;
                 
-                if (!body) return;
-                
-                const queue = UI.collectionBatchQueue || [];
-                countSpan.innerText = queue.length;
-                
-                if (queue.length === 0) {
-                    body.innerHTML = `
-                        <tr>
-                            <td colspan="6" class="p-8 text-center text-slate-400 font-medium italic">No pending items in queue</td>
-                        </tr>
-                    `;
-                    totalSpan.innerText = "0.00";
-                    if (batchSubmitBtn) {
-                        batchSubmitBtn.disabled = true;
-                        batchSubmitBtn.innerText = "Submit Batch (0 Entries)";
-                        batchSubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                        batchSubmitBtn.classList.remove('hover:from-brand-700', 'hover:to-emerald-600');
-                    }
-                    return;
-                }
-                
-                let totalAmount = 0;
-                let rowsHtml = '';
-                
-                queue.forEach((item, index) => {
-                    const total = parseFloat(item.amount) || 0;
-                    totalAmount += total;
-                    
-                    rowsHtml += `
-                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
-                            <td class="p-2.5 font-medium">${item.date}</td>
-                            <td class="p-2.5 font-bold text-slate-700 dark:text-slate-200">${item.customer_code}</td>
-                            <td class="p-2.5 text-right font-mono text-slate-600 dark:text-slate-400">${parseFloat(item.regular_amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                            <td class="p-2.5 text-right font-mono text-slate-600 dark:text-slate-400">${parseFloat(item.advance_amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                            <td class="p-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">${item.mode}</span></td>
-                            <td class="p-2.5 text-center">
-                                <button type="button" onclick="UI.removeBatchQueueItem(${index})" class="text-rose-500 hover:text-rose-600 hover:scale-110 transition p-1">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                </button>
-                            </td>
-                        </tr>
+                let html = '';
+                UI.batchCustomers.forEach((item, index) => {
+                    html += `
+                    <div class="relative bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700 p-4 rounded-xl space-y-3 animate-entry">
+                        <!-- Card Header -->
+                        <div class="flex justify-between items-center pb-2 border-b border-slate-200/50 dark:border-slate-700/50">
+                            <span class="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                                <span class="w-4 h-4 rounded-full bg-brand-500 text-white flex items-center justify-center text-[9px] font-bold">${index + 1}</span>
+                                Customer Details
+                            </span>
+                            ${UI.batchCustomers.length > 1 ? `
+                            <button type="button" onclick="UI.removeBulkCustomer(${index})" class="text-slate-400 hover:text-rose-505 dark:hover:text-rose-400 hover:scale-105 transition p-1 text-[10px] font-bold flex items-center gap-1">
+                                <i class="fa-solid fa-trash-can text-sm"></i> Remove
+                            </button>
+                            ` : ''}
+                        </div>
+
+                        <!-- Inputs Grid -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <!-- Customer Code -->
+                            <div>
+                                <label class="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Customer Code</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-slate-400 dark:text-slate-500 text-[10px]">
+                                        <i class="fa-solid fa-user-tag"></i>
+                                    </span>
+                                    <input type="text" value="${item.code || ''}" oninput="UI.updateBulkCustomerValue(${index}, 'code', this.value)" class="w-full pl-8 pr-2.5 py-0 h-9 rounded-lg border bg-white dark:bg-slate-800 dark:border-slate-600 focus:ring-1 focus:ring-brand-500 text-xs font-semibold text-slate-750 dark:text-slate-200 shadow-sm" placeholder="C-1052">
+                                </div>
+                            </div>
+                            <!-- Receipt No -->
+                            <div>
+                                <label class="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Money Receipt No</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-slate-400 dark:text-slate-500 text-[10px]">
+                                        <i class="fa-solid fa-file-invoice"></i>
+                                    </span>
+                                    <input type="text" value="${item.receipt || ''}" oninput="UI.updateBulkCustomerValue(${index}, 'receipt', this.value)" class="w-full pl-8 pr-2.5 py-0 h-9 rounded-lg border bg-white dark:bg-slate-800 dark:border-slate-600 focus:ring-1 focus:ring-brand-500 text-xs font-semibold text-slate-750 dark:text-slate-200 shadow-sm" placeholder="Receipt No">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <!-- Regular Amount -->
+                            <div>
+                                <label class="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Regular Amount</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-slate-400 dark:text-slate-500 font-bold text-[10px]">৳</span>
+                                    <input type="number" value="${item.reg || ''}" oninput="UI.updateBulkCustomerValue(${index}, 'reg', this.value)" class="w-full pl-6 pr-2.5 py-0 h-9 rounded-lg border bg-white dark:bg-slate-800 dark:border-slate-600 focus:ring-1 focus:ring-brand-500 text-xs font-bold text-slate-750 dark:text-slate-200 shadow-sm" placeholder="0.00">
+                                </div>
+                            </div>
+                            <!-- Advance Amount -->
+                            <div>
+                                <label class="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Advance Amount</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-slate-400 dark:text-slate-500 font-bold text-[10px]">৳</span>
+                                    <input type="number" value="${item.adv || ''}" oninput="UI.updateBulkCustomerValue(${index}, 'adv', this.value)" class="w-full pl-6 pr-2.5 py-0 h-9 rounded-lg border bg-white dark:bg-slate-800 dark:border-slate-600 focus:ring-1 focus:ring-brand-500 text-xs font-bold text-slate-750 dark:text-slate-200 shadow-sm" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Checkbox LMNP -->
+                        <div class="flex justify-end pt-1">
+                            <label class="flex items-center space-x-1.5 cursor-pointer">
+                                <input type="checkbox" ${item.lmnp ? 'checked' : ''} onchange="UI.updateBulkCustomerValue(${index}, 'lmnp', this.checked)" class="w-3.5 h-3.5 text-brand-600 rounded focus:ring-brand-500 shadow-sm m-0">
+                                <span class="text-[10px] font-bold text-slate-600 dark:text-slate-350">Last Month NP Recovery?</span>
+                            </label>
+                        </div>
+                    </div>
                     `;
                 });
-                
-                body.innerHTML = rowsHtml;
-                totalSpan.innerText = totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                
-                if (batchSubmitBtn) {
-                    batchSubmitBtn.disabled = false;
-                    batchSubmitBtn.innerText = `Submit Batch (${queue.length} Entries)`;
-                    batchSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    batchSubmitBtn.classList.add('hover:from-brand-700', 'hover:to-emerald-600');
+                container.innerHTML = html;
+            },
+
+            updateBulkCustomerValue(index, field, value) {
+                if (UI.batchCustomers[index]) {
+                    if (field === 'lmnp') {
+                        UI.batchCustomers[index][field] = !!value;
+                    } else {
+                        UI.batchCustomers[index][field] = value;
+                    }
                 }
             },
 
-            removeBatchQueueItem(index) {
-                if (UI.collectionBatchQueue) {
-                    UI.collectionBatchQueue.splice(index, 1);
-                    UI.renderBatchQueue();
-                }
-            },
-
-            clearBatchQueue() {
-                if (confirm("Are you sure you want to clear the entire pending queue?")) {
-                    UI.collectionBatchQueue = [];
-                    UI.renderBatchQueue();
-                }
-            },
-
-            submitBatchQueue() {
-                const queue = UI.collectionBatchQueue || [];
-                if (queue.length === 0) return;
+            addBulkCustomer() {
+                UI.batchCustomers.push({ code: '', receipt: '', reg: '', adv: '', lmnp: false });
+                UI.renderBulkCustomerInputs();
                 
-                if (!confirm(`Are you sure you want to submit this batch of ${queue.length} collections?`)) {
+                // Focus the code input of the newly added card
+                setTimeout(() => {
+                    const containers = document.querySelectorAll('#bulk-customers-container > div');
+                    if (containers.length > 0) {
+                        const lastContainer = containers[containers.length - 1];
+                        const codeInput = lastContainer.querySelector('input[type="text"]');
+                        if (codeInput) codeInput.focus();
+                    }
+                }, 50);
+            },
+
+            removeBulkCustomer(index) {
+                if (UI.batchCustomers.length > 1) {
+                    UI.batchCustomers.splice(index, 1);
+                    UI.renderBulkCustomerInputs();
+                }
+            },
+
+            submitBulkCustomers() {
+                const todayStr = Utils.getLocalDate();
+                const selectedDate = document.getElementById('coll-date').value || todayStr;
+                const paymentMode = document.getElementById('coll-mode').value;
+                const territoryId = this.getCurrentTerritoryId();
+
+                if (selectedDate > todayStr) {
+                    alert("Future dates are not allowed for collection entry.");
                     return;
                 }
-                
+
+                // Filter out entries that are completely empty
+                const activeEntries = UI.batchCustomers.filter(item => {
+                    return (item.code && item.code.trim() !== '') || 
+                           (item.receipt && item.receipt.trim() !== '') || 
+                           (item.reg && parseFloat(item.reg) > 0) || 
+                           (item.adv && parseFloat(item.adv) > 0);
+                });
+
+                if (activeEntries.length === 0) {
+                    alert("Please enter details for at least one customer.");
+                    return;
+                }
+
+                // Validate all active entries
+                for (let i = 0; i < UI.batchCustomers.length; i++) {
+                    const item = UI.batchCustomers[i];
+                    
+                    // Skip completely empty rows
+                    const isEmpty = (!item.code || item.code.trim() === '') && 
+                                    (!item.receipt || item.receipt.trim() === '') && 
+                                    (!item.reg || parseFloat(item.reg) === 0) && 
+                                    (!item.adv || parseFloat(item.adv) === 0);
+                    if (isEmpty) continue;
+
+                    // If code is empty but other fields are filled
+                    if (!item.code || item.code.trim() === '') {
+                        alert(`Please enter Customer Code for Customer ${i + 1}.`);
+                        // Focus the field
+                        const containers = document.querySelectorAll('#bulk-customers-container > div');
+                        if (containers[i]) {
+                            const codeInput = containers[i].querySelector('input[type="text"]');
+                            if (codeInput) codeInput.focus();
+                        }
+                        return;
+                    }
+
+                    // If amounts are 0 or empty
+                    const regAmt = parseFloat(item.reg) || 0;
+                    const advAmt = parseFloat(item.adv) || 0;
+                    if (regAmt + advAmt <= 0) {
+                        alert(`Please enter a valid amount (Regular or Advance) for Customer ${i + 1}.`);
+                        const containers = document.querySelectorAll('#bulk-customers-container > div');
+                        if (containers[i]) {
+                            const regInput = containers[i].querySelector('input[placeholder="0.00"]');
+                            if (regInput) regInput.focus();
+                        }
+                        return;
+                    }
+                }
+
+                // Confirm submission
+                if (!confirm(`Are you sure you want to submit collections for ${activeEntries.length} customer(s)?`)) {
+                    return;
+                }
+
                 UI.toggleLoader(true);
                 (async () => {
-                    const batchSubmitBtn = document.getElementById('batch-submit-btn');
-                    const originalText = batchSubmitBtn ? batchSubmitBtn.innerHTML : '';
-                    if (batchSubmitBtn) {
-                        batchSubmitBtn.disabled = true;
-                        batchSubmitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Submitting Batch...`;
+                    const bulkSubmitBtn = document.getElementById('bulk-submit-btn');
+                    const originalText = bulkSubmitBtn ? bulkSubmitBtn.innerHTML : '';
+                    if (bulkSubmitBtn) {
+                        bulkSubmitBtn.disabled = true;
+                        bulkSubmitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Submitting...`;
                     }
-                    
+
                     try {
-                        const promises = queue.map(item => Store.update('collections', item));
+                        const promises = activeEntries.map(item => {
+                            const regAmt = parseFloat(item.reg) || 0;
+                            const advAmt = parseFloat(item.adv) || 0;
+                            const totalAmt = regAmt + advAmt;
+                            const entry = {
+                                territory_id: territoryId,
+                                date: selectedDate,
+                                customer_code: item.code.trim(),
+                                file_id: 'N/A',
+                                customer_name: 'N/A',
+                                receipt: (item.receipt || '').trim(),
+                                amount: totalAmt,
+                                regular_amount: regAmt,
+                                advance_amount: advAmt,
+                                mode: paymentMode,
+                                is_lm_np: !!item.lmnp,
+                                timestamp: Date.now() + Math.random(),
+                                active_month: (selectedDate === todayStr ? Utils.getActiveMonth() : selectedDate.slice(0, 7))
+                            };
+                            return Store.update('collections', entry);
+                        });
+
                         await Promise.all(promises);
+                        UI.showSuccess(`Successfully submitted ${activeEntries.length} collections!`);
                         
-                        UI.showSuccess(`Successfully submitted batch of ${queue.length} collections!`);
-                        UI.collectionBatchQueue = [];
-                        UI.renderBatchQueue();
+                        // Reset form
+                        UI.batchCustomers = [
+                            { code: '', receipt: '', reg: '', adv: '', lmnp: false },
+                            { code: '', receipt: '', reg: '', adv: '', lmnp: false },
+                            { code: '', receipt: '', reg: '', adv: '', lmnp: false }
+                        ];
+                        UI.renderBulkCustomerInputs();
                         UI.renderOfficerDashboard();
                     } catch (err) {
-                        alert("Error submitting batch collections: " + err.message);
+                        alert("Error submitting collections: " + err.message);
                     } finally {
-                        if (batchSubmitBtn) {
-                            batchSubmitBtn.disabled = false;
-                            batchSubmitBtn.innerHTML = originalText;
+                        if (bulkSubmitBtn) {
+                            bulkSubmitBtn.disabled = false;
+                            bulkSubmitBtn.innerHTML = originalText;
                         }
                         UI.toggleLoader(false);
                     }
@@ -6310,62 +6409,8 @@
             handleCollectionSubmit(e) {
                 e.preventDefault();
                 
-                const todayStr = Utils.getLocalDate();
-                const selectedDate = document.getElementById('coll-date').value || todayStr;
-                
-                if (selectedDate > todayStr) {
-                    alert("Future dates are not allowed for collection entry.");
-                    return;
-                }
-
-                const tId = this.getCurrentTerritoryId();
-
-                const regAmt = parseFloat(document.getElementById('coll-reg-amount').value) || 0;
-                const advAmt = parseFloat(document.getElementById('coll-adv-amount').value) || 0;
-                const totalAmt = regAmt + advAmt;
-
-                if (totalAmt <= 0) {
-                    alert("Please enter a valid amount (Regular or Advance).");
-                    return;
-                }
-
-                const customerCode = document.getElementById('coll-code').value;
-                const receipt = document.getElementById('coll-receipt').value;
-                const mode = document.getElementById('coll-mode').value;
-                const isLmNp = document.getElementById('coll-lmnp').checked;
-
                 if (UI.collectionEntryMode === 'bulk') {
-                    // Batch Entry Mode: Add to queue
-                    const entry = {
-                        territory_id: tId,
-                        date: selectedDate,
-                        customer_code: customerCode,
-                        file_id: 'N/A',
-                        customer_name: 'N/A',
-                        receipt: receipt,
-                        amount: totalAmt,
-                        regular_amount: regAmt,
-                        advance_amount: advAmt,
-                        mode: mode,
-                        is_lm_np: isLmNp,
-                        timestamp: Date.now() + Math.random(),
-                        active_month: (selectedDate === todayStr ? Utils.getActiveMonth() : selectedDate.slice(0, 7))
-                    };
-                    
-                    if (!UI.collectionBatchQueue) UI.collectionBatchQueue = [];
-                    UI.collectionBatchQueue.push(entry);
-                    
-                    // Reset only inputs, keep date & mode
-                    document.getElementById('coll-code').value = '';
-                    document.getElementById('coll-receipt').value = '';
-                    document.getElementById('coll-reg-amount').value = '';
-                    document.getElementById('coll-adv-amount').value = '';
-                    document.getElementById('coll-lmnp').checked = false;
-                    
-                    UI.renderBatchQueue();
-                    
-                    // Refocus Customer Code input for rapid logging
-                    document.getElementById('coll-code').focus();
+                    UI.submitBulkCustomers();
                     return;
                 }
 
