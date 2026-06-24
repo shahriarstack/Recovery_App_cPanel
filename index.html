@@ -5531,7 +5531,7 @@
                     <!-- Decorative bg element -->
                     <div class="absolute -top-12 -right-12 w-40 h-40 bg-brand-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
-                    <div class="flex justify-between items-start mb-8 relative z-10">
+                    <div class="flex justify-between items-start mb-6 relative z-10">
                         <div>
                             <h2 class="text-xl md:text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
                                 <span class="w-1.5 h-6 bg-brand-500 rounded-full"></span>
@@ -5541,6 +5541,16 @@
                         </div>
                         <button onclick="Router.navigate('officer-dashboard')" class="group w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-700/50 hover:bg-rose-50 dark:hover:bg-rose-900/20 border border-slate-100 dark:border-slate-600 flex items-center justify-center transition-all duration-300 hover:rotate-90 hover:shadow-md">
                             <i class="fa-solid fa-xmark text-slate-400 group-hover:text-rose-500 text-lg transition-colors"></i>
+                        </button>
+                    </div>
+
+                    <!-- Mode Switcher -->
+                    <div class="flex p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl mb-6 border border-slate-200/50 dark:border-slate-700/50 relative z-10">
+                        <button type="button" id="tab-single" onclick="UI.toggleCollectionMode('single')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-white dark:bg-slate-750 text-brand-600 dark:text-brand-400 shadow-sm flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-file-invoice"></i> Single Entry
+                        </button>
+                        <button type="button" id="tab-bulk" onclick="UI.toggleCollectionMode('bulk')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-list-check"></i> Batch Entry
                         </button>
                     </div>
 
@@ -5622,12 +5632,54 @@
                             </div>
                         </div>
 
-                        <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold h-12 rounded-lg shadow-lg mt-4 transition transform active:scale-95 text-sm sm:text-base flex items-center justify-center">
+                        <button type="submit" id="coll-submit-btn" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold h-12 rounded-lg shadow-lg mt-4 transition transform active:scale-95 text-sm sm:text-base flex items-center justify-center">
                             Save Entry
                         </button>
                     </form>
-                </div>
+
+                    <!-- Batch Queue Panel (Hidden by default) -->
+                    <div id="batch-queue-container" class="hidden mt-6 pt-6 border-t border-slate-200 dark:border-slate-700/50 relative z-10">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                <i class="fa-solid fa-list-ul text-brand-500"></i>
+                                Pending Batch Queue (<span id="batch-count">0</span>)
+                            </h3>
+                            <button type="button" onclick="UI.clearBatchQueue()" class="text-[10px] text-rose-500 hover:text-rose-600 font-bold flex items-center gap-1 transition">
+                                <i class="fa-solid fa-trash-can"></i> Clear All
+                            </button>
+                        </div>
+                        
+                        <div class="overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-700/50 max-h-[220px] scrollbar-thin">
+                            <table class="w-full text-xs text-left border-collapse">
+                                <thead class="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[9px]">
+                                    <tr>
+                                        <th class="p-2.5">Date</th>
+                                        <th class="p-2.5">Cust. Code</th>
+                                        <th class="p-2.5 text-right">Reg (৳)</th>
+                                        <th class="p-2.5 text-right">Adv (৳)</th>
+                                        <th class="p-2.5 text-center">Mode</th>
+                                        <th class="p-2.5 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="batch-queue-body" class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-600 dark:text-slate-300">
+                                    <tr>
+                                        <td colspan="6" class="p-8 text-center text-slate-400 font-medium italic">No pending items in queue</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="flex justify-between items-center mt-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-750/30 text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <span>Total Batch Amount:</span>
+                            <span class="text-brand-600 dark:text-brand-400 text-sm">৳<span id="batch-total">0.00</span></span>
+                        </div>
+                        
+                        <button type="button" onclick="UI.submitBatchQueue()" id="batch-submit-btn" class="w-full bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-700 hover:to-emerald-600 text-white font-bold h-12 rounded-lg shadow-lg mt-4 transition transform active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-2" disabled>
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Submit Batch (0 Entries)
+                        </button>
                     </div>
+                </div>
+            </div>
             `;
                 const collDateInput = document.getElementById('coll-date');
                 const today = Utils.getLocalDate();
@@ -5643,6 +5695,10 @@
                         UI.handleCollectionDateChange({ value: dateStr });
                     }
                 });
+
+                // Reset batch queue state on load
+                UI.collectionBatchQueue = [];
+                UI.collectionEntryMode = 'single';
             },
 
             // --- DATA ENTRY PANEL ---
@@ -6104,31 +6160,218 @@
                 }
             },
 
-            handleCollectionSubmit(e) {
-                e.preventDefault();
+            toggleCollectionMode(mode) {
+                UI.collectionEntryMode = mode;
+                const tabSingle = document.getElementById('tab-single');
+                const tabBulk = document.getElementById('tab-bulk');
+                const queueContainer = document.getElementById('batch-queue-container');
+                const submitBtn = document.getElementById('coll-submit-btn');
+
+                if (mode === 'single') {
+                    if (tabSingle) {
+                        tabSingle.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm flex items-center justify-center gap-2";
+                    }
+                    if (tabBulk) {
+                        tabBulk.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 flex items-center justify-center gap-2";
+                    }
+                    if (queueContainer) queueContainer.classList.add('hidden');
+                    if (submitBtn) {
+                        submitBtn.innerHTML = "Save Entry";
+                        submitBtn.className = "w-full bg-brand-600 hover:bg-brand-700 text-white font-bold h-12 rounded-lg shadow-lg mt-4 transition transform active:scale-95 text-sm sm:text-base flex items-center justify-center";
+                    }
+                } else {
+                    if (tabSingle) {
+                        tabSingle.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 flex items-center justify-center gap-2";
+                    }
+                    if (tabBulk) {
+                        tabBulk.className = "flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm flex items-center justify-center gap-2";
+                    }
+                    if (queueContainer) queueContainer.classList.remove('hidden');
+                    if (submitBtn) {
+                        submitBtn.innerHTML = "<i class='fa-solid fa-plus mr-1.5'></i> Add to Batch Queue";
+                        submitBtn.className = "w-full bg-gradient-to-r from-brand-500 to-emerald-600 hover:from-brand-600 hover:to-emerald-700 text-white font-bold h-12 rounded-lg shadow-lg mt-4 transition transform active:scale-95 text-sm sm:text-base flex items-center justify-center";
+                    }
+                    UI.renderBatchQueue();
+                }
+            },
+
+            renderBatchQueue() {
+                const body = document.getElementById('batch-queue-body');
+                const countSpan = document.getElementById('batch-count');
+                const totalSpan = document.getElementById('batch-total');
+                const batchSubmitBtn = document.getElementById('batch-submit-btn');
+                
+                if (!body) return;
+                
+                const queue = UI.collectionBatchQueue || [];
+                countSpan.innerText = queue.length;
+                
+                if (queue.length === 0) {
+                    body.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="p-8 text-center text-slate-400 font-medium italic">No pending items in queue</td>
+                        </tr>
+                    `;
+                    totalSpan.innerText = "0.00";
+                    if (batchSubmitBtn) {
+                        batchSubmitBtn.disabled = true;
+                        batchSubmitBtn.innerText = "Submit Batch (0 Entries)";
+                        batchSubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                        batchSubmitBtn.classList.remove('hover:from-brand-700', 'hover:to-emerald-600');
+                    }
+                    return;
+                }
+                
+                let totalAmount = 0;
+                let rowsHtml = '';
+                
+                queue.forEach((item, index) => {
+                    const total = parseFloat(item.amount) || 0;
+                    totalAmount += total;
+                    
+                    rowsHtml += `
+                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+                            <td class="p-2.5 font-medium">${item.date}</td>
+                            <td class="p-2.5 font-bold text-slate-700 dark:text-slate-200">${item.customer_code}</td>
+                            <td class="p-2.5 text-right font-mono text-slate-600 dark:text-slate-400">${parseFloat(item.regular_amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td class="p-2.5 text-right font-mono text-slate-600 dark:text-slate-400">${parseFloat(item.advance_amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td class="p-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">${item.mode}</span></td>
+                            <td class="p-2.5 text-center">
+                                <button type="button" onclick="UI.removeBatchQueueItem(${index})" class="text-rose-500 hover:text-rose-600 hover:scale-110 transition p-1">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                body.innerHTML = rowsHtml;
+                totalSpan.innerText = totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                
+                if (batchSubmitBtn) {
+                    batchSubmitBtn.disabled = false;
+                    batchSubmitBtn.innerText = `Submit Batch (${queue.length} Entries)`;
+                    batchSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    batchSubmitBtn.classList.add('hover:from-brand-700', 'hover:to-emerald-600');
+                }
+            },
+
+            removeBatchQueueItem(index) {
+                if (UI.collectionBatchQueue) {
+                    UI.collectionBatchQueue.splice(index, 1);
+                    UI.renderBatchQueue();
+                }
+            },
+
+            clearBatchQueue() {
+                if (confirm("Are you sure you want to clear the entire pending queue?")) {
+                    UI.collectionBatchQueue = [];
+                    UI.renderBatchQueue();
+                }
+            },
+
+            submitBatchQueue() {
+                const queue = UI.collectionBatchQueue || [];
+                if (queue.length === 0) return;
+                
+                if (!confirm(`Are you sure you want to submit this batch of ${queue.length} collections?`)) {
+                    return;
+                }
+                
                 UI.toggleLoader(true);
                 (async () => {
-                    const todayStr = Utils.getLocalDate();
-                    const selectedDate = document.getElementById('coll-date').value || todayStr;
+                    const batchSubmitBtn = document.getElementById('batch-submit-btn');
+                    const originalText = batchSubmitBtn ? batchSubmitBtn.innerHTML : '';
+                    if (batchSubmitBtn) {
+                        batchSubmitBtn.disabled = true;
+                        batchSubmitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Submitting Batch...`;
+                    }
                     
-                    if (selectedDate > todayStr) {
-                        alert("Future dates are not allowed for collection entry.");
+                    try {
+                        const promises = queue.map(item => Store.update('collections', item));
+                        await Promise.all(promises);
+                        
+                        UI.showSuccess(`Successfully submitted batch of ${queue.length} collections!`);
+                        UI.collectionBatchQueue = [];
+                        UI.renderBatchQueue();
+                        UI.renderOfficerDashboard();
+                    } catch (err) {
+                        alert("Error submitting batch collections: " + err.message);
+                    } finally {
+                        if (batchSubmitBtn) {
+                            batchSubmitBtn.disabled = false;
+                            batchSubmitBtn.innerHTML = originalText;
+                        }
                         UI.toggleLoader(false);
-                        return;
                     }
+                })();
+            },
 
-                    const tId = this.getCurrentTerritoryId();
+            handleCollectionSubmit(e) {
+                e.preventDefault();
+                
+                const todayStr = Utils.getLocalDate();
+                const selectedDate = document.getElementById('coll-date').value || todayStr;
+                
+                if (selectedDate > todayStr) {
+                    alert("Future dates are not allowed for collection entry.");
+                    return;
+                }
 
-                    const regAmt = parseFloat(document.getElementById('coll-reg-amount').value) || 0;
-                    const advAmt = parseFloat(document.getElementById('coll-adv-amount').value) || 0;
-                    const totalAmt = regAmt + advAmt;
+                const tId = this.getCurrentTerritoryId();
 
-                    if (totalAmt <= 0) {
-                        alert("Please enter a valid amount (Regular or Advance).");
-                        UI.toggleLoader(false);
-                        return;
-                    }
+                const regAmt = parseFloat(document.getElementById('coll-reg-amount').value) || 0;
+                const advAmt = parseFloat(document.getElementById('coll-adv-amount').value) || 0;
+                const totalAmt = regAmt + advAmt;
 
+                if (totalAmt <= 0) {
+                    alert("Please enter a valid amount (Regular or Advance).");
+                    return;
+                }
+
+                const customerCode = document.getElementById('coll-code').value;
+                const receipt = document.getElementById('coll-receipt').value;
+                const mode = document.getElementById('coll-mode').value;
+                const isLmNp = document.getElementById('coll-lmnp').checked;
+
+                if (UI.collectionEntryMode === 'bulk') {
+                    // Batch Entry Mode: Add to queue
+                    const entry = {
+                        territory_id: tId,
+                        date: selectedDate,
+                        customer_code: customerCode,
+                        file_id: 'N/A',
+                        customer_name: 'N/A',
+                        receipt: receipt,
+                        amount: totalAmt,
+                        regular_amount: regAmt,
+                        advance_amount: advAmt,
+                        mode: mode,
+                        is_lm_np: isLmNp,
+                        timestamp: Date.now() + Math.random(),
+                        active_month: (selectedDate === todayStr ? Utils.getActiveMonth() : selectedDate.slice(0, 7))
+                    };
+                    
+                    if (!UI.collectionBatchQueue) UI.collectionBatchQueue = [];
+                    UI.collectionBatchQueue.push(entry);
+                    
+                    // Reset only inputs, keep date & mode
+                    document.getElementById('coll-code').value = '';
+                    document.getElementById('coll-receipt').value = '';
+                    document.getElementById('coll-reg-amount').value = '';
+                    document.getElementById('coll-adv-amount').value = '';
+                    document.getElementById('coll-lmnp').checked = false;
+                    
+                    UI.renderBatchQueue();
+                    
+                    // Refocus Customer Code input for rapid logging
+                    document.getElementById('coll-code').focus();
+                    return;
+                }
+
+                // Single Entry Mode (Existing logic)
+                UI.toggleLoader(true);
+                (async () => {
                     const btn = e.target.querySelector('button[type="submit"]');
                     const originalBtnContent = btn ? btn.innerHTML : '';
                     if (btn) {
@@ -6140,15 +6383,15 @@
                         const entry = {
                             territory_id: tId,
                             date: selectedDate,
-                            customer_code: document.getElementById('coll-code').value,
+                            customer_code: customerCode,
                             file_id: 'N/A',
                             customer_name: 'N/A',
-                            receipt: document.getElementById('coll-receipt').value,
+                            receipt: receipt,
                             amount: totalAmt,
                             regular_amount: regAmt,
                             advance_amount: advAmt,
-                            mode: document.getElementById('coll-mode').value,
-                            is_lm_np: document.getElementById('coll-lmnp').checked,
+                            mode: mode,
+                            is_lm_np: isLmNp,
                             timestamp: Date.now(),
                             active_month: (selectedDate === todayStr ? Utils.getActiveMonth() : selectedDate.slice(0, 7))
                         };
