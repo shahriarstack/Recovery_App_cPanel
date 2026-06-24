@@ -5481,8 +5481,11 @@
                     <form id="collection-form" onsubmit="UI.handleCollectionSubmit(event)" class="space-y-3 sm:space-y-4 relative z-10">
                         <div class="grid grid-cols-2 gap-3 sm:gap-4">
                             <div>
-                                <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Date <span class="hidden sm:inline">(Locked)</span></label>
-                                <input type="date" id="coll-date" class="w-full px-3 py-0 h-10 rounded-lg border bg-slate-100 text-slate-500 dark:bg-slate-700 dark:border-slate-600 cursor-not-allowed text-xs sm:text-sm appearance-none block m-0" disabled>
+                                <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1 flex items-center justify-between">
+                                    <span>Date</span>
+                                    <span id="date-badge" class="text-[9px] font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30 px-1.5 py-0.5 rounded border border-brand-200/50 dark:border-brand-800/30">Today</span>
+                                </label>
+                                <input type="date" id="coll-date" class="w-full px-3 py-0 h-10 rounded-lg border bg-white dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-xs sm:text-sm block m-0 font-medium text-slate-700 dark:text-slate-200" onchange="UI.handleCollectionDateChange(this)">
                             </div>
                             <div>
                                 <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Customer Code</label>
@@ -5531,7 +5534,10 @@
                 </div>
                     </div>
             `;
-                document.getElementById('coll-date').valueAsDate = new Date();
+                const collDateInput = document.getElementById('coll-date');
+                const today = Utils.getLocalDate();
+                collDateInput.value = today;
+                collDateInput.max = today;
             },
 
             // --- DATA ENTRY PANEL ---
@@ -5945,11 +5951,48 @@
                 })();
             },
 
+            handleCollectionDateChange(input) {
+                const badge = document.getElementById('date-badge');
+                if (!badge) return;
+                
+                const selected = input.value;
+                const today = Utils.getLocalDate();
+                
+                if (!selected || selected === today) {
+                    badge.innerText = 'Today';
+                    badge.className = 'text-[9px] font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30 px-1.5 py-0.5 rounded border border-brand-200/50 dark:border-brand-800/30';
+                } else {
+                    const diffTime = new Date(today) - new Date(selected);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    if (diffDays === 1) {
+                        badge.innerText = 'Yesterday';
+                        badge.className = 'text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded border border-amber-200/50 dark:border-amber-800/30';
+                    } else if (diffDays > 1) {
+                        badge.innerText = `${diffDays} days ago`;
+                        badge.className = 'text-[9px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 px-1.5 py-0.5 rounded border border-rose-200/50 dark:border-rose-800/30';
+                    } else if (diffDays < 0) {
+                        badge.innerText = 'Future Date';
+                        badge.className = 'text-[9px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 rounded border border-red-200/50 dark:border-red-800/30';
+                    } else {
+                        badge.innerText = 'Today';
+                        badge.className = 'text-[9px] font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30 px-1.5 py-0.5 rounded border border-brand-200/50 dark:border-brand-800/30';
+                    }
+                }
+            },
+
             handleCollectionSubmit(e) {
                 e.preventDefault();
                 UI.toggleLoader(true);
                 (async () => {
                     const todayStr = Utils.getLocalDate();
+                    const selectedDate = document.getElementById('coll-date').value || todayStr;
+                    
+                    if (selectedDate > todayStr) {
+                        alert("Future dates are not allowed for collection entry.");
+                        UI.toggleLoader(false);
+                        return;
+                    }
+
                     const tId = this.getCurrentTerritoryId();
 
                     const regAmt = parseFloat(document.getElementById('coll-reg-amount').value) || 0;
@@ -5972,7 +6015,7 @@
                     try {
                         const entry = {
                             territory_id: tId,
-                            date: todayStr,
+                            date: selectedDate,
                             customer_code: document.getElementById('coll-code').value,
                             file_id: 'N/A',
                             customer_name: 'N/A',
@@ -5983,13 +6026,22 @@
                             mode: document.getElementById('coll-mode').value,
                             is_lm_np: document.getElementById('coll-lmnp').checked,
                             timestamp: Date.now(),
-                            active_month: (todayStr === Utils.getLocalDate() ? Utils.getActiveMonth() : todayStr.slice(0, 7))
+                            active_month: (selectedDate === todayStr ? Utils.getActiveMonth() : selectedDate.slice(0, 7))
                         };
 
                         await Store.update('collections', entry);
                         UI.showSuccess('Collection Saved Successfully');
                         document.getElementById('collection-form').reset();
-                        document.getElementById('coll-date').valueAsDate = new Date();
+                        
+                        const collDateInput = document.getElementById('coll-date');
+                        collDateInput.value = todayStr;
+                        collDateInput.max = todayStr;
+                        const badge = document.getElementById('date-badge');
+                        if (badge) {
+                            badge.innerText = 'Today';
+                            badge.className = 'text-[9px] font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30 px-1.5 py-0.5 rounded border border-brand-200/50 dark:border-brand-800/30';
+                        }
+                        
                         UI.renderOfficerDashboard();
                     } catch (err) {
                         alert("Error saving collection: " + err.message);
