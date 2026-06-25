@@ -6021,6 +6021,10 @@
             },
 
             bulkEdit(type) {
+                if (type === 'history' && this.selection.ids.size > 1) {
+                    UI.openBulkDateChangeModal();
+                    return;
+                }
                 if (this.selection.ids.size > 1) {
                     alert("Bulk edit is not supported yet. Please select one item to edit.");
                     return;
@@ -6030,6 +6034,67 @@
                 if (type === 'settlements') UI.openSettlementModal(id);
                 if (type === 'history') UI.openCollectionModal(id); // Using existing or new modal
                 if (type === 'projections') UI.openProjectionModal(id);
+            },
+
+            openBulkDateChangeModal() {
+                const count = this.selection.ids.size;
+                const today = Utils.getLocalDate();
+                const html = `
+                    <form onsubmit="UI.saveBulkDateChange(event)" class="space-y-4">
+                        <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200/50 dark:border-slate-700/50 text-xs text-slate-500 space-y-1">
+                            <p class="font-bold text-slate-700 dark:text-slate-350">You have selected <span class="text-brand-500 font-extrabold">${count}</span> collections.</p>
+                            <p>Entering a new date will update the collection date for all selected records.</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">New Collection Date</label>
+                            <input type="date" name="bulkDate" value="${today}" required class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 font-semibold text-slate-750 dark:text-slate-200">
+                        </div>
+                        <button type="submit" class="w-full py-3 bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-700 hover:to-emerald-600 text-white font-bold rounded-lg shadow-lg hover-lift transition">
+                            <i class="fa-solid fa-calendar-check mr-2"></i> Update ${count} Collections
+                        </button>
+                    </form>
+                `;
+                this.renderModal('Bulk Change Date', html);
+            },
+
+            saveBulkDateChange(e) {
+                e.preventDefault();
+                UI.toggleLoader(true);
+                const formData = new FormData(e.target);
+                const newDate = formData.get('bulkDate');
+                const selectedIds = Array.from(this.selection.ids);
+
+                if (!newDate) {
+                    alert('Please select a valid date.');
+                    UI.toggleLoader(false);
+                    return;
+                }
+
+                (async () => {
+                    try {
+                        const db = Store.get();
+                        const promises = selectedIds.map(async (id) => {
+                            const item = db.collections.find(c => String(c.id) === String(id));
+                            if (item) {
+                                // Update date and active month
+                                item.date = newDate;
+                                item.active_month = newDate.slice(0, 7);
+                                return Store.update('collections', item);
+                            }
+                        });
+
+                        await Promise.all(promises);
+                        UI.showSuccess(`Successfully updated date for ${selectedIds.length} collections!`);
+                        
+                        UI.closeModal('generic-modal');
+                        UI.clearSelection();
+                        UI.renderAdminHistory();
+                    } catch (err) {
+                        alert("Error updating collection dates: " + err.message);
+                    } finally {
+                        UI.toggleLoader(false);
+                    }
+                })();
             },
 
             // --- PAGE RENDERING ---
