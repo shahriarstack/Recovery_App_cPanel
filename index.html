@@ -5540,26 +5540,29 @@
 
                     <!--RPI & OFFROAD STATUS BANNER - COMPRESSED FOR MOBILE -->
                     <div class="animate-entry mb-4 sm:mb-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
-                        <div class="col-span-2 lg:col-span-3 p-4 sm:p-5 rounded-xl border ${Calc.getRPIBg(metrics.rpi)} flex items-center justify-between shadow-sm hover-lift relative overflow-hidden group">
+                         <div class="col-span-2 lg:col-span-3 p-2.5 sm:p-3.5 rounded-xl border ${Calc.getRPIBg(metrics.rpi)} flex items-center justify-between shadow-sm hover-lift relative overflow-hidden group">
                            <div class="absolute right-[-10px] top-[-10px] opacity-[0.08] transform transition-transform group-hover:scale-110">
-                                <i class="fa-solid fa-bolt-lightning text-7xl sm:text-8xl"></i>
+                                <i class="fa-solid fa-bolt-lightning text-5xl sm:text-6xl"></i>
                            </div>
                            <div class="relative z-10 w-2/3">
-                                <h3 class="text-sm sm:text-lg font-black text-slate-800 dark:text-white tracking-tight leading-tight mb-1">Recovery Performance Index (RPI)</h3>
-                                <p class="text-[9px] sm:text-[10px] uppercase font-bold opacity-60 tracking-widest hidden sm:block">Efficiency Multiplier Index</p>
+                                <h3 class="text-xs sm:text-sm font-black text-slate-800 dark:text-white tracking-tight leading-tight mb-0.5">Recovery Performance Index (RPI)</h3>
+                                <p class="text-[8px] sm:text-[9px] uppercase font-bold opacity-60 tracking-widest hidden sm:block leading-none">Efficiency Multiplier Index</p>
+                                <button onclick="Router.navigate('officer-history')" class="text-[9px] font-bold text-slate-600 dark:text-slate-400 border-b border-slate-300 dark:border-slate-700 hover:border-slate-800 dark:hover:border-slate-200 transition-all w-fit mt-1.5 flex items-center gap-1">
+                                    <i class="fa-solid fa-clock-rotate-left text-[8px]"></i> VIEW HISTORY <i class="fa-solid fa-chevron-right text-[6px]"></i>
+                                </button>
                             </div>
-                            <div class="text-3xl sm:text-5xl font-black ${Calc.getRPIColor(metrics.rpi)} relative z-10">${metrics.rpi}</div>
+                            <div class="text-2xl sm:text-3xl font-black ${Calc.getRPIColor(metrics.rpi)} relative z-10">${metrics.rpi}</div>
                         </div>
 
-                        <div onclick="Router.navigate('offroad-monitor')" class="col-span-2 lg:col-span-1 p-3 sm:p-5 rounded-xl border border-rose-100 dark:border-rose-900/30 bg-rose-50/80 dark:bg-rose-900/10 flex items-center justify-between shadow-sm hover-lift relative overflow-hidden group cursor-pointer transition-colors hover:bg-rose-100">
+                        <div onclick="Router.navigate('offroad-monitor')" class="col-span-2 lg:col-span-1 p-2.5 sm:p-3.5 rounded-xl border border-rose-100 dark:border-rose-900/30 bg-rose-50/80 dark:bg-rose-900/10 flex items-center justify-between shadow-sm hover-lift relative overflow-hidden group cursor-pointer transition-colors hover:bg-rose-100">
                             <div class="relative z-10 flex flex-col justify-center">
                                 <p class="text-[10px] sm:text-xs uppercase font-bold text-rose-500 mb-0.5 tracking-tight">Active Offroad</p>
-                                <button class="text-[9px] font-bold text-rose-600 border-b border-rose-200 w-fit sm:mt-1 hover:border-rose-600 transition-all">VIEW TRACKER <i class="fa-solid fa-chevron-right ml-0.5"></i></button>
+                                <button class="text-[9px] font-bold text-rose-600 border-b border-rose-200 w-fit sm:mt-1.5 hover:border-rose-600 transition-all">VIEW TRACKER <i class="fa-solid fa-chevron-right ml-0.5"></i></button>
                             </div>
-                            <h3 class="relative z-10 text-2xl sm:text-4xl font-black text-rose-600 pr-2">${db.offroad_vehicles.filter(v => v.territoryId === linkedTId && v.status === 'Active').length}</h3>
+                            <h3 class="relative z-10 text-2xl sm:text-3xl font-black text-rose-600 pr-2">${db.offroad_vehicles.filter(v => v.territoryId === linkedTId && v.status === 'Active').length}</h3>
                              <div class="absolute right-0 bottom-[-10px] opacity-10 transform translate-x-3 translate-y-2 group-hover:scale-110 transition-transform">
-                                <i class="fa-solid fa-car-burst text-5xl text-rose-600"></i>
-                            </div>
+                                <i class="fa-solid fa-car-burst text-4xl text-rose-600"></i>
+                             </div>
                         </div>
                     </div>
 
