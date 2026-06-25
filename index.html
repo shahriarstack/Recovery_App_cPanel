@@ -7242,15 +7242,8 @@
                                 <input type="hidden" id="history-start-date" value="${defaultStartDate}">
                                 <input type="hidden" id="history-end-date" value="${defaultEndDate}">
 
-                                <div class="flex flex-wrap items-center gap-1.5 justify-center sm:justify-start">
-                                    <button id="btn-hist-month" onclick="UI.setOfficerHistoryRange('month')" class="px-3 py-1.5 text-[10px] sm:text-xs font-black rounded-full bg-brand-500 text-white transition shadow-sm border border-brand-500">Active Month</button>
-                                    <button id="btn-hist-today" onclick="UI.setOfficerHistoryRange('today')" class="px-3 py-1.5 text-[10px] sm:text-xs font-black rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition shadow-sm border border-slate-200/50 dark:border-slate-700/50">Today</button>
-                                    <button id="btn-hist-yesterday" onclick="UI.setOfficerHistoryRange('yesterday')" class="px-3 py-1.5 text-[10px] sm:text-xs font-black rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition shadow-sm border border-slate-200/50 dark:border-slate-700/50">Yesterday</button>
-                                    <button id="btn-hist-week" onclick="UI.setOfficerHistoryRange('week')" class="px-3 py-1.5 text-[10px] sm:text-xs font-black rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition shadow-sm border border-slate-200/50 dark:border-slate-700/50">Last 7 Days</button>
-                                    <button id="btn-hist-custom" onclick="UI.setOfficerHistoryRange('custom')" class="px-3 py-1.5 text-[10px] sm:text-xs font-black rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition shadow-sm border border-slate-200/50 dark:border-slate-700/50">Custom...</button>
-                                </div>
-
-                                <div id="history-custom-dates" class="hidden flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 mt-1">
+                                <!-- Date Range Inputs (Always shown) -->
+                                <div class="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 w-full sm:w-auto">
                                     <div class="flex items-center px-2.5 py-1 bg-white dark:bg-dark-card rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
                                         <span class="text-[9px] uppercase tracking-wider text-slate-400 font-bold mr-1.5">From</span>
                                         <input type="date" id="history-start-picker" onchange="UI.handleHistoryCustomDateChange()" value="${defaultStartDate}" class="bg-transparent border-none text-[10px] font-black text-slate-700 dark:text-slate-300 focus:ring-0 outline-none cursor-pointer p-0 h-6 w-24">
@@ -7260,11 +7253,19 @@
                                         <input type="date" id="history-end-picker" onchange="UI.handleHistoryCustomDateChange()" value="${defaultEndDate}" class="bg-transparent border-none text-[10px] font-black text-slate-700 dark:text-slate-300 focus:ring-0 outline-none cursor-pointer p-0 h-6 w-24">
                                     </div>
                                 </div>
+
+                                <!-- Quick Selector Pills (Underneath Date Inputs) -->
+                                <div class="flex flex-wrap items-center gap-1.5 justify-center sm:justify-start">
+                                    <button id="btn-hist-month" onclick="UI.setOfficerHistoryRange('month')" class="px-2.5 py-1 text-[9px] sm:text-[10px] font-black rounded-full bg-brand-500 text-white transition shadow-sm border border-brand-500">Active Month</button>
+                                    <button id="btn-hist-today" onclick="UI.setOfficerHistoryRange('today')" class="px-2.5 py-1 text-[9px] sm:text-[10px] font-black rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition shadow-sm border border-slate-200/50 dark:border-slate-700/50">Today</button>
+                                    <button id="btn-hist-yesterday" onclick="UI.setOfficerHistoryRange('yesterday')" class="px-2.5 py-1 text-[9px] sm:text-[10px] font-black rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition shadow-sm border border-slate-200/50 dark:border-slate-700/50">Yesterday</button>
+                                    <button id="btn-hist-week" onclick="UI.setOfficerHistoryRange('week')" class="px-2.5 py-1 text-[9px] sm:text-[10px] font-black rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition shadow-sm border border-slate-200/50 dark:border-slate-700/50">Last 7 Days</button>
+                                </div>
                             </div>
                         </div>
 
                         <!--Summary Cards-->
-                        <div id="history-summary" class="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+                        <div id="history-summary" class="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
                             <!-- Injected by JS -->
                         </div>
 
@@ -7324,7 +7325,7 @@
 
                 // Update Summary
                 document.getElementById('history-summary').innerHTML = `
-            <div class="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-brand-500 to-emerald-600 text-white shadow-md relative overflow-hidden group">
+            <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-brand-500 to-emerald-600 text-white shadow-md relative overflow-hidden group">
                          <div class="absolute right-0 top-0 p-1.5 sm:p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                             <i class="fa-solid fa-sack-dollar text-2xl sm:text-5xl"></i>
                         </div>
@@ -7332,21 +7333,13 @@
                         <p class="text-sm sm:text-2xl font-bold font-mono leading-none">${totalAmt.toLocaleString()}</p>
                         <p class="text-[8px] sm:text-xs opacity-75 mt-0.5 sm:mt-1">${start} to ${end}</p>
                     </div>
-                    <div class="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+                    <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
                          <div class="absolute right-0 top-0 p-1.5 sm:p-3 opacity-5 group-hover:opacity-10 transition-opacity">
                             <i class="fa-solid fa-receipt text-2xl sm:text-5xl text-slate-400"></i>
                         </div>
                         <p class="text-[9px] sm:text-xs font-bold text-slate-500 uppercase tracking-wide mb-0.5 sm:mb-1">Transactions</p>
                         <p class="text-sm sm:text-2xl font-bold font-mono text-slate-800 dark:text-white leading-none">${count}</p>
                         <p class="text-[8px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1">Records Found</p>
-                    </div>
-                    <div class="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
-                        <div class="absolute right-0 top-0 p-1.5 sm:p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-                            <i class="fa-solid fa-building-columns text-2xl sm:text-5xl text-blue-500"></i>
-                        </div>
-                        <p class="text-[9px] sm:text-xs font-bold text-slate-500 uppercase tracking-wide mb-0.5 sm:mb-1">Via Bank</p>
-                        <p class="text-sm sm:text-2xl font-bold font-mono text-blue-600 leading-none">${bankAmt.toLocaleString()}</p>
-                        <p class="text-[8px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1">Direct Transfer</p>
                     </div>
         `;
 
@@ -7388,38 +7381,36 @@
                 let endStr = today;
 
                 // Update active button state styling
-                const btnIds = ['month', 'today', 'yesterday', 'week', 'custom'];
+                const btnIds = ['month', 'today', 'yesterday', 'week'];
                 btnIds.forEach(id => {
                     const btn = document.getElementById('btn-hist-' + id);
                     if (!btn) return;
                     if (id === type) {
-                        btn.className = "px-3 py-1.5 text-[10px] sm:text-xs font-black rounded-full bg-brand-500 text-white transition shadow-sm border border-brand-500";
+                        btn.className = "px-2.5 py-1 text-[9px] sm:text-[10px] font-black rounded-full bg-brand-500 text-white transition shadow-sm border border-brand-500";
                     } else {
-                        btn.className = "px-3 py-1.5 text-[10px] sm:text-xs font-black rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition shadow-sm border border-slate-200/50 dark:border-slate-700/50";
+                        btn.className = "px-2.5 py-1 text-[9px] sm:text-[10px] font-black rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition shadow-sm border border-slate-200/50 dark:border-slate-700/50";
                     }
                 });
 
-                const customDiv = document.getElementById('history-custom-dates');
-                if (type === 'custom') {
-                    if (customDiv) customDiv.classList.remove('hidden');
-                    startStr = document.getElementById('history-start-picker')?.value || today;
-                    endStr = document.getElementById('history-end-picker')?.value || today;
-                } else {
-                    if (customDiv) customDiv.classList.add('hidden');
-                    if (type === 'yesterday') {
-                        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-                        startStr = Utils.getLocalDate(yesterday);
-                        endStr = startStr;
-                    } else if (type === 'week') {
-                        const weekAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
-                        startStr = Utils.getLocalDate(weekAgo);
-                        endStr = today;
-                    } else if (type === 'month') {
-                        const bounds = Utils.getMonthBounds();
-                        startStr = bounds.startOfMonth;
-                        endStr = bounds.endOfMonth;
-                    }
+                if (type === 'yesterday') {
+                    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                    startStr = Utils.getLocalDate(yesterday);
+                    endStr = startStr;
+                } else if (type === 'week') {
+                    const weekAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
+                    startStr = Utils.getLocalDate(weekAgo);
+                    endStr = today;
+                } else if (type === 'month') {
+                    const bounds = Utils.getMonthBounds();
+                    startStr = bounds.startOfMonth;
+                    endStr = bounds.endOfMonth;
                 }
+
+                // Update the visible date inputs
+                const startPicker = document.getElementById('history-start-picker');
+                const endPicker = document.getElementById('history-end-picker');
+                if (startPicker) startPicker.value = startStr;
+                if (endPicker) endPicker.value = endStr;
 
                 document.getElementById('history-start-date').value = startStr;
                 document.getElementById('history-end-date').value = endStr;
@@ -7431,6 +7422,16 @@
                 const endStr = document.getElementById('history-end-picker').value;
                 document.getElementById('history-start-date').value = startStr;
                 document.getElementById('history-end-date').value = endStr;
+                
+                // Clear active styling from preset buttons
+                const btnIds = ['month', 'today', 'yesterday', 'week'];
+                btnIds.forEach(id => {
+                    const btn = document.getElementById('btn-hist-' + id);
+                    if (btn) {
+                        btn.className = "px-2.5 py-1 text-[9px] sm:text-[10px] font-black rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition shadow-sm border border-slate-200/50 dark:border-slate-700/50";
+                    }
+                });
+                
                 this.updateOfficerHistory(null, startStr, endStr);
             },
 
