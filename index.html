@@ -5539,49 +5539,25 @@
                     </div>
 
                     <!--RPI & OFFROAD STATUS BANNER - COMPRESSED FOR MOBILE -->
-                    <div class="animate-entry mb-4 sm:mb-6 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-dark-card shadow-sm overflow-hidden">
-                        <div class="flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-700/50">
-                            <!-- Collection History Button (Left) -->
-                            <div onclick="Router.navigate('officer-history')" class="flex-1 py-3 px-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/30 cursor-pointer transition-all group">
-                               <div class="flex items-center gap-2.5">
-                                    <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center text-sm group-hover:scale-110 transition-transform">
-                                        <i class="fa-solid fa-clock-rotate-left"></i>
-                                    </div>
-                                    <div class="leading-none">
-                                        <p class="text-[8px] sm:text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">History</p>
-                                        <p class="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-brand-500 transition-colors mt-0.5">View Log</p>
-                                    </div>
-                               </div>
-                               <i class="fa-solid fa-chevron-right text-[7px] text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform"></i>
-                            </div>
+                    <div class="animate-entry mb-4 sm:mb-6 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-dark-card shadow-sm overflow-hidden flex flex-row divide-x divide-slate-100 dark:divide-slate-700/50">
+                        <!-- Collection History Button (Left) -->
+                        <div onclick="Router.navigate('officer-history')" class="flex-1 py-2 px-2 flex items-center justify-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/30 cursor-pointer transition-all group text-slate-600 dark:text-slate-300">
+                            <i class="fa-solid fa-clock-rotate-left text-[10px] sm:text-xs text-brand-500 group-hover:scale-110 transition-transform"></i>
+                            <span class="text-[9px] sm:text-xs font-black uppercase tracking-wider group-hover:text-brand-500 transition-colors">History</span>
+                            <i class="fa-solid fa-chevron-right text-[6px] text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform sm:inline-block hidden"></i>
+                        </div>
 
-                            <!-- RPI Card (Center) -->
-                            <div class="flex-1 py-3 px-4 flex items-center justify-between bg-slate-50/20 dark:bg-slate-900/10">
-                               <div class="flex items-center gap-2.5">
-                                    <div class="w-8 h-8 rounded-xl ${Calc.getRPIBg(metrics.rpi)} ${Calc.getRPIColor(metrics.rpi)} flex items-center justify-center text-sm">
-                                        <i class="fa-solid fa-bolt-lightning"></i>
-                                    </div>
-                                    <div class="leading-none">
-                                        <p class="text-[8px] sm:text-[9px] font-black uppercase opacity-60 tracking-wider ${Calc.getRPIColor(metrics.rpi)}">RPI Index</p>
-                                        <p class="text-xs font-black ${Calc.getRPIColor(metrics.rpi)} mt-0.5">Score: ${metrics.rpi}</p>
-                                    </div>
-                               </div>
-                               <span class="text-[8px] px-1.5 py-0.5 rounded bg-white/40 dark:bg-black/20 text-[7px] font-black uppercase tracking-tighter ${Calc.getRPIColor(metrics.rpi)} sm:inline-block hidden">Active</span>
-                            </div>
+                        <!-- RPI Card (Center) -->
+                        <div class="flex-1 py-2 px-2 flex items-center justify-center gap-1.5 bg-slate-50/20 dark:bg-slate-900/10">
+                            <i class="fa-solid fa-bolt-lightning text-[10px] sm:text-xs ${Calc.getRPIColor(metrics.rpi)}"></i>
+                            <span class="text-[9px] sm:text-xs font-black uppercase tracking-wider ${Calc.getRPIColor(metrics.rpi)}">${metrics.rpi} RPI</span>
+                        </div>
 
-                            <!-- Active Offroad Card (Right) -->
-                            <div onclick="Router.navigate('offroad-monitor')" class="flex-1 py-3 px-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/30 cursor-pointer transition-all group hover:bg-rose-550/10">
-                               <div class="flex items-center gap-2.5">
-                                    <div class="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center text-sm group-hover:rotate-12 transition-transform">
-                                        <i class="fa-solid fa-car-burst"></i>
-                                    </div>
-                                    <div class="leading-none">
-                                        <p class="text-[8px] sm:text-[9px] font-black uppercase text-rose-500 tracking-wider">Offroad</p>
-                                        <p class="text-xs font-black text-rose-600 mt-0.5">${db.offroad_vehicles.filter(v => v.territoryId === linkedTId && v.status === 'Active').length} Active</p>
-                                    </div>
-                               </div>
-                               <i class="fa-solid fa-chevron-right text-[7px] text-rose-300 dark:text-rose-900/30 group-hover:translate-x-0.5 transition-transform"></i>
-                            </div>
+                        <!-- Active Offroad Card (Right) -->
+                        <div onclick="Router.navigate('offroad-monitor')" class="flex-1 py-2 px-2 flex items-center justify-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/30 cursor-pointer transition-all group text-rose-600 dark:text-rose-400 hover:bg-rose-50/5">
+                            <i class="fa-solid fa-car-burst text-[10px] sm:text-xs group-hover:rotate-12 transition-transform"></i>
+                            <span class="text-[9px] sm:text-xs font-black uppercase tracking-wider">${db.offroad_vehicles.filter(v => v.territoryId === linkedTId && v.status === 'Active').length} Offroad</span>
+                            <i class="fa-solid fa-chevron-right text-[7px] text-rose-300 dark:text-rose-900/30 group-hover:translate-x-0.5 transition-transform sm:inline-block hidden"></i>
                         </div>
                     </div>
 
