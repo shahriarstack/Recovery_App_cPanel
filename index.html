@@ -3421,6 +3421,10 @@
                 const cutoffHours = parseInt(cutoffSetting?.value || 0);
                 const activeMonth = db.system_settings?.find(s => s.key === 'active_month')?.value || 'N/A';
 
+                // Initialize ranking filter state if not present
+                UI.rankingSearchVal = UI.rankingSearchVal || '';
+                UI.rankingPartVal = UI.rankingPartVal || 'All';
+
                 // Calculate dynamic expected target achievement for the current day of the month
                 const todayStr = Utils.getLocalDate();
                 const [y, m, d] = todayStr.split('-').map(Number);
@@ -3535,76 +3539,7 @@
 
                 const totalA = calculateTotals(partAData);
                 const totalB = calculateTotals(partBData);
-                const totalGrand = calculateTotals(allTerritoryData);
 
-                // Row HTML Generator
-                const createRow = (t, isTotal = false, label = '') => {
-                    const isCompact = tableMode === 'compact';
-                    
-                    let achColorStyle = '';
-                    if (!isTotal) {
-                        if (t.globalGroup === 'top') {
-                            achColorStyle = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold border-l-2 border-emerald-500 transition-colors duration-300 hover:bg-emerald-500/20';
-                        } else if (t.globalGroup === 'middle') {
-                            achColorStyle = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 font-extrabold border-l-2 border-amber-500 transition-colors duration-300 hover:bg-amber-500/20';
-                        } else {
-                            achColorStyle = 'bg-rose-500/10 text-rose-600 dark:text-rose-400 font-extrabold border-l-2 border-rose-500 transition-colors duration-300 hover:bg-rose-500/20';
-                        }
-                    } else {
-                        achColorStyle = 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white font-bold';
-                    }
-
-                    const lastAchColorClass = (!isTotal && parseFloat(t.lastDayAch) < parseFloat(totalGrand.lastDayAch)) ? 'text-red-600' : 'text-orange-500';
-                    return `
-                    <tr class="${isTotal ? 'bg-slate-200 dark:bg-slate-700 font-bold border-y-2 border-slate-300 dark:border-slate-600' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition interactive-row border-b border-slate-100 dark:border-slate-700'} text-slate-700 dark:text-slate-300">
-                        <td class="p-1.5 border dark:border-slate-600 ${isTotal ? '' : 'sticky left-0 bg-white dark:bg-dark-card'} text-center">${isTotal ? '' : t.part}</td>
-                        <td class="p-1.5 border dark:border-slate-600 ${isTotal ? 'text-right' : 'sticky left-10 bg-white dark:bg-dark-card shadow-sm'} font-medium">
-                            ${isTotal ? label : t.name}
-                        </td>
-                        <td class="p-1.5 border dark:border-slate-600 text-center">${t.targetFiles}</td>
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center">${t.mtdProjFiles}</td>` : ''}
-                        <td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'font-semibold text-blue-600' : ''}">${t.uniquePaidCodes}</td>
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'text-red-500' : ''}">${t.tillDateNonPayFiles}</td>` : ''}
-                        
-                        <td class="p-1.5 border dark:border-slate-600 text-right font-medium">${parseInt(t.targetAmt).toLocaleString()}</td>
-                        
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'text-slate-500' : ''}">${parseInt(t.presetProjReg).toLocaleString()}</td>` : ''}
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'text-slate-500' : ''}">${parseInt(t.presetProjAdv).toLocaleString()}</td>` : ''}
-                        
-                        <td class="p-1.5 border dark:border-slate-600 text-right font-bold ${!isTotal ? 'text-brand-600' : ''}">${parseInt(t.presetProjTotal).toLocaleString()}</td>
-                        <td class="p-1.5 border dark:border-slate-600 text-right font-bold ${!isTotal ? 'text-green-600' : ''}">${parseInt(t.mtdColl).toLocaleString()}</td>
-                        <td class="p-1.5 border dark:border-slate-600 text-center font-bold ${achColorStyle}">
-                            <div class="flex items-center justify-center gap-1.5">
-                                <span>${t.tillDayAchievement}%</span>
-                            </div>
-                        </td>
-                        
-                        <td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'font-medium text-slate-700 dark:text-slate-300' : ''}">${parseInt(t.todayProj).toLocaleString()}</td>
-                        <td class="p-1.5 border dark:border-slate-600 text-right font-bold ${!isTotal ? 'text-green-600' : ''}">${parseInt(t.todayColl).toLocaleString()}</td>
-                        <td class="p-1.5 border dark:border-slate-600 text-center font-bold text-fuchsia-600 bg-fuchsia-50 dark:bg-fuchsia-900/10">${t.todayAch}%</td>
- 
-                        <td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'text-slate-500' : ''} border-l-2 border-slate-100 dark:border-slate-600">${parseInt(t.yestProjAmt).toLocaleString()}</td>
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'text-slate-500' : ''}">${t.yestProjFiles}</td>` : ''}
-                        <td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'text-slate-500' : ''}">${parseInt(t.yestCollAmt).toLocaleString()}</td>
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'text-slate-500' : ''}">${t.yestCollFiles}</td>` : ''}
-                        <td class="p-1.5 border dark:border-slate-600 text-center font-bold ${lastAchColorClass}">${t.lastDayAch}%</td>
-                        
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'text-rose-800 bg-rose-50 dark:bg-rose-900/20' : ''} border-l-2 border-slate-100 dark:border-slate-600">${parseInt(t.lmNpTargetAmt).toLocaleString()}</td>` : ''}
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'text-rose-800 bg-rose-50 dark:bg-rose-900/20' : ''}">${t.lmNpTargetFiles}</td>` : ''}
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-right font-bold ${!isTotal ? 'text-rose-600' : ''}">${parseInt(t.mtdLmNpColl).toLocaleString()}</td>` : ''}
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center font-bold ${!isTotal ? 'text-rose-600' : ''}">${t.mtdLmNpFiles}</td>` : ''}
-                        <td class="p-1.5 border dark:border-slate-600 text-center font-bold border-l-2 border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/40">
-                            <span onclick="UI.showAppUseModal('${t.id}')" class="cursor-pointer hover:opacity-80 transition-opacity inline-flex items-center px-2 py-0.5 rounded-full text-xs font-black ${
-                                t.appUsePct >= 90 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
-                                t.appUsePct >= 70 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
-                                'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                            }">
-                                <i class="fa-solid ${t.appUsePct >= 90 ? 'fa-circle-check' : t.appUsePct >= 70 ? 'fa-triangle-exclamation' : 'fa-circle-xmark'} mr-1 opacity-80"></i>
-                                ${t.appUsePct}%
-                            </span>
-                        </td>
-                    </tr>`;
-                };
 
                 const topPerformers = [...allTerritoryData].sort((a, b) => parseFloat(b.rpi) - parseFloat(a.rpi)).slice(0, 5);
                 const bottomPerformers = [...allTerritoryData].sort((a, b) => parseFloat(a.rpi) - parseFloat(b.rpi)).slice(0, 5);
@@ -3890,13 +3825,35 @@
                                     </h3>
                                     <div class="text-xs text-slate-500 italic">Sorted by achievement from top to bottom. Color indicates status relative to current daily target.</div>
                                 </div>
-                                <div class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
-                                    <button onclick="UI.renderAdminDashboard('compact')" class="px-3 py-1.5 text-xs font-bold rounded-md transition-all ${isCompact ? 'bg-white dark:bg-slate-600 text-brand-600 shadow' : 'text-slate-500 hover:text-slate-700'}">
-                                        <i class="fa-solid fa-compress mr-1"></i> Focused
-                                    </button>
-                                    <button onclick="UI.renderAdminDashboard('full')" class="px-3 py-1.5 text-xs font-bold rounded-md transition-all ${!isCompact ? 'bg-white dark:bg-slate-600 text-brand-600 shadow' : 'text-slate-500 hover:text-slate-700'}">
-                                        <i class="fa-solid fa-expand mr-1"></i> Detailed
-                                    </button>
+                                <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+                                    <!-- Search Input -->
+                                    <div class="relative w-full sm:w-48">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-slate-400">
+                                            <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
+                                        </span>
+                                        <input type="text" id="ranking-search" oninput="UI.filterRankingTable()" placeholder="Filter territory..." value="${UI.rankingSearchVal || ''}" class="w-full pl-8 pr-2.5 py-1 h-8 rounded-lg border bg-slate-50/50 dark:bg-slate-800/50 dark:border-slate-600 focus:ring-1 focus:ring-brand-500 text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-sm outline-none">
+                                    </div>
+                                    
+                                    <!-- Part Filter -->
+                                    <div class="relative w-full sm:w-28">
+                                        <select id="ranking-part-filter" onchange="UI.filterRankingTable()" class="w-full pl-2 pr-6 py-1 h-8 rounded-lg border bg-slate-50/50 dark:bg-slate-800/50 dark:border-slate-600 focus:ring-1 focus:ring-brand-500 text-xs font-bold text-slate-700 dark:text-slate-200 appearance-none shadow-sm cursor-pointer border-slate-200 dark:border-slate-700">
+                                            <option value="All" ${UI.rankingPartVal === 'All' ? 'selected' : ''}>All Parts</option>
+                                            <option value="A" ${UI.rankingPartVal === 'A' ? 'selected' : ''}>Part A</option>
+                                            <option value="B" ${UI.rankingPartVal === 'B' ? 'selected' : ''}>Part B</option>
+                                        </select>
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-slate-400 text-[10px]">
+                                            <i class="fa-solid fa-chevron-down"></i>
+                                        </span>
+                                    </div>
+
+                                    <div class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
+                                        <button onclick="UI.renderAdminDashboard('compact')" class="px-3 py-1.5 text-xs font-bold rounded-md transition-all ${isCompact ? 'bg-white dark:bg-slate-600 text-brand-600 shadow' : 'text-slate-500 hover:text-slate-700'}">
+                                            <i class="fa-solid fa-compress mr-1"></i> Focused
+                                        </button>
+                                        <button onclick="UI.renderAdminDashboard('full')" class="px-3 py-1.5 text-xs font-bold rounded-md transition-all ${!isCompact ? 'bg-white dark:bg-slate-600 text-brand-600 shadow' : 'text-slate-500 hover:text-slate-700'}">
+                                            <i class="fa-solid fa-expand mr-1"></i> Detailed
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -4125,20 +4082,8 @@
                     </div>
                  `;
 
-                const tbody = document.getElementById('ranking-table-body');
-
-                // Render Part A
-                partAData.forEach((t, i) => tbody.innerHTML += createRow(t));
-                // Total Part A
-                tbody.innerHTML += createRow(totalA, true, 'Total Part A');
-
-                // Render Part B
-                partBData.forEach((t, i) => tbody.innerHTML += createRow(t));
-                // Total Part B
-                tbody.innerHTML += createRow(totalB, true, 'Total Part B');
-
-                // Grand Total
-                tbody.innerHTML += createRow(totalGrand, true, 'Grand Total');
+                // Populate the ranking table based on active filters
+                this.populateRankingTable(tableMode);
 
                 const partA = totalA.mtdColl;
                 const partB = totalB.mtdColl;
@@ -4147,6 +4092,218 @@
                     UI.updateMomentumChart();
                     Charts.renderDoughnut('admin-mode-chart', modes, modeData);
                 }, 100);
+            },
+
+            populateRankingTable(tableMode) {
+                const db = Store.get();
+                const metrics = Calc.getMetrics();
+                
+                const searchVal = (UI.rankingSearchVal || '').toLowerCase().trim();
+                const partVal = UI.rankingPartVal || 'All';
+                const isCompact = tableMode === 'compact';
+                
+                const allTerritoryData = db.territories.map(t => {
+                    const m = Calc.getMetrics(t.id);
+                    const ldAch = m.yestProjAmt > 0 ? ((m.yestCollAmt / m.yestProjAmt) * 100).toFixed(1) : '0.0';
+                    const tdAch = m.todayProj > 0 ? ((m.todayColl / m.todayProj) * 100).toFixed(1) : (m.todayColl > 0 ? '100+' : '0.0');
+                    const appUsePct = Calc.getAppUsePercentage(t.id);
+                    return { ...t, ...m, lastDayAch: ldAch, todayAch: tdAch, appUsePct };
+                });
+
+                // Calculate global ranks for dynamic top/middle/bottom groups across ALL territories
+                const sortedAll = [...allTerritoryData].sort((a, b) => parseFloat(b.tillDayAchievement || 0) - parseFloat(a.tillDayAchievement || 0));
+                const totalCount = sortedAll.length;
+                sortedAll.forEach((t, i) => {
+                    if (i < Math.ceil(totalCount / 3)) {
+                        t.globalGroup = 'top';
+                    } else if (i < Math.ceil(totalCount * 2 / 3)) {
+                        t.globalGroup = 'middle';
+                    } else {
+                        t.globalGroup = 'bottom';
+                    }
+                });
+
+                // Helper to calculate totals
+                const calculateTotals = (data) => {
+                    const sums = {
+                        targetFiles: 0, mtdProjFiles: 0, uniquePaidCodes: 0, tillDateNonPayFiles: 0,
+                        targetAmt: 0, mtdProjRegular: 0, mtdProjAdvance: 0, mtdProjTotal: 0, mtdColl: 0,
+                        presetProjReg: 0, presetProjAdv: 0, presetProjTotal: 0,
+                        yestProjAmt: 0, yestProjFiles: 0, yestCollAmt: 0, yestCollFiles: 0,
+                        lmNpTargetAmt: 0, lmNpTargetFiles: 0, mtdLmNpColl: 0, mtdLmNpFiles: 0,
+                        todayProj: 0, todayColl: 0, appUsePct: 0
+                    };
+
+                    data.forEach(t => {
+                        sums.targetFiles += parseInt(t.targetFiles) || 0;
+                        sums.mtdProjFiles += parseInt(t.mtdProjFiles) || 0;
+                        sums.uniquePaidCodes += parseInt(t.uniquePaidCodes) || 0;
+                        sums.tillDateNonPayFiles += parseInt(t.tillDateNonPayFiles) || 0;
+                        sums.targetAmt += parseFloat(t.targetAmt) || 0;
+                        sums.mtdProjRegular += parseFloat(t.mtdProjRegular) || 0;
+                        sums.mtdProjAdvance += parseFloat(t.mtdProjAdvance) || 0;
+                        sums.mtdProjTotal += parseFloat(t.mtdProjTotal) || 0;
+                        sums.mtdColl += parseFloat(t.mtdColl) || 0;
+                        sums.yestProjAmt += parseFloat(t.yestProjAmt) || 0;
+                        sums.yestProjFiles += parseInt(t.yestProjFiles) || 0;
+                        sums.yestCollAmt += parseFloat(t.yestCollAmt) || 0;
+                        sums.yestCollFiles += parseInt(t.yestCollFiles) || 0;
+                        sums.lmNpTargetAmt += parseFloat(t.lmNpTargetAmt) || 0;
+                        sums.lmNpTargetFiles += parseInt(t.lmNpTargetFiles) || 0;
+                        sums.mtdLmNpColl += parseFloat(t.mtdLmNpColl) || 0;
+                        sums.mtdLmNpFiles += parseInt(t.mtdLmNpFiles) || 0;
+                        sums.todayProj += parseFloat(t.todayProj) || 0;
+                        sums.todayColl += parseFloat(t.todayColl) || 0;
+                        sums.presetProjReg += parseFloat(t.presetProjReg) || 0;
+                        sums.presetProjAdv += parseFloat(t.presetProjAdv) || 0;
+                        sums.presetProjTotal += parseFloat(t.presetProjTotal) || 0;
+                    });
+
+                    // Derived Metrics for Totals
+                    sums.tillDayAchievement = sums.presetProjTotal > 0 ? ((sums.mtdColl / sums.presetProjTotal) * 100).toFixed(1) : '0.0';
+                    sums.achievement = sums.tillDayAchievement;
+                    sums.emiAchievement = sums.targetAmt > 0 ? ((sums.mtdColl / sums.targetAmt) * 100).toFixed(1) : '0.0';
+                    sums.lastDayAch = sums.yestProjAmt > 0 ? ((sums.yestCollAmt / sums.yestProjAmt) * 100).toFixed(1) : '0.0';
+                    sums.todayAch = sums.todayProj > 0 ? ((sums.todayColl / sums.todayProj) * 100).toFixed(1) : (sums.todayColl > 0 ? '100+' : '0.0');
+
+                    const cureRate = sums.targetFiles > 0 ? (sums.uniquePaidCodes / sums.targetFiles) * 100 : 0;
+                    const lmNpRecPct = sums.lmNpTargetAmt > 0 ? (sums.mtdLmNpColl / sums.lmNpTargetAmt) * 100 : 0;
+
+                    let projAcc = 0;
+                    if (sums.todayProj > 0) {
+                        const diff = Math.abs(sums.todayProj - sums.todayColl);
+                        projAcc = Math.max(0, (1 - (diff / sums.todayProj)) * 100);
+                    } else if (sums.todayColl > 0) {
+                        projAcc = 0;
+                    } else {
+                        projAcc = 100;
+                    }
+
+                    sums.rpi = Math.min(100, (parseFloat(sums.achievement) * 0.4) + (projAcc * 0.2) + (lmNpRecPct * 0.2) + (cureRate * 0.2)).toFixed(1);
+                    sums.appUsePct = data.length > 0 ? Number((data.reduce((sum, item) => sum + (parseFloat(item.appUsePct) || 0), 0) / data.length).toFixed(1)) : 0;
+
+                    return sums;
+                };
+
+                const totalGrand = calculateTotals(allTerritoryData);
+
+                // Filter data
+                let filteredA = allTerritoryData.filter(t => t.part === 'A');
+                let filteredB = allTerritoryData.filter(t => t.part === 'B');
+
+                if (partVal === 'A') {
+                    filteredB = [];
+                } else if (partVal === 'B') {
+                    filteredA = [];
+                }
+
+                if (searchVal) {
+                    filteredA = filteredA.filter(t => t.name.toLowerCase().includes(searchVal) || t.officer.toLowerCase().includes(searchVal));
+                    filteredB = filteredB.filter(t => t.name.toLowerCase().includes(searchVal) || t.officer.toLowerCase().includes(searchVal));
+                }
+
+                // Sort
+                filteredA.sort((a, b) => parseFloat(b.tillDayAchievement || 0) - parseFloat(a.tillDayAchievement || 0));
+                filteredB.sort((a, b) => parseFloat(b.tillDayAchievement || 0) - parseFloat(a.tillDayAchievement || 0));
+
+                const totalA = calculateTotals(filteredA);
+                const totalB = calculateTotals(filteredB);
+                const totalGrandFiltered = calculateTotals([...filteredA, ...filteredB]);
+
+                const createRow = (t, isTotal = false, label = '') => {
+                    let achColorStyle = '';
+                    if (!isTotal) {
+                        if (t.globalGroup === 'top') {
+                            achColorStyle = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold border-l-2 border-emerald-500 transition-colors duration-300 hover:bg-emerald-500/20';
+                        } else if (t.globalGroup === 'middle') {
+                            achColorStyle = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 font-extrabold border-l-2 border-amber-500 transition-colors duration-300 hover:bg-amber-500/20';
+                        } else {
+                            achColorStyle = 'bg-rose-500/10 text-rose-600 dark:text-rose-400 font-extrabold border-l-2 border-rose-500 transition-colors duration-300 hover:bg-rose-500/20';
+                        }
+                    } else {
+                        achColorStyle = 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white font-bold';
+                    }
+
+                    const lastAchColorClass = (!isTotal && parseFloat(t.lastDayAch) < parseFloat(totalGrand.lastDayAch)) ? 'text-red-650' : 'text-orange-500';
+                    return `
+                    <tr class="${isTotal ? 'bg-slate-200 dark:bg-slate-700 font-bold border-y-2 border-slate-300 dark:border-slate-600' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition interactive-row border-b border-slate-100 dark:border-slate-700'} text-slate-700 dark:text-slate-300">
+                        <td class="p-1.5 border dark:border-slate-600 ${isTotal ? '' : 'sticky left-0 bg-white dark:bg-dark-card'} text-center">${isTotal ? '' : t.part}</td>
+                        <td class="p-1.5 border dark:border-slate-600 ${isTotal ? 'text-right' : 'sticky left-10 bg-white dark:bg-dark-card shadow-sm'} font-medium">
+                            ${isTotal ? label : t.name}
+                        </td>
+                        <td class="p-1.5 border dark:border-slate-600 text-center">${t.targetFiles}</td>
+                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center">${t.mtdProjFiles}</td>` : ''}
+                        <td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'font-semibold text-blue-600' : ''}">${t.uniquePaidCodes}</td>
+                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'text-red-500' : ''}">${t.tillDateNonPayFiles}</td>` : ''}
+                        
+                        <td class="p-1.5 border dark:border-slate-600 text-right font-medium">${parseInt(t.targetAmt).toLocaleString()}</td>
+                        
+                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'text-slate-500' : ''}">${parseInt(t.presetProjReg).toLocaleString()}</td>` : ''}
+                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'text-slate-500' : ''}">${parseInt(t.presetProjAdv).toLocaleString()}</td>` : ''}
+                        
+                        <td class="p-1.5 border dark:border-slate-600 text-right font-bold ${!isTotal ? 'text-brand-600' : ''}">${parseInt(t.presetProjTotal).toLocaleString()}</td>
+                        <td class="p-1.5 border dark:border-slate-600 text-right font-bold ${!isTotal ? 'text-green-600' : ''}">${parseInt(t.mtdColl).toLocaleString()}</td>
+                        <td class="p-1.5 border dark:border-slate-600 text-center font-bold ${achColorStyle}">
+                            <div class="flex items-center justify-center gap-1.5">
+                                <span>${t.tillDayAchievement}%</span>
+                            </div>
+                        </td>
+                        
+                        <td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'font-medium text-slate-700 dark:text-slate-300' : ''}">${parseInt(t.todayProj).toLocaleString()}</td>
+                        <td class="p-1.5 border dark:border-slate-600 text-right font-bold ${!isTotal ? 'text-green-600' : ''}">${parseInt(t.todayColl).toLocaleString()}</td>
+                        <td class="p-1.5 border dark:border-slate-600 text-center font-bold text-fuchsia-600 bg-fuchsia-50 dark:bg-fuchsia-900/10">${t.todayAch}%</td>
+ 
+                        <td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'text-slate-500' : ''} border-l-2 border-slate-100 dark:border-slate-600">${parseInt(t.yestProjAmt).toLocaleString()}</td>
+                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'text-slate-500' : ''}">${t.yestProjFiles}</td>` : ''}
+                        <td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'text-slate-500' : ''}">${parseInt(t.yestCollAmt).toLocaleString()}</td>
+                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'text-slate-500' : ''}">${t.yestCollFiles}</td>` : ''}
+                        <td class="p-1.5 border dark:border-slate-600 text-center font-bold ${lastAchColorClass}">${t.lastDayAch}%</td>
+                        
+                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'text-rose-800 bg-rose-50 dark:bg-rose-900/20' : ''} border-l-2 border-slate-100 dark:border-slate-600">${parseInt(t.lmNpTargetAmt).toLocaleString()}</td>` : ''}
+                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'text-rose-800 bg-rose-50 dark:bg-rose-900/20' : ''}">${t.lmNpTargetFiles}</td>` : ''}
+                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-right font-bold ${!isTotal ? 'text-rose-600' : ''}">${parseInt(t.mtdLmNpColl).toLocaleString()}</td>` : ''}
+                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center font-bold ${!isTotal ? 'text-rose-600' : ''}">${t.mtdLmNpFiles}</td>` : ''}
+                        <td class="p-1.5 border dark:border-slate-600 text-center font-bold border-l-2 border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/40">
+                            <span onclick="UI.showAppUseModal('${t.id}')" class="cursor-pointer hover:opacity-80 transition-opacity inline-flex items-center px-2 py-0.5 rounded-full text-xs font-black ${
+                                t.appUsePct >= 90 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                                t.appUsePct >= 70 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
+                                'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                            }">
+                                <i class="fa-solid ${t.appUsePct >= 90 ? 'fa-circle-check' : t.appUsePct >= 70 ? 'fa-triangle-exclamation' : 'fa-circle-xmark'} mr-1 opacity-80"></i>
+                                ${t.appUsePct}%
+                            </span>
+                        </td>
+                    </tr>`;
+                };
+
+                const tbody = document.getElementById('ranking-table-body');
+                if (tbody) {
+                    tbody.innerHTML = '';
+                    if (filteredA.length === 0 && filteredB.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="${isCompact ? 13 : 21}" class="px-6 py-8 text-center text-slate-400 italic">No matching records found.</td></tr>`;
+                    } else {
+                        if (filteredA.length > 0) {
+                            filteredA.forEach(t => tbody.innerHTML += createRow(t));
+                            tbody.innerHTML += createRow(totalA, true, 'Total Part A');
+                        }
+                        if (filteredB.length > 0) {
+                            filteredB.forEach(t => tbody.innerHTML += createRow(t));
+                            tbody.innerHTML += createRow(totalB, true, 'Total Part B');
+                        }
+                        tbody.innerHTML += createRow(totalGrandFiltered, true, 'Grand Total');
+                    }
+                }
+            },
+
+            filterRankingTable() {
+                const searchInput = document.getElementById('ranking-search');
+                const partSelect = document.getElementById('ranking-part-filter');
+                
+                UI.rankingSearchVal = searchInput ? searchInput.value : '';
+                UI.rankingPartVal = partSelect ? partSelect.value : 'All';
+
+                const isCompact = document.getElementById('views-container').innerHTML.includes("UI.renderAdminDashboard('compact')");
+                this.populateRankingTable(isCompact ? 'compact' : 'full');
             },
 
             renderAdminOffroadView(viewMode = 'active') {
