@@ -1721,8 +1721,8 @@
                 if (titleContainer) {
                     if (title) {
                         titleContainer.innerHTML = `
-                            <h1 class="text-xs sm:text-sm font-black text-slate-800 dark:text-white leading-none">${title}</h1>
-                            ${subtitle ? `<p class="text-[8px] sm:text-[9px] text-slate-400 dark:text-slate-500 font-bold mt-0.5">${subtitle}</p>` : ''}
+                            <h1 class="text-xs sm:text-sm font-semibold tracking-tight text-slate-800 dark:text-white leading-none animate-fade-in">${title}</h1>
+                            ${subtitle ? `<p class="text-[8px] sm:text-[9px] text-slate-400 dark:text-slate-500 font-medium tracking-wide uppercase mt-0.5 animate-fade-in">${subtitle}</p>` : ''}
                         `;
                     } else {
                         titleContainer.innerHTML = '';
@@ -2371,11 +2371,7 @@
 
                 document.getElementById('views-container').innerHTML = `
                     <div class="animate-entry space-y-6">
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <div>
-                                <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Area Head Management</h2>
-                                <p class="text-sm text-slate-500">Create and manage Area Heads and their assigned territories</p>
-                            </div>
+                        <div class="flex justify-end items-center mb-2">
                             <button onclick="UI.openAreaHeadModal()" class="px-4 py-2 bg-brand-600 text-white rounded-lg shadow-md hover:bg-brand-700 transition-all font-bold text-sm">
                                 <i class="fa-solid fa-plus mr-2"></i> Add Area Head
                             </button>
@@ -2803,17 +2799,15 @@
                     return { ...t, ...m, lastDayAch: ldAch, todayAch: tdAch };
                 }).sort((a, b) => parseFloat(b.rpi) - parseFloat(a.rpi));
 
+                UI.updateHeader('Area Head Dashboard', `Welcome, ${currentAh.officerName || currentAh.username}`);
+
                 document.getElementById('views-container').innerHTML = `
                     <div class="animate-entry max-w-6xl mx-auto space-y-6">
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div class="flex justify-between items-center mb-2">
                             <div>
-                                <div class="flex items-center gap-2">
-                                    <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Area Head Dashboard</h2>
-                                    <button onclick="UI.openRequestTerritoryModal()" class="p-2 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 hover:bg-brand-500/20 transition flex items-center font-bold text-xs border border-brand-500/20 shadow-sm">
-                                        <i class="fa-solid fa-circle-nodes mr-1.5"></i> Manage Regions
-                                    </button>
-                                </div>
-                                <p class="text-sm text-slate-500 font-medium mt-0.5">Welcome, ${currentAh.officerName || currentAh.username}</p>
+                                <button onclick="UI.openRequestTerritoryModal()" class="p-2 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 hover:bg-brand-500/20 transition flex items-center font-bold text-xs border border-brand-500/20 shadow-sm">
+                                    <i class="fa-solid fa-circle-nodes mr-1.5"></i> Manage Regions
+                                </button>
                             </div>
                             <div class="flex items-center gap-3">
                                 ${currentRequested.length > 0 ? `
@@ -3076,13 +3070,7 @@
                 const container = document.getElementById('views-container');
                 container.innerHTML = `
                     <div class="animate-entry space-y-4">
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                            <div>
-                                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
-                                    <i class="fa-solid fa-trophy text-brand-500 text-xl"></i> Recovery Performance Analytics
-                                </h2>
-                                <p class="text-xs text-slate-500 font-medium">Strategic insights into top and below performing territories</p>
-                            </div>
+                        <div class="flex justify-end items-center mb-2">
                             <button onclick="UI.downloadPerformanceCSV()" class="flex items-center px-3 py-1.5 bg-white dark:bg-slate-800 border border-emerald-500 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-all font-bold text-xs shadow-lg shadow-emerald-500/10 hover-lift">
                                 <i class="fa-solid fa-file-csv mr-1.5"></i> Download CSV
                             </button>
@@ -3606,26 +3594,22 @@
                 container.innerHTML = `
                     <div class="animate-entry space-y-4"> 
                         
-                        <!-- DASHBOARD HEADER -->
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
-                            <div>
-                                <div class="flex items-center gap-2 mb-2">
+                        <!-- DASHBOARD HEADER ACTIONS -->
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-2">
+                            <div class="flex flex-wrap items-center gap-2">
                                     ${cutoffHours > 0 ? `
                                         <div class="flex items-center px-2.5 py-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-lg text-amber-700 dark:text-amber-400 text-[10px] font-black tracking-wide shadow-sm">
                                             <span class="relative flex h-2 w-2 mr-2">
                                                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                                                 <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
                                             </span>
-                                            EXTENDED CUTOFF: +${cutoffHours}H (0${cutoffHours}:00 AM)
+                                            EXTENDED CUTOFF: +${cutoffHours}H
                                         </div>
                                     ` : ''}
                                     <div class="flex items-center px-2.5 py-1 bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-700/30 rounded-lg text-brand-700 dark:text-brand-400 text-[10px] font-black tracking-wide shadow-sm">
                                         <i class="fa-solid fa-calendar-day mr-2 opacity-70"></i>
-                                        ACTIVE OPS MONTH: ${activeMonth}
+                                        ACTIVE MONTH: ${activeMonth}
                                     </div>
-                                </div>
-                                <h2 class="text-2xl font-black text-slate-800 dark:text-white">Admin Intelligence Dashboard</h2>
-                                <p class="text-xs text-slate-500 font-medium">Monthly Recovery Performance Metrics & Strategic Analytics</p>
                             </div>
                             <div class="flex items-center gap-3">
                                 <button onclick="UI.openSystemSettingsModal()" class="flex items-center px-4 py-2 bg-white dark:bg-slate-800 border-2 border-brand-500 text-brand-600 dark:text-brand-400 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-all font-bold text-sm shadow-lg shadow-brand-500/10 hover-lift">
@@ -4407,13 +4391,8 @@
 
                 document.getElementById('views-container').innerHTML = `
                     <div class="animate-entry">
-                        <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <div>
-                                <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Offroad Tracker</h2>
-                                <p class="text-sm text-slate-500">Comprehensive audit of vehicle incidents & recoveries</p>
-                            </div>
-                            
-                            <div class="flex flex-wrap items-center gap-3">
+                        <div class="mb-4 flex flex-col md:flex-row justify-end items-stretch md:items-center gap-3">
+                            <div class="flex flex-wrap items-center gap-3 justify-end">
                                 <button onclick="UI.openOffroadModal()" class="px-4 py-2 bg-red-600 text-white rounded-lg shadow-lg hover:bg-red-700 transition flex items-center font-bold text-sm">
                                     <i class="fa-solid fa-plus mr-2"></i> New Report
                                 </button>
@@ -4565,12 +4544,7 @@
 
                 document.getElementById('views-container').innerHTML = `
                     <div class="animate-entry max-w-6xl mx-auto">
-                        <div class="mb-6">
-                            <h2 class="text-2xl font-bold text-slate-800 dark:text-white flex items-center">
-                                <i class="fa-solid fa-stopwatch text-brand-500 mr-3"></i> Projection Monitor
-                            </h2>
-                            <p class="text-sm text-slate-500">Monitor daily projections, manage locks, and track run rates.</p>
-                        </div>
+                        <!-- Redundant header title removed -->
 
                         <!-- FILTER BAR -->
                         <div class="mb-6 flex flex-col xl:flex-row gap-3 items-center justify-between bg-white dark:bg-dark-card p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -5180,20 +5154,14 @@
 
                 document.getElementById('views-container').innerHTML = `
             <div class="animate-entry" >
-                        <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <div>
-                                <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Settlement & Closure Vault</h2>
-                                <p class="text-sm text-slate-500">Track Early Settlements, Closures & Credit Notes</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="UI.openSettlementModal()" class="group flex items-center px-4 py-2 bg-brand-600 text-white rounded-lg shadow-lg hover:bg-brand-700 transition hover:-translate-y-0.5">
-                                    <i class="fa-solid fa-plus mr-2"></i> Add New
-                                </button>
-                                <button onclick="UI.exportSettlementCSV()" class="group flex items-center px-4 py-2 bg-white dark:bg-dark-card border border-purple-200 dark:border-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg shadow-sm hover:shadow-md transition hover:-translate-y-0.5">
-                                    <i class="fa-solid fa-file-csv mr-2 group-hover:scale-110 transition-transform"></i>
-                                    <span class="font-bold text-xs uppercase tracking-wide">Export</span>
-                                </button>
-                            </div>
+                        <div class="mb-4 flex justify-end items-center gap-2">
+                            <button onclick="UI.openSettlementModal()" class="group flex items-center px-4 py-2 bg-brand-600 text-white rounded-lg shadow-lg hover:bg-brand-700 transition hover:-translate-y-0.5">
+                                <i class="fa-solid fa-plus mr-2"></i> Add New
+                            </button>
+                            <button onclick="UI.exportSettlementCSV()" class="group flex items-center px-4 py-2 bg-white dark:bg-dark-card border border-purple-200 dark:border-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg shadow-sm hover:shadow-md transition hover:-translate-y-0.5">
+                                <i class="fa-solid fa-file-csv mr-2 group-hover:scale-110 transition-transform"></i>
+                                <span class="font-bold text-xs uppercase tracking-wide">Export</span>
+                            </button>
                         </div>
 
                         <!--Stats Cards-->
@@ -5307,13 +5275,8 @@
 
                 document.getElementById('views-container').innerHTML = `
             <div class="animate-entry max-w-6xl mx-auto" >
-                        <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <div class="text-left">
-                                <h2 class="text-lg sm:text-xl font-black tracking-tight text-slate-800 dark:text-white">Global Collection History</h2>
-                                <p class="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium">Master record of all collections across territories</p>
-                            </div>
-                            
-                            <form onsubmit="UI.updateAdminHistory(event)" class="flex items-center bg-white dark:bg-dark-card p-1.5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div class="mb-4 flex flex-col md:flex-row justify-end items-end md:items-center gap-4">
+                            <form onsubmit="UI.updateAdminHistory(event)" class="flex items-center bg-white dark:bg-dark-card p-1.5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 w-full md:w-auto">
                                 <div class="px-2 border-r border-slate-100 dark:border-slate-700 mr-2">
                                     <input type="text" name="territorySearch" placeholder="Territory..." oninput="UI.updateAdminHistory()" class="bg-transparent border-none text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-0 w-24 sm:w-32 outline-none">
                                 </div>
@@ -5909,13 +5872,8 @@
 
                 document.getElementById('views-container').innerHTML = `
                     <div class="animate-entry max-w-6xl mx-auto">
-                        <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <div>
-                                <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Offroad Monitor</h2>
-                                <p class="text-sm text-slate-500">Manage recovery status and vehicle incidents</p>
-                            </div>
-                            
-                            <div class="flex flex-wrap items-center gap-3">
+                        <div class="mb-4 flex flex-col md:flex-row justify-end items-stretch md:items-center gap-4">
+                            <div class="flex flex-wrap items-center gap-3 justify-end">
                                 <div class="bg-slate-200 dark:bg-slate-700 p-1 rounded-lg inline-flex mr-2">
                                     <button onclick="UI.renderOfficerOffroadTracker('active')" class="px-4 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'active' ? 'bg-white dark:bg-slate-600 text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}">
                                         Active
@@ -6050,13 +6008,13 @@
             <div class="animate-entry max-w-xl mx-auto mt-10" >
                 <div class="glass-panel p-8 rounded-2xl shadow-xl dark:bg-dark-card border-t-4 ${isLate ? 'border-red-500' : 'border-brand-500'}">
                     <div class="flex items-center mb-6">
-                        <div class="w-12 h-12 rounded-full ${isLate ? 'bg-red-100 text-red-600' : 'bg-brand-100 text-brand-600'} flex items-center justify-center text-xl mr-4">
+                        <div class="w-10 h-10 rounded-full ${isLate ? 'bg-red-100 text-red-600' : 'bg-brand-100 text-brand-600'} flex items-center justify-center text-lg mr-3">
                             <i class="fa-regular fa-clock"></i>
                         </div>
                         <div>
-                            <h2 class="text-2xl font-bold">Morning Projection</h2>
-                            <p class="text-sm ${isLate ? 'text-red-500' : 'text-slate-500'}">
-                                ${isLate ? 'Submission time (10:00 AM) has passed.' : 'Submit before 10:00 AM'}
+                            <h2 class="text-lg font-bold">Morning Projection</h2>
+                            <p class="text-xs ${isLate ? 'text-red-500' : 'text-slate-500'}">
+                                ${isLate ? 'Submission window closed' : 'Submit before 10:00 AM'}
                             </p>
                         </div>
                     </div>
@@ -6114,16 +6072,16 @@
                     <!-- Decorative bg element -->
                     <div class="absolute -top-12 -right-12 w-40 h-40 bg-brand-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
-                    <div class="flex justify-between items-start mb-6 relative z-10">
+                    <div class="flex justify-between items-start mb-4 relative z-10">
                         <div>
-                            <h2 class="text-xl md:text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
-                                <span class="w-1.5 h-6 bg-brand-500 rounded-full"></span>
+                            <h2 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                <span class="w-1 h-5 bg-brand-500 rounded-full"></span>
                                 New Collection
                             </h2>
-                            <p class="text-xs text-slate-500 dark:text-slate-400 ml-4 mt-1">Enter daily collection details</p>
+                            <p class="text-[10px] text-slate-500 dark:text-slate-400 ml-3 mt-0.5">Enter daily collection details</p>
                         </div>
-                        <button onclick="Router.navigate('officer-dashboard')" class="group w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-700/50 hover:bg-rose-50 dark:hover:bg-rose-900/20 border border-slate-100 dark:border-slate-600 flex items-center justify-center transition-all duration-300 hover:rotate-90 hover:shadow-md">
-                            <i class="fa-solid fa-xmark text-slate-400 group-hover:text-rose-500 text-lg transition-colors"></i>
+                        <button onclick="Router.navigate('officer-dashboard')" class="group w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-700/50 hover:bg-rose-50 dark:hover:bg-rose-900/20 border border-slate-100 dark:border-slate-600 flex items-center justify-center transition-all duration-300 hover:rotate-90 hover:shadow-sm">
+                            <i class="fa-solid fa-xmark text-slate-400 group-hover:text-rose-500 text-sm transition-colors"></i>
                         </button>
                     </div>
 
@@ -6327,11 +6285,7 @@
 
                 document.getElementById('views-container').innerHTML = `
             <div class="animate-entry flex flex-col h-[calc(100vh-140px)]" >
-                        <div class="mb-6 flex justify-between items-center">
-                            <div>
-                                <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Data Entry Setup</h2>
-                                <p class="text-sm text-slate-500">Monthly Targets & Initial Projections</p>
-                            </div>
+                        <div class="mb-4 flex justify-end items-center">
                             <div class="flex space-x-3">
                                 <button onclick="UI.downloadTargetTemplate()" class="flex items-center px-4 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition text-sm font-medium hover-lift">
                                     <i class="fa-solid fa-download mr-2 text-slate-500"></i> Template
@@ -6428,11 +6382,7 @@
 
                 document.getElementById('views-container').innerHTML = `
             <div class="animate-entry flex flex-col h-[calc(100vh-140px)]" >
-                        <div class="mb-6 flex justify-between items-center">
-                            <div>
-                                <h2 class="text-2xl font-bold text-slate-800 dark:text-white">User Management</h2>
-                                <p class="text-sm text-slate-500">Manage Officers & Login Credentials</p>
-                            </div>
+                        <div class="mb-4 flex justify-end items-center">
                             <div class="flex space-x-3">
                                 <button onclick="UI.downloadUserTemplate()" class="flex items-center px-4 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition text-sm font-medium hover-lift">
                                     <i class="fa-solid fa-download mr-2 text-slate-500"></i> Download Template
@@ -7312,12 +7262,7 @@
 
                 document.getElementById('views-container').innerHTML = `
             <div class="animate-entry max-w-5xl mx-auto" >
-                        <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <div class="text-left">
-                                <h2 class="text-lg sm:text-xl font-black tracking-tight text-slate-800 dark:text-white">Collection History</h2>
-                                <p class="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium">Review and track your past collections</p>
-                            </div>
-                            
+                        <div class="mb-4 flex flex-col md:flex-row justify-end items-stretch md:items-end gap-4">
                             <div class="flex flex-col gap-2 w-full md:w-auto items-stretch md:items-end">
                                 <input type="hidden" id="history-start-date" value="${defaultStartDate}">
                                 <input type="hidden" id="history-end-date" value="${defaultEndDate}">
