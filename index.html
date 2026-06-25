@@ -5802,10 +5802,16 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
-                        ${metrics.rawCollections.filter(c => c.date === Utils.getLocalDate()).map(c => `
-                                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
-                                        <td class="px-4 py-2 sm:px-6 sm:py-3">
-                                            <div class="font-medium text-slate-800 dark:text-slate-200">#${c.receipt}</div>
+                        ${todayCollEntries.map(c => {
+                            const isDup = metrics.rawCollections.some(other => other.id !== c.id && other.customerCode === c.customerCode && parseFloat(other.amount) === parseFloat(c.amount));
+                            return `
+                                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 ${isDup ? 'bg-yellow-50/40 dark:bg-yellow-900/10' : ''} relative transition-colors duration-300">
+                                        <td class="px-4 py-2 sm:px-6 sm:py-3 relative">
+                                            ${isDup ? '<div class="absolute -left-[1px] top-0 bottom-0 w-[3px] bg-yellow-400 rounded-r shadow-[0_0_8px_rgba(250,204,21,0.6)] animate-pulse"></div>' : ''}
+                                            <div class="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5 flex-wrap">
+                                                #${c.receipt}
+                                                ${isDup ? '<span class="inline-flex items-center px-1.5 py-0.5 rounded-md bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400 text-[8px] sm:text-[9px] font-black uppercase tracking-widest ring-1 ring-yellow-400/30 animate-pulse" title="Possible Duplicate Entry in this month"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Suspect</span>' : ''}
+                                            </div>
                                             <div class="text-[10px] sm:text-xs text-slate-400 font-mono">${c.customerCode || 'N/A'}</div>
                                         </td>
                                         <td class="px-4 py-2 sm:px-6 sm:py-3">
@@ -5819,7 +5825,7 @@
                                             ${c.mode}</span>
                                         </td>
                                             <td class="px-4 py-2 sm:px-6 sm:py-3 text-right">
-                                                <div class="font-bold tracking-tight">${parseFloat(c.amount).toLocaleString()}</div>
+                                                <div class="font-bold tracking-tight ${isDup ? 'text-yellow-600 dark:text-yellow-500' : ''}">${parseFloat(c.amount).toLocaleString()}</div>
                                                 <div class="flex justify-end gap-2 mt-1">
                                                     <button onclick="UI.openCollectionModal('${c.id}', '${c.territoryId}')" class="text-[10px] text-brand-600 font-bold hover:underline transition flex items-center">
                                                         <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
@@ -5830,8 +5836,9 @@
                                                 </div>
                                             </td>
                                     </tr>
-                                `).join('')}
-                        ${metrics.rawCollections.filter(c => c.date === Utils.getLocalDate()).length === 0 ? '<tr><td colspan="4" class="px-6 py-6 text-center text-slate-400 text-sm">No collections today</td></tr>' : ''}
+                            `;
+                        }).join('')}
+                        ${todayCollEntries.length === 0 ? '<tr><td colspan="4" class="px-6 py-6 text-center text-slate-400 text-sm">No collections today</td></tr>' : ''}
                     </tbody>
                 </table>
                 </div>
