@@ -5611,12 +5611,7 @@
                                     </td>
                                     <td class="p-1.5 sm:p-2 border-r border-slate-100 dark:border-slate-700 bg-emerald-50/20 dark:bg-emerald-900/10">
                                         <div class="flex flex-col sm:flex-row justify-between items-center">
-                                            <div class="flex items-center gap-1">
-                                                 <span class="text-slate-500 font-bold uppercase tracking-tighter text-[8px] sm:text-[10px]">Today C.</span>
-                                                 <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[8px] font-black shadow-sm" title="Unique Customers Collected Today">
-                                                     <i class="fa-solid fa-users mr-0.5 opacity-85"></i>${todayCollCustCount}
-                                                 </span>
-                                             </div>
+                                            <span class="text-slate-500 font-bold uppercase tracking-tighter text-[8px] sm:text-[10px]">Today C.</span>
                                             <span class="font-bold text-[10px] sm:text-xs text-emerald-600 mt-0.5 sm:mt-0">${parseInt(metrics.todayColl).toLocaleString()}</span>
                                         </div>
                                     </td>
@@ -5740,11 +5735,21 @@
                     <!--RECENT TRANSACTIONS-->
             <div class="animate-entry rounded-lg shadow border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card overflow-hidden">
                 <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center sm:hidden">
-                    <h3 class="font-bold text-slate-800 dark:text-white text-sm">Today's Collections</h3>
+                    <h3 class="font-bold text-slate-800 dark:text-white text-sm flex items-center gap-1.5">
+                        Today's Collections
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-black shadow-sm" title="Unique Customers Collected Today">
+                            <i class="fa-solid fa-users mr-0.5 opacity-85"></i>${todayCollCustCount}
+                        </span>
+                    </h3>
                     <button onclick="Router.navigate('officer-collection')" class="text-[10px] bg-brand-600 text-white px-2 py-1 rounded hover:bg-brand-700"><i class="fa-solid fa-plus"></i> Add</button>
                 </div>
                 <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700 hidden sm:flex justify-between items-center">
-                    <h3 class="font-bold text-slate-800 dark:text-white">Today's Collections</h3>
+                    <h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                        Today's Collections
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-xs font-black shadow-sm" title="Unique Customers Collected Today">
+                            <i class="fa-solid fa-users mr-0.5 opacity-85"></i>${todayCollCustCount}
+                        </span>
+                    </h3>
                     <button onclick="Router.navigate('officer-collection')" class="text-xs bg-brand-600 text-white px-3 py-1.5 rounded hover:bg-brand-700 hover-lift"><i class="fa-solid fa-plus mr-1"></i> New Entry</button>
                 </div>
                 <div class="overflow-x-auto scrollbar-hide">
