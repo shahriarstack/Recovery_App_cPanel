@@ -439,43 +439,6 @@
             color: #cbd5e1 !important;
             fill: #cbd5e1 !important;
         }
-
-        /* Premium Animating Header Liquid Aura & Water Flow */
-        @keyframes liquidAura {
-            0% {
-                border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-                transform: translateX(-50%) translateY(-50%) rotate(0deg) scale(0.95);
-                opacity: 0.15;
-            }
-            50% {
-                border-radius: 30% 60% 70% 30% / 50% 60% 30% 60%;
-                transform: translateX(-50%) translateY(-50%) rotate(180deg) scale(1.18);
-                opacity: 0.3;
-            }
-            100% {
-                border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-                transform: translateX(-50%) translateY(-50%) rotate(360deg) scale(0.95);
-                opacity: 0.15;
-            }
-        }
-        .animate-ambient-hdr {
-            animation: liquidAura 16s infinite ease-in-out;
-        }
-        @keyframes waterFlow {
-            0% {
-                background-position: 0% 50%;
-            }
-            50% {
-                background-position: 100% 50%;
-            }
-            100% {
-                background-position: 0% 50%;
-            }
-        }
-        .animate-laser-glow {
-            background-size: 400% auto;
-            animation: waterFlow 10s cubic-bezier(0.445, 0.05, 0.55, 0.95) infinite;
-        }
     </style>
 </head>
 
@@ -766,14 +729,7 @@
             <!-- TOP BAR -->
             <header
                 class="h-16 bg-white/80 dark:bg-dark-card/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-6 z-10 sticky top-0">
-                
-                <!-- Premium Ambient Header Background Aura (Liquid Water Refraction) -->
-                <div class="absolute top-0 left-1/2 w-80 h-10 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-tr from-brand-500/15 via-cyan-500/10 to-teal-500/15 blur-3xl pointer-events-none animate-ambient-hdr"></div>
-                
-                <!-- Sleek Ambient Topbar Laser/Progress Line (Water Flow Wave) -->
-                <div class="absolute bottom-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-brand-500 via-cyan-500 via-teal-400 via-sky-500 via-brand-500 to-transparent animate-laser-glow opacity-80 z-20"></div>
-
-                <button class="text-slate-500 hover:text-brand-600 transition-colors mr-4 z-10" onclick="UI.toggleSidebar()">
+                <button class="text-slate-500 hover:text-brand-600 transition-colors mr-4" onclick="UI.toggleSidebar()">
                     <i class="fa-solid fa-bars text-xl"></i>
                 </button>
 
@@ -4070,9 +4026,9 @@
                                             </div>
                                             <div class="flex items-center gap-1 px-2 py-1 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
                                                 <i class="fa-solid fa-calendar-range text-[10px] text-brand-500 opacity-70"></i>
-                                                <input type="date" id="momentum-start" onchange="UI.updateMomentumChart()" value="${Utils.getLocalDate(new Date(Date.now() - 29 * 24 * 60 * 60 * 1000))}" class="bg-transparent border-none text-[9px] font-black outline-none cursor-pointer">
+                                                <input type="date" id="momentum-start" onchange="UI.updateMomentumChart()" value="${Utils.getMonthBounds().startOfMonth}" class="bg-transparent border-none text-[9px] font-black outline-none cursor-pointer">
                                                 <span class="text-[9px] text-slate-300 font-black px-1">/</span>
-                                                <input type="date" id="momentum-end" onchange="UI.updateMomentumChart()" value="${Utils.getLocalDate()}" class="bg-transparent border-none text-[9px] font-black outline-none cursor-pointer">
+                                                <input type="date" id="momentum-end" onchange="UI.updateMomentumChart()" value="${Utils.getMonthBounds().endOfMonth}" class="bg-transparent border-none text-[9px] font-black outline-none cursor-pointer">
                                             </div>
                                         </div>
                                     </div>
