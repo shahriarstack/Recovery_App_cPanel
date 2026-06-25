@@ -5541,10 +5541,10 @@
                     <!--RPI & OFFROAD STATUS BANNER - COMPRESSED FOR MOBILE -->
                     <div class="animate-entry mb-4 sm:mb-6 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-dark-card shadow-sm overflow-hidden flex flex-row divide-x divide-slate-100 dark:divide-slate-700/50">
                         <!-- Collection History Button (Left) -->
-                        <div onclick="Router.navigate('officer-history')" class="flex-1 py-2 px-2 flex items-center justify-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/30 cursor-pointer transition-all group text-slate-600 dark:text-slate-300">
-                            <i class="fa-solid fa-clock-rotate-left text-[10px] sm:text-xs text-brand-500 group-hover:scale-110 transition-transform"></i>
+                        <div onclick="Router.navigate('officer-history')" class="flex-1 py-2 px-2 flex items-center justify-center gap-1 hover:bg-slate-50 dark:hover:bg-slate-800/30 cursor-pointer transition-all active:scale-95 duration-100 group text-slate-600 dark:text-slate-300">
+                            <i class="fa-solid fa-clock-rotate-left text-[10px] sm:text-xs text-brand-500 group-hover:rotate-[-15deg] group-hover:scale-110 transition-transform"></i>
                             <span class="text-[9px] sm:text-xs font-black uppercase tracking-wider group-hover:text-brand-500 transition-colors">History</span>
-                            <i class="fa-solid fa-chevron-right text-[6px] text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform sm:inline-block hidden"></i>
+                            <i class="fa-solid fa-chevron-right text-[6px] text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform"></i>
                         </div>
 
                         <!-- RPI Card (Center) -->
@@ -5554,10 +5554,10 @@
                         </div>
 
                         <!-- Active Offroad Card (Right) -->
-                        <div onclick="Router.navigate('offroad-monitor')" class="flex-1 py-2 px-2 flex items-center justify-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/30 cursor-pointer transition-all group text-rose-600 dark:text-rose-400 hover:bg-rose-50/5">
-                            <i class="fa-solid fa-car-burst text-[10px] sm:text-xs group-hover:rotate-12 transition-transform"></i>
+                        <div onclick="Router.navigate('offroad-monitor')" class="flex-1 py-2 px-2 flex items-center justify-center gap-1 hover:bg-slate-50 dark:hover:bg-slate-800/30 cursor-pointer transition-all active:scale-95 duration-100 group text-rose-600 dark:text-rose-400 hover:bg-rose-50/5">
+                            <i class="fa-solid fa-car-burst text-[10px] sm:text-xs group-hover:rotate-12 group-hover:scale-110 transition-transform"></i>
                             <span class="text-[9px] sm:text-xs font-black uppercase tracking-wider">${db.offroad_vehicles.filter(v => v.territoryId === linkedTId && v.status === 'Active').length} Offroad</span>
-                            <i class="fa-solid fa-chevron-right text-[7px] text-rose-300 dark:text-rose-900/30 group-hover:translate-x-0.5 transition-transform sm:inline-block hidden"></i>
+                            <i class="fa-solid fa-chevron-right text-[6px] text-rose-300 dark:text-rose-900/30 group-hover:translate-x-0.5 transition-transform"></i>
                         </div>
                     </div>
 
