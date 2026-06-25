@@ -5448,6 +5448,11 @@
                 // Calculate Today Achievement for the new layout
                 const todayAch = metrics.todayProj > 0 ? ((metrics.todayColl / metrics.todayProj) * 100).toFixed(1) : (metrics.todayColl > 0 ? '100+' : '0.0');
 
+                // Calculate today's collection customer count
+                const todayStr = Utils.getLocalDate();
+                const todayCollEntries = metrics.rawCollections.filter(c => c.date === todayStr);
+                const todayCollCustCount = new Set(todayCollEntries.map(c => c.customerCode)).size;
+
                 // Calculate Regular vs Advance Split (MTD)
                 const mtdCollReg = metrics.rawCollections.reduce((sum, c) => sum + (parseFloat(c.regularAmount) || (parseFloat(c.advanceAmount) ? 0 : parseFloat(c.amount)) || 0), 0);
                 const mtdCollAdv = metrics.rawCollections.reduce((sum, c) => sum + (parseFloat(c.advanceAmount) || 0), 0);
@@ -5606,7 +5611,12 @@
                                     </td>
                                     <td class="p-1.5 sm:p-2 border-r border-slate-100 dark:border-slate-700 bg-emerald-50/20 dark:bg-emerald-900/10">
                                         <div class="flex flex-col sm:flex-row justify-between items-center">
-                                            <span class="text-slate-500 font-bold uppercase tracking-tighter text-[8px] sm:text-[10px]">Today C.</span>
+                                            <div class="flex items-center gap-1">
+                                                 <span class="text-slate-500 font-bold uppercase tracking-tighter text-[8px] sm:text-[10px]">Today C.</span>
+                                                 <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[8px] font-black shadow-sm" title="Unique Customers Collected Today">
+                                                     <i class="fa-solid fa-users mr-0.5 opacity-85"></i>${todayCollCustCount}
+                                                 </span>
+                                             </div>
                                             <span class="font-bold text-[10px] sm:text-xs text-emerald-600 mt-0.5 sm:mt-0">${parseInt(metrics.todayColl).toLocaleString()}</span>
                                         </div>
                                     </td>
