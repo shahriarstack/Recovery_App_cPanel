@@ -4642,12 +4642,6 @@
                             <th onclick="UI.sortProjections('officer')" class="px-5 py-3 select-none hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer">
                                 Officer ${UI.getSortIcon('officer')}
                             </th>
-                            <th onclick="UI.sortProjections('regular')" class="px-5 py-3 text-right select-none hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer">
-                                Regular Proj ${UI.getSortIcon('regular')}
-                            </th>
-                            <th onclick="UI.sortProjections('advance')" class="px-5 py-3 text-right select-none hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer">
-                                Advance Proj ${UI.getSortIcon('advance')}
-                            </th>
                             <th onclick="UI.sortProjections('total')" class="px-5 py-3 text-right select-none hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer">
                                 Total Proj ${UI.getSortIcon('total')}
                             </th>
@@ -4771,8 +4765,6 @@
                                     </div>
                                 </td>
                                 <td class="px-5 py-3.5 text-slate-600 dark:text-slate-400 text-xs">${item.officer}</td>
-                                <td class="px-5 py-3.5 text-right font-mono text-slate-500 text-xs">${parseFloat(regVal).toLocaleString()}</td>
-                                <td class="px-5 py-3.5 text-right font-mono text-brand-500 text-xs">${parseFloat(advVal).toLocaleString()}</td>
                                 <td class="px-5 py-3.5 text-right font-mono font-bold text-slate-800 dark:text-white text-xs">${totalProj.toLocaleString()}</td>
                                 <td class="px-5 py-3.5 text-center font-mono text-xs text-slate-500">${files}</td>
                                 <td class="px-5 py-3.5 text-right font-mono text-xs">
