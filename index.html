@@ -729,11 +729,15 @@
             <!-- TOP BAR -->
             <header
                 class="h-16 bg-white/80 dark:bg-dark-card/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-6 z-10 sticky top-0">
-                <button class="text-slate-500 hover:text-brand-600 transition-colors mr-4" onclick="UI.toggleSidebar()">
-                    <i class="fa-solid fa-bars text-xl"></i>
-                </button>
+                <div class="flex items-center flex-1 min-w-0 mr-4">
+                    <button class="text-slate-500 hover:text-brand-600 transition-colors mr-3 flex-shrink-0" onclick="UI.toggleSidebar()">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                    <div id="header-title-container" class="flex flex-col leading-none min-w-0"></div>
+                </div>
 
-                <div class="flex items-center space-x-4 ml-auto">
+                <div class="flex items-center space-x-3 ml-auto flex-shrink-0">
+                    <div id="header-right-custom" class="flex items-center"></div>
                     <!-- Date Filter Mock -->
                     <div
                         class="hidden sm:flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-1.5 text-sm transition-colors">
@@ -1631,6 +1635,33 @@
                     localStorage.setItem('currentView_' + Auth.currentUser.role, viewId);
                 }
 
+                // Default header titles/subtitles mapping
+                const defaultTitles = {
+                    'admin-dashboard': { title: 'Admin Dashboard', subtitle: 'Executive Performance Control' },
+                    'admin-data-entry': { title: 'Data Entry Setup', subtitle: 'Monthly Targets & Projections' },
+                    'admin-users': { title: 'User Management', subtitle: 'Credentials & Permissions' },
+                    'admin-area-heads': { title: 'Area Heads', subtitle: 'Region Configurations' },
+                    'area-head-dashboard': { title: 'Area Head Dashboard', subtitle: 'Regional Monitoring' },
+                    'admin-offroad': { title: 'Offroad Tracker', subtitle: 'Out of Operations Recovery' },
+                    'admin-settlements': { title: 'Settlements Monitor', subtitle: 'Discount & Waiver Approval Status' },
+                    'admin-history': { title: 'Global Collection History', subtitle: 'Master Record of All Collections' },
+                    'admin-vehicle-perf': { title: 'Vehicle Performance', subtitle: 'Recovery Status by Customer' },
+                    'admin-projections': { title: 'Projection Monitor', subtitle: 'Missing & Submitted Projections' },
+                    'admin-performance': { title: 'Strategic Analytics', subtitle: 'Collection Momentum & Performance' },
+                    'officer-dashboard': { title: 'Dashboard', subtitle: '' },
+                    'officer-projection': { title: 'Projections', subtitle: 'Submit Daily Recovery Estimate' },
+                    'officer-collection': { title: 'Collection Entry', subtitle: 'Post Recovery Receipts' },
+                    'officer-offroad': { title: 'Offroad Tracker', subtitle: 'Active Offroad Vehicles' },
+                    'officer-settlements': { title: 'Settlement Status', subtitle: 'Discounts & Waivers Tracker' },
+                    'officer-history': { title: 'Collection History', subtitle: 'Track Your Payments' },
+                    'officer-analytics': { title: 'Vehicle Analytics', subtitle: 'Interactive Recovery Insights' }
+                };
+
+                const headerInfo = defaultTitles[viewId] || { title: '', subtitle: '' };
+                if (typeof UI !== 'undefined' && UI.updateHeader) {
+                    UI.updateHeader(headerInfo.title, headerInfo.subtitle, '');
+                }
+
                 const container = document.getElementById('views-container');
                 container.innerHTML = '';
 
@@ -1680,6 +1711,26 @@
                         toggleIcon.classList.remove('fa-eye-slash');
                         toggleIcon.classList.add('fa-eye');
                     }
+                }
+            },
+
+            updateHeader(title, subtitle, rightHtml = '') {
+                const titleContainer = document.getElementById('header-title-container');
+                const rightContainer = document.getElementById('header-right-custom');
+                
+                if (titleContainer) {
+                    if (title) {
+                        titleContainer.innerHTML = `
+                            <h1 class="text-xs sm:text-sm font-black text-slate-800 dark:text-white leading-none">${title}</h1>
+                            ${subtitle ? `<p class="text-[8px] sm:text-[9px] text-slate-400 dark:text-slate-500 font-bold mt-0.5">${subtitle}</p>` : ''}
+                        `;
+                    } else {
+                        titleContainer.innerHTML = '';
+                    }
+                }
+                
+                if (rightContainer) {
+                    rightContainer.innerHTML = rightHtml;
                 }
             },
 
@@ -5481,48 +5532,36 @@
 
                 const appUsePct = Calc.getAppUsePercentage(linkedTId);
 
-                document.getElementById('views-container').innerHTML = `
-            <div id="officer-dashboard-panel" class="animate-entry mb-4 sm:mb-6" >
-                        <div class="flex justify-between items-center mb-2">
-                            <div>
-                                <h2 class="text-xl sm:text-2xl font-bold tracking-tight">Dashboard</h2>
-                                <p class="text-[10px] text-slate-400">Territory: ${linkedTId}</p>
+                UI.updateHeader('Dashboard', `Territory: ${linkedTId}`, `
+                    <div onclick="UI.showAppUseModal('${linkedTId}')" class="cursor-pointer relative flex items-center justify-center py-1 px-2 rounded-xl bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 shadow-sm hover-lift group mr-2">
+                        <div class="absolute inset-0 rounded-xl bg-gradient-to-tr ${
+                            appUsePct >= 90 ? 'from-emerald-500/10 to-teal-500/5' :
+                            appUsePct >= 70 ? 'from-amber-500/10 to-orange-500/5' :
+                            'from-rose-500/10 to-red-500/5'
+                        } opacity-100 group-hover:scale-105 transition-transform duration-500"></div>
+                        
+                        <div class="flex items-center gap-1.5 relative z-10">
+                            <div class="flex items-center justify-center w-5 h-5 rounded-lg ${
+                                appUsePct >= 90 ? 'bg-emerald-500/10 text-emerald-500' :
+                                appUsePct >= 70 ? 'bg-amber-500/10 text-amber-500' :
+                                'bg-rose-500/10 text-rose-500'
+                            } text-[9px] font-black transition-transform duration-300 group-hover:rotate-12">
+                                <i class="fa-solid fa-gauge-high"></i>
                             </div>
-                            
-                            <!-- Premium Glassmorphic App Use Gauge -->
-                            <div class="flex items-center gap-3">
-                                <div class="hidden sm:flex flex-col items-end">
-                                    <span class="text-[9px] uppercase tracking-widest font-black text-slate-400 dark:text-slate-500">System Engagement</span>
-                                    <span class="text-xs font-bold text-slate-600 dark:text-slate-300">App Use Rating</span>
-                                </div>
-                                <div onclick="UI.showAppUseModal('${linkedTId}')" class="cursor-pointer relative flex items-center justify-center p-2.5 rounded-2xl bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 shadow-lg hover-lift group">
-                                    <div class="absolute inset-0 rounded-2xl bg-gradient-to-tr ${
-                                        appUsePct >= 90 ? 'from-emerald-500/10 to-teal-500/5' :
-                                        appUsePct >= 70 ? 'from-amber-500/10 to-orange-500/5' :
-                                        'from-rose-500/10 to-red-500/5'
-                                    } opacity-100 group-hover:scale-105 transition-transform duration-500"></div>
-                                    
-                                    <div class="flex items-center gap-2 relative z-10">
-                                        <div class="flex items-center justify-center w-6 h-6 rounded-lg ${
-                                            appUsePct >= 90 ? 'bg-emerald-500/10 text-emerald-500' :
-                                            appUsePct >= 70 ? 'bg-amber-500/10 text-amber-500' :
-                                            'bg-rose-500/10 text-rose-500'
-                                        } text-[10px] font-black transition-transform duration-300 group-hover:rotate-12">
-                                            <i class="fa-solid fa-gauge-high"></i>
-                                        </div>
-                                        <div>
-                                            <div class="text-[8px] uppercase tracking-widest font-black text-slate-400 leading-none mb-0.5">App Use</div>
-                                            <div class="text-sm font-black ${
-                                                appUsePct >= 90 ? 'text-emerald-500' :
-                                                appUsePct >= 70 ? 'text-amber-500' :
-                                                'text-rose-500'
-                                            } leading-none">${appUsePct}%</div>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="flex items-center gap-1">
+                                <span class="hidden sm:inline text-[8px] uppercase tracking-wider font-black text-slate-400 leading-none">App Use</span>
+                                <span class="text-xs font-black ${
+                                    appUsePct >= 90 ? 'text-emerald-500' :
+                                    appUsePct >= 70 ? 'text-amber-500' :
+                                    'text-rose-500'
+                                } leading-none">${appUsePct}%</span>
                             </div>
                         </div>
                     </div>
+                `);
+
+                document.getElementById('views-container').innerHTML = `
+            <div id="officer-dashboard-panel" class="animate-entry mb-4 sm:mb-6" >
                     
                     <!--Portfolio Health Strip(Green Theme)-->
                     <div class="animate-entry mb-4 sm:mb-6 rounded-lg bg-gradient-to-r from-brand-600 to-blue-500 shadow-md text-white hover-lift overflow-hidden">
