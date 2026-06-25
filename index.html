@@ -6297,6 +6297,10 @@
                                     <i class="fa-solid fa-download mr-2 text-slate-500"></i> Template
                                 </button>
                                 
+                                <button onclick="UI.downloadCurrentDataCSV()" class="flex items-center px-4 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition text-sm font-medium hover-lift" title="Export Current Data as CSV">
+                                    <i class="fa-solid fa-file-csv mr-2 text-emerald-500"></i> Export Current
+                                </button>
+                                
                                 <label class="flex items-center px-4 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition text-sm font-medium cursor-pointer hover-lift">
                                     <i class="fa-solid fa-upload mr-2 text-brand-600"></i> Import CSV
                                     <input type="file" class="hidden" accept=".csv" onchange="UI.handleCSVUpload(event)">
@@ -7859,6 +7863,44 @@
                 a.style.display = 'none';
                 a.href = url;
                 a.download = "target_setup_template.csv";
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                }, 100);
+            },
+
+            downloadCurrentDataCSV() {
+                const db = Store.get();
+                const currentMonth = Utils.getActiveMonth();
+                let csv = "Part,Territory Name,Total Files,Proj Files,Total EMI,Proj (Reg),Proj (Adv),LM NP Amt,LM NP Files,Total OD,OD Growth SPLY,Per File OD,6+ OD Files,6+ OD Growth SPLM\n";
+
+                db.territories.forEach(t => {
+                    const target = db.targets.find(tg => tg.territoryId === t.id && tg.month === currentMonth) || {};
+                    const val = (prop, fallback = 0) => target[prop] !== undefined ? target[prop] : fallback;
+
+                    csv += `${t.part || ''},${t.name || ''},` +
+                           `${val('files')},` +
+                           `${val('projFiles')},` +
+                           `${val('amount')},` +
+                           `${val('projReg')},` +
+                           `${val('projAdv')},` +
+                           `${val('lmNpTargetAmount')},` +
+                           `${val('lmNpTargetFiles')},` +
+                           `${val('totalOd')},` +
+                           `${val('odGrowthSply')},` +
+                           `${val('perFileOd')},` +
+                           `${val('sixPlusOdFiles')},` +
+                           `${val('sixPlusOdGrowthSplm')}\n`;
+                });
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `current_target_setup_${currentMonth}.csv`;
                 document.body.appendChild(a);
                 a.click();
                 setTimeout(() => {
