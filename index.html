@@ -1359,7 +1359,7 @@
                 if (realTodayStr.slice(0, 7) === currentMonth) {
                     const daysInMonth = new Date(activeYear, activeMonthNum, 0).getDate();
                     const dayOfMonth = todayParts[2];
-                    daysLeft = daysInMonth - dayOfMonth;
+                    daysLeft = daysInMonth - dayOfMonth + 1; // Include today in remaining days calculation
                 } else if (realTodayStr.slice(0, 7) < currentMonth) {
                     const daysInMonth = new Date(activeYear, activeMonthNum, 0).getDate();
                     daysLeft = daysInMonth;
