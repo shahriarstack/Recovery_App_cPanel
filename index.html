@@ -3662,8 +3662,8 @@
                 const totalB = calculateTotals(partBData);
 
 
-                const topPerformers = [...allTerritoryData].sort((a, b) => parseFloat(b.rpi) - parseFloat(a.rpi)).slice(0, 5);
-                const bottomPerformers = [...allTerritoryData].sort((a, b) => parseFloat(a.rpi) - parseFloat(b.rpi)).slice(0, 5);
+                const topPerformers = [...allTerritoryData].sort((a, b) => parseFloat(b.tillDayAchievement || 0) - parseFloat(a.tillDayAchievement || 0)).slice(0, 5);
+                const bottomPerformers = [...allTerritoryData].sort((a, b) => parseFloat(a.tillDayAchievement || 0) - parseFloat(b.tillDayAchievement || 0)).slice(0, 5);
 
                 const today = new Date();
 
