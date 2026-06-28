@@ -4038,28 +4038,18 @@
                                             ${!isCompact ? `<th class="p-2 border dark:border-slate-600 bg-rose-50 dark:bg-rose-900 sticky top-0 z-20">LM NP Files</th>` : ''}
                                             ${!isCompact ? `<th class="p-2 border dark:border-slate-600 bg-rose-50 dark:bg-rose-900 sticky top-0 z-20">LM NP Rec (Amt)</th>` : ''}
                                             ${!isCompact ? `<th class="p-2 border dark:border-slate-600 bg-rose-50 dark:bg-rose-900 sticky top-0 z-20">LM NP Rec (Files)</th>` : ''}
-                                            <th class="p-2 border dark:border-slate-600 bg-violet-100 dark:bg-violet-900 text-violet-700 font-bold border-l-2 border-slate-200 dark:border-slate-600 text-center sticky top-0 z-20">App Use %</th>
+<th class="p-2 border dark:border-slate-600 bg-violet-100 dark:bg-violet-900 text-violet-700 font-bold border-l-2 border-slate-200 dark:border-slate-600 text-center sticky top-0 z-20">App Use %</th>
                                         </tr>
                                     </thead>
                                     <tbody id="ranking-table-body"></tbody>
                                 </table>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                              <div class="mt-6">
                             <div class="glass-panel p-6 rounded-xl shadow-lg dark:bg-dark-card hover-lift">
-                                <h3 class="text-lg font-bold mb-4">Part A vs Part B</h3>
-                                <div class="h-48 flex justify-center">
-                                    <canvas id="chart-part-comparison"></canvas>
-                                </div>
-                            </div>
-                            
-                            <div class="glass-panel p-6 rounded-xl shadow-lg dark:bg-dark-card hover-lift flex flex-col justify-center">
                                 <h3 class="text-lg font-bold mb-4 text-slate-800 dark:text-white flex items-center">
                                     <i class="fa-solid fa-file-export mr-2 text-brand-500"></i> Reports & Exports
                                 </h3>
                                 
-                                <div class="space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700 transition hover:border-brand-200 dark:hover:border-brand-800">
                                         <div class="flex items-center">
                                             <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-4 shadow-sm">
@@ -4090,7 +4080,10 @@
                                         </button>
                                     </div>
                                 </div>
-                              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
                             <!-- Top Performing Card -->
                             <div class="glass-panel p-5 rounded-xl shadow-lg dark:bg-dark-card border-l-4 border-emerald-500 hover-lift">
                                 <div class="flex items-center justify-between mb-3.5">
@@ -4237,10 +4230,7 @@
                 // Populate the ranking table based on active filters
                 this.populateRankingTable(tableMode);
 
-                const partA = totalA.mtdColl;
-                const partB = totalB.mtdColl;
                 setTimeout(() => {
-                    Charts.renderDoughnut('chart-part-comparison', ['Part A', 'Part B'], [partA, partB]);
                     UI.updateMomentumChart();
                     Charts.renderDoughnut('admin-mode-chart', modes, modeData);
                 }, 100);
