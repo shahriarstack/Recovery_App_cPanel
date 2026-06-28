@@ -3978,6 +3978,10 @@
                                             <i class="fa-solid fa-chevron-down"></i>
                                         </span>
                                     </div>
+                                    <!-- Daily Req Toggle Button -->
+                                    <button type="button" onclick="UI.toggleDailyReqColumn()" id="toggle-daily-req-btn" class="px-3 py-1.5 h-8 text-xs font-bold rounded-lg border ${UI.showDailyReqColumn ? 'border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300'} hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-1.5 shadow-sm">
+                                         <i class="fa-solid ${UI.showDailyReqColumn ? 'fa-eye' : 'fa-eye-slash'}"></i> Daily Req
+                                     </button>
 
                                     <div class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
                                         <button onclick="UI.renderAdminDashboard('compact')" class="px-3 py-1.5 text-xs font-bold rounded-md transition-all ${isCompact ? 'bg-white dark:bg-slate-600 text-brand-600 shadow' : 'text-slate-500 hover:text-slate-700'}">
@@ -4010,6 +4014,7 @@
                                             <th class="p-2 border dark:border-slate-600 bg-green-50 dark:bg-green-900 sticky top-0 z-20">Till Day Coll</th>
                                             <th class="p-2 border dark:border-slate-600 bg-blue-50 dark:bg-blue-900 sticky top-0 z-20">Ach %</th>
                                             <th class="p-2 border dark:border-slate-600 bg-rose-50 dark:bg-rose-950/60 sticky top-0 z-20 text-rose-600 dark:text-rose-400 font-bold">Remaining Tar.</th>
+                                            <th class="daily-req-col ${UI.showDailyReqColumn ? '' : 'hidden'} p-2 border dark:border-slate-600 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 font-bold sticky top-0 z-20">Daily Req</th>
                                             
                                             <th class="p-2 border dark:border-slate-600 bg-slate-100 dark:bg-slate-700 sticky top-0 z-20">Today's Proj</th>
                                             <th class="p-2 border dark:border-slate-600 bg-green-50 dark:bg-green-900 sticky top-0 z-20">Today's Coll</th>
@@ -4265,7 +4270,7 @@
                         presetProjReg: 0, presetProjAdv: 0, presetProjTotal: 0,
                         yestProjAmt: 0, yestProjFiles: 0, yestCollAmt: 0, yestCollFiles: 0,
                         lmNpTargetAmt: 0, lmNpTargetFiles: 0, mtdLmNpColl: 0, mtdLmNpFiles: 0,
-                        todayProj: 0, todayColl: 0, appUsePct: 0, remainingAmt: 0
+                        todayProj: 0, todayColl: 0, appUsePct: 0, remainingAmt: 0, rdrr: 0
                     };
 
                     data.forEach(t => {
@@ -4292,6 +4297,7 @@
                         sums.presetProjAdv += parseFloat(t.presetProjAdv) || 0;
                         sums.presetProjTotal += parseFloat(t.presetProjTotal) || 0;
                         sums.remainingAmt += parseFloat(t.remainingAmt) || 0;
+                        sums.rdrr += parseFloat(t.rdrr) || 0;
                     });
 
                     // Derived Metrics for Totals
@@ -4360,6 +4366,21 @@
                     }
 
                     const lastAchColorClass = (!isTotal && parseFloat(t.lastDayAch) < parseFloat(totalGrand.lastDayAch)) ? 'text-red-650' : 'text-orange-500';
+                    
+                    const remAmt = Math.round(t.remainingAmt || 0);
+                    let remColor = '';
+                    if (isTotal) {
+                        remColor = remAmt === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-rose-600 dark:text-rose-400 font-bold';
+                    } else {
+                        if (remAmt === 0) {
+                            remColor = 'text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/5';
+                        } else if (remAmt >= 50000) {
+                            remColor = 'text-rose-600 dark:text-rose-400 font-bold bg-rose-500/5';
+                        } else {
+                            remColor = 'text-slate-500 dark:text-slate-400 font-normal';
+                        }
+                    }
+
                     return `
                     <tr class="${isTotal ? 'bg-slate-200 dark:bg-slate-700 font-bold border-y-2 border-slate-300 dark:border-slate-600' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition interactive-row border-b border-slate-100 dark:border-slate-700'} text-slate-700 dark:text-slate-300">
                         <td class="p-1.5 border dark:border-slate-600 ${isTotal ? '' : 'sticky left-0 bg-white dark:bg-dark-card'} text-center">${isTotal ? '' : t.part}</td>
@@ -4383,8 +4404,11 @@
                                 <span>${t.tillDayAchievement}%</span>
                             </div>
                         </td>
-                        <td class="p-1.5 border dark:border-slate-600 text-right ${isTotal ? 'font-bold bg-rose-50/30 dark:bg-rose-950/20' : 'font-normal bg-rose-50/10 dark:bg-rose-950/5'} text-rose-600 dark:text-rose-400">
-                            ৳${Math.round(t.remainingAmt || 0).toLocaleString()}
+                        <td class="p-1.5 border dark:border-slate-600 text-right ${isTotal ? 'bg-rose-50/30 dark:bg-rose-950/20' : 'bg-rose-50/10 dark:bg-rose-950/5'} ${remColor}">
+                            ${remAmt.toLocaleString()}
+                        </td>
+                        <td class="daily-req-col ${UI.showDailyReqColumn ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${isTotal ? 'font-bold bg-amber-50/30 dark:bg-amber-950/20 text-slate-800 dark:text-white' : 'font-medium bg-amber-50/10 dark:bg-amber-950/5 text-amber-600 dark:text-amber-400'}">
+                            ৳${Math.round(t.rdrr || 0).toLocaleString()}
                         </td>
                         
                         <td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'font-medium text-slate-700 dark:text-slate-300' : ''}">${parseInt(t.todayProj).toLocaleString()}</td>
@@ -8997,6 +9021,37 @@
                 </div>
                 `;
                 this.renderModal('RPI Scoring Criteria', content);
+            },
+            toggleDailyReqColumn() {
+                UI.showDailyReqColumn = !UI.showDailyReqColumn;
+                const cols = document.querySelectorAll('.daily-req-col');
+                cols.forEach(el => {
+                    if (UI.showDailyReqColumn) {
+                        el.classList.remove('hidden');
+                    } else {
+                        el.classList.add('hidden');
+                    }
+                });
+                
+                // Update empty row colspan
+                const emptyRowTd = document.querySelector('#ranking-table-body td[colspan]');
+                if (emptyRowTd) {
+                    const isCompact = document.getElementById('views-container').innerHTML.includes("UI.renderAdminDashboard('compact')");
+                    const baseColspan = isCompact ? 14 : 22;
+                    emptyRowTd.setAttribute('colspan', baseColspan + (UI.showDailyReqColumn ? 1 : 0));
+                }
+
+                // Update toggle button style/icon
+                const btn = document.getElementById('toggle-daily-req-btn');
+                if (btn) {
+                    if (UI.showDailyReqColumn) {
+                        btn.innerHTML = `<i class="fa-solid fa-eye mr-1.5"></i> Daily Req`;
+                        btn.className = "px-3 py-1.5 h-8 text-xs font-bold rounded-lg border border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 transition flex items-center shadow-sm";
+                    } else {
+                        btn.innerHTML = `<i class="fa-solid fa-eye-slash mr-1.5"></i> Daily Req`;
+                        btn.className = "px-3 py-1.5 h-8 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-355 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center shadow-sm";
+                    }
+                }
             },
             showSuccess(message) {
                 const existing = document.getElementById('success-toast');
