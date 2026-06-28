@@ -3668,13 +3668,8 @@
                 const topHalf = sortedAllPerformers.slice(0, halfCount);
                 const bottomHalf = sortedAllPerformers.slice(halfCount);
                 
-                const top5 = topHalf.slice(0, 5);
-                const topOthers = topHalf.slice(5);
-                
                 // Sort bottom half ascending (worst performer first) for Critical list
                 const bottomHalfSorted = [...bottomHalf].sort((a, b) => parseFloat(a.tillDayAchievement || 0) - parseFloat(b.tillDayAchievement || 0));
-                const critical5 = bottomHalfSorted.slice(0, 5);
-                const criticalOthers = bottomHalfSorted.slice(5);
 
                 const today = new Date();
 
@@ -4095,129 +4090,75 @@
                                         </button>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+                              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
                             <!-- Top Performing Card -->
-                            <div class="glass-panel p-5 rounded-xl shadow-lg dark:bg-dark-card border-l-4 border-emerald-500 hover-lift flex flex-col h-[520px]">
-                                <div class="flex items-center justify-between mb-3.5">
+                            <div class="glass-panel p-5 rounded-xl shadow-lg dark:bg-dark-card border-l-4 border-emerald-500 hover-lift flex flex-col h-[375px]">
+                                <div class="flex items-center justify-between mb-3.5 flex-none">
                                     <h3 class="text-base font-extrabold text-slate-800 dark:text-white flex items-center">
                                         <i class="fa-solid fa-trophy text-amber-500 mr-2 text-lg"></i> Top Performing Territories
                                     </h3>
-                                    <span class="text-[9px] font-black bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full uppercase tracking-wider">Top Half</span>
+                                    <span class="text-[9px] font-black bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full uppercase tracking-wider">Top Half (${topHalf.length})</span>
                                 </div>
                                 
-                                <!-- Top 5 list -->
-                                <div class="space-y-1.5 flex-none">
-                                    ${top5.map((t, idx) => {
+                                <!-- Performers scroll list -->
+                                <div class="space-y-1.5 overflow-y-auto flex-1 scrollbar-thin pr-1 min-h-0">
+                                    ${topHalf.map((t, idx) => {
                                         let medal = '';
-                                        if (idx === 0) medal = '<span class="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs font-black shadow-sm border border-amber-200/50"><i class="fa-solid fa-medal text-[10px]"></i></span>';
-                                        else if (idx === 1) medal = '<span class="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center text-xs font-black shadow-sm border border-slate-200/50"><i class="fa-solid fa-medal text-[10px]"></i></span>';
-                                        else if (idx === 2) medal = '<span class="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-900/20 text-orange-655 dark:text-orange-400 flex items-center justify-center text-xs font-black shadow-sm border border-orange-200/30"><i class="fa-solid fa-medal text-[10px]"></i></span>';
-                                        else medal = `<span class="w-5 h-5 rounded-full bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center text-[10px] font-black border border-slate-100 dark:border-slate-700">${idx + 1}</span>`;
+                                        if (idx === 0) medal = '<span class="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs font-black shadow-sm border border-amber-200/50 flex-none"><i class="fa-solid fa-medal text-[10px]"></i></span>';
+                                        else if (idx === 1) medal = '<span class="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center text-xs font-black shadow-sm border border-slate-200/50 flex-none"><i class="fa-solid fa-medal text-[10px]"></i></span>';
+                                        else if (idx === 2) medal = '<span class="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-900/20 text-orange-655 dark:text-orange-400 flex items-center justify-center text-xs font-black shadow-sm border border-orange-200/30 flex-none"><i class="fa-solid fa-medal text-[10px]"></i></span>';
+                                        else medal = `<span class="w-5 h-5 rounded-full bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center text-[10px] font-black border border-slate-100 dark:border-slate-700 flex-none">${idx + 1}</span>`;
                                         
                                         return `
                                         <div class="flex items-center justify-between p-2 bg-slate-50/50 dark:bg-slate-850/20 hover:bg-slate-100/50 dark:hover:bg-slate-800/40 rounded-lg transition border border-slate-100/50 dark:border-slate-750/30">
-                                            <div class="flex items-center gap-2.5">
+                                            <div class="flex items-center gap-2.5 min-w-0">
                                                 ${medal}
-                                                <div>
-                                                    <div class="text-xs font-bold text-slate-800 dark:text-slate-200">${t.name}</div>
-                                                    <div class="text-[9px] text-slate-400 dark:text-slate-500">${t.officer}</div>
+                                                <div class="truncate">
+                                                    <div class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">${t.name}</div>
+                                                    <div class="text-[9px] text-slate-400 dark:text-slate-500 truncate">${t.officer}</div>
                                                 </div>
                                             </div>
-                                            <div class="text-right">
+                                            <div class="text-right flex-none pl-2">
                                                 <div class="text-xs font-black text-emerald-600 dark:text-emerald-400">${t.tillDayAchievement}%</div>
-                                                <div class="text-[9px] font-bold text-slate-450 dark:text-slate-505">RPI: ${t.rpi}</div>
+                                                <div class="text-[9px] font-bold text-slate-450 dark:text-slate-500">RPI: ${t.rpi}</div>
                                             </div>
                                         </div>
                                         `;
                                     }).join('')}
-                                    ${top5.length === 0 ? '<div class="text-center py-4 text-xs text-slate-400">No data available</div>' : ''}
-                                </div>
-                                
-                                <!-- Scrollable rest of list -->
-                                <div class="border-t border-slate-100 dark:border-slate-750/60 mt-3 pt-2.5 flex-1 flex flex-col min-h-0">
-                                    <div class="text-[9px] font-black uppercase text-slate-400 dark:text-slate-505 tracking-wider mb-2 flex items-center justify-between px-1 flex-none">
-                                        <span>Other Top Performers</span>
-                                        <span class="bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 rounded text-[8px] font-bold">${topOthers.length} More</span>
-                                    </div>
-                                    <div class="overflow-y-auto flex-1 scrollbar-thin space-y-1.5 pr-1 min-h-0">
-                                        ${topOthers.map((t, idx) => `
-                                            <div class="flex items-center justify-between p-2 bg-slate-50/20 dark:bg-slate-800/10 hover:bg-slate-50/40 dark:hover:bg-slate-800/20 rounded-md transition border border-slate-100/30 dark:border-slate-850/10">
-                                                <div class="flex items-center gap-2">
-                                                    <span class="text-[9px] font-bold text-slate-450 dark:text-slate-550 w-4 text-right">${idx + 6}</span>
-                                                    <div>
-                                                        <div class="text-xs font-semibold text-slate-700 dark:text-slate-300">${t.name}</div>
-                                                        <div class="text-[9px] text-slate-450 dark:text-slate-500">${t.officer}</div>
-                                                    </div>
-                                                </div>
-                                                <div class="text-right">
-                                                    <div class="text-xs font-bold text-slate-705 dark:text-slate-300">${t.tillDayAchievement}%</div>
-                                                    <div class="text-[9px] text-slate-400 dark:text-slate-505">RPI: ${t.rpi}</div>
-                                                </div>
-                                            </div>
-                                        `).join('')}
-                                        ${topOthers.length === 0 ? '<div class="text-center py-2 text-[10px] text-slate-450 italic">No additional territories</div>' : ''}
-                                    </div>
+                                    ${topHalf.length === 0 ? '<div class="text-center py-4 text-xs text-slate-400">No data available</div>' : ''}
                                 </div>
                             </div>
 
                             <!-- Critical Card -->
-                            <div class="glass-panel p-5 rounded-xl shadow-lg dark:bg-dark-card border-l-4 border-rose-500 hover-lift flex flex-col h-[520px]">
-                                <div class="flex items-center justify-between mb-3.5">
+                            <div class="glass-panel p-5 rounded-xl shadow-lg dark:bg-dark-card border-l-4 border-rose-500 hover-lift flex flex-col h-[375px]">
+                                <div class="flex items-center justify-between mb-3.5 flex-none">
                                     <h3 class="text-base font-extrabold text-slate-800 dark:text-white flex items-center">
-                                        <i class="fa-solid fa-triangle-exclamation text-rose-505 mr-2 text-lg animate-pulse"></i> Critical Attention Needed
+                                        <i class="fa-solid fa-triangle-exclamation text-rose-500 mr-2 text-lg animate-pulse"></i> Critical Attention Needed
                                     </h3>
-                                    <span class="text-[9px] font-black bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 px-2 py-0.5 rounded-full uppercase tracking-wider">Bottom Half</span>
+                                    <span class="text-[9px] font-black bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 px-2 py-0.5 rounded-full uppercase tracking-wider">Bottom Half (${bottomHalfSorted.length})</span>
                                 </div>
                                 
-                                <!-- Top 5 Critical list -->
-                                <div class="space-y-1.5 flex-none">
-                                    ${critical5.map((t, idx) => `
+                                <!-- Performers scroll list -->
+                                <div class="space-y-1.5 overflow-y-auto flex-1 scrollbar-thin pr-1 min-h-0">
+                                    ${bottomHalfSorted.map((t, idx) => `
                                         <div class="flex items-center justify-between p-2 bg-slate-50/50 dark:bg-slate-850/20 hover:bg-slate-100/50 dark:hover:bg-slate-800/40 rounded-lg transition border border-slate-100/50 dark:border-slate-750/30">
-                                            <div class="flex items-center gap-2.5">
-                                                <span class="w-5 h-5 rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-500 dark:text-rose-450 flex items-center justify-center text-[10px] font-black border border-rose-200/40 dark:border-rose-800/20">#${idx + 1}</span>
-                                                <div>
-                                                    <div class="text-xs font-bold text-slate-800 dark:text-slate-200">${t.name}</div>
-                                                    <div class="text-[9px] text-slate-400 dark:text-slate-500">${t.officer}</div>
+                                            <div class="flex items-center gap-2.5 min-w-0">
+                                                <span class="w-5 h-5 rounded-full bg-rose-550/10 dark:bg-rose-950/30 text-rose-500 dark:text-rose-400 flex items-center justify-center text-[10px] font-black border border-rose-200/40 dark:border-rose-800/20 flex-none">#${idx + 1}</span>
+                                                <div class="truncate">
+                                                    <div class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">${t.name}</div>
+                                                    <div class="text-[9px] text-slate-400 dark:text-slate-500 truncate">${t.officer}</div>
                                                 </div>
                                             </div>
-                                            <div class="text-right">
+                                            <div class="text-right flex-none pl-2">
                                                 <div class="text-xs font-black text-rose-600 dark:text-rose-400">${t.tillDayAchievement}%</div>
-                                                <div class="text-[9px] font-bold text-slate-450 dark:text-slate-505">RPI: ${t.rpi}</div>
+                                                <div class="text-[9px] font-bold text-slate-450 dark:text-slate-500">RPI: ${t.rpi}</div>
                                             </div>
                                         </div>
                                     `).join('')}
-                                    ${critical5.length === 0 ? '<div class="text-center py-4 text-xs text-slate-400">No data available</div>' : ''}
-                                </div>
-                                
-                                <!-- Scrollable rest of critical list -->
-                                <div class="border-t border-slate-100 dark:border-slate-750/60 mt-3 pt-2.5 flex-1 flex flex-col min-h-0">
-                                    <div class="text-[9px] font-black uppercase text-slate-400 dark:text-slate-550 tracking-wider mb-2 flex items-center justify-between px-1 flex-none">
-                                        <span>Other Critical Territories</span>
-                                        <span class="bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 rounded text-[8px] font-bold">${criticalOthers.length} More</span>
-                                    </div>
-                                    <div class="overflow-y-auto flex-1 scrollbar-thin space-y-1.5 pr-1 min-h-0">
-                                        ${criticalOthers.map((t, idx) => `
-                                            <div class="flex items-center justify-between p-2 bg-slate-50/20 dark:bg-slate-800/10 hover:bg-slate-50/40 dark:hover:bg-slate-800/20 rounded-md transition border border-slate-100/30 dark:border-slate-850/10">
-                                                <div class="flex items-center gap-2">
-                                                    <span class="text-[9px] font-bold text-slate-450 dark:text-slate-550 w-4 text-right">#${idx + 6}</span>
-                                                    <div>
-                                                        <div class="text-xs font-semibold text-slate-700 dark:text-slate-300">${t.name}</div>
-                                                        <div class="text-[9px] text-slate-450 dark:text-slate-500">${t.officer}</div>
-                                                    </div>
-                                                </div>
-                                                <div class="text-right">
-                                                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300">${t.tillDayAchievement}%</div>
-                                                    <div class="text-[9px] text-slate-400 dark:text-slate-505">RPI: ${t.rpi}</div>
-                                                </div>
-                                            </div>
-                                        `).join('')}
-                                        ${criticalOthers.length === 0 ? '<div class="text-center py-2 text-[10px] text-slate-450 italic">No additional territories</div>' : ''}
-                                    </div>
+                                    ${bottomHalfSorted.length === 0 ? '<div class="text-center py-4 text-xs text-slate-400">No data available</div>' : ''}
                                 </div>
                             </div>
+                        </div>                        </div>
                         </div>
 
                         <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
