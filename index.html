@@ -3978,11 +3978,7 @@
                                             <i class="fa-solid fa-chevron-down"></i>
                                         </span>
                                     </div>
-                                    <!-- Daily Req Toggle Button -->
-                                    <button type="button" onclick="UI.toggleDailyReqColumn()" id="toggle-daily-req-btn" class="px-3 py-1.5 h-8 text-xs font-bold rounded-lg border ${UI.showDailyReqColumn ? 'border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300'} hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-1.5 shadow-sm">
-                                         <i class="fa-solid ${UI.showDailyReqColumn ? 'fa-eye' : 'fa-eye-slash'}"></i> Daily Req
-                                     </button>
-
+                                    
                                     <div class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
                                         <button onclick="UI.renderAdminDashboard('compact')" class="px-3 py-1.5 text-xs font-bold rounded-md transition-all ${isCompact ? 'bg-white dark:bg-slate-600 text-brand-600 shadow' : 'text-slate-500 hover:text-slate-700'}">
                                             <i class="fa-solid fa-compress mr-1"></i> Focused
@@ -4013,7 +4009,14 @@
                                             <th class="p-2 border dark:border-slate-600 bg-slate-100 dark:bg-slate-700 sticky top-0 z-20 font-bold">Total Proj</th>
                                             <th class="p-2 border dark:border-slate-600 bg-green-50 dark:bg-green-900 sticky top-0 z-20">Till Day Coll</th>
                                             <th class="p-2 border dark:border-slate-600 bg-blue-50 dark:bg-blue-900 sticky top-0 z-20">Ach %</th>
-                                            <th class="p-2 border dark:border-slate-600 bg-rose-50 dark:bg-rose-950/60 sticky top-0 z-20 text-rose-600 dark:text-rose-400 font-bold">Remaining Tar.</th>
+                                            <th class="p-2 border dark:border-slate-600 bg-rose-50 dark:bg-rose-950/60 sticky top-0 z-20 text-rose-600 dark:text-rose-400 font-bold min-w-[125px]">
+                                                <div class="flex items-center justify-between gap-1">
+                                                    <span>Remaining Tar.</span>
+                                                    <button type="button" onclick="UI.toggleDailyReqColumn(); event.stopPropagation();" id="toggle-daily-req-btn" class="p-1 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-md transition text-rose-500 dark:text-rose-450 flex items-center justify-center h-5 w-5 border border-rose-200/50 dark:border-rose-800/30" title="Toggle Daily Req Column">
+                                                        <i class="fa-solid ${UI.showDailyReqColumn ? 'fa-eye' : 'fa-eye-slash'}"></i>
+                                                    </button>
+                                                </div>
+                                            </th>
                                             <th class="daily-req-col ${UI.showDailyReqColumn ? '' : 'hidden'} p-2 border dark:border-slate-600 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 font-bold sticky top-0 z-20">Daily Req</th>
                                             
                                             <th class="p-2 border dark:border-slate-600 bg-slate-100 dark:bg-slate-700 sticky top-0 z-20">Today's Proj</th>
@@ -9041,15 +9044,16 @@
                     emptyRowTd.setAttribute('colspan', baseColspan + (UI.showDailyReqColumn ? 1 : 0));
                 }
 
-                // Update toggle button style/icon
+                // Update header toggle button icon
                 const btn = document.getElementById('toggle-daily-req-btn');
                 if (btn) {
-                    if (UI.showDailyReqColumn) {
-                        btn.innerHTML = `<i class="fa-solid fa-eye mr-1.5"></i> Daily Req`;
-                        btn.className = "px-3 py-1.5 h-8 text-xs font-bold rounded-lg border border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 transition flex items-center shadow-sm";
-                    } else {
-                        btn.innerHTML = `<i class="fa-solid fa-eye-slash mr-1.5"></i> Daily Req`;
-                        btn.className = "px-3 py-1.5 h-8 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-355 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center shadow-sm";
+                    const icon = btn.querySelector('i');
+                    if (icon) {
+                        if (UI.showDailyReqColumn) {
+                            icon.className = 'fa-solid fa-eye';
+                        } else {
+                            icon.className = 'fa-solid fa-eye-slash';
+                        }
                     }
                 }
             },
