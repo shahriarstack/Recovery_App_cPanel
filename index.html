@@ -1370,7 +1370,7 @@
                 const remainingAmt = Math.max(0, presetProjTotal - mtdColl);
                 const rdrr = daysLeft > 0 ? remainingAmt / daysLeft : remainingAmt;
 
-                const rpi = Math.min(100, (achievement * 0.4) + (projAcc * 0.2) + (lmNpRecPct * 0.2) + (cureRate * 0.2));
+                const rpi = Math.min(100, (achievement * 0.7) + (projAcc * 0.1) + (lmNpRecPct * 0.1) + (cureRate * 0.1));
 
                 return {
                     targetAmt, targetFiles,
@@ -3633,7 +3633,7 @@
                     }
 
                     // Weighted RPI for Group
-                    sums.rpi = Math.min(100, (parseFloat(sums.achievement) * 0.4) + (projAcc * 0.2) + (lmNpRecPct * 0.2) + (cureRate * 0.2)).toFixed(1);
+                    sums.rpi = Math.min(100, (parseFloat(sums.achievement) * 0.7) + (projAcc * 0.1) + (lmNpRecPct * 0.1) + (cureRate * 0.1)).toFixed(1);
                     
                     // App Use Group Average
                     sums.appUsePct = data.length > 0 ? Number((data.reduce((sum, item) => sum + (parseFloat(item.appUsePct) || 0), 0) / data.length).toFixed(1)) : 0;
@@ -3711,7 +3711,7 @@
                         </div>
                         
                         <!-- GLOBAL RPI BANNER -->
-                        <div class="py-2.5 px-4 rounded-xl border ${Calc.getRPIBg(metrics.rpi)} shadow-sm hover-lift relative overflow-hidden group">
+                        <div onclick="UI.showRPICriteriaModal()" class="py-2.5 px-4 rounded-xl border ${Calc.getRPIBg(metrics.rpi)} shadow-sm hover-lift relative overflow-hidden group cursor-pointer" title="Click to view marking criteria">
                             <!-- Background shine animation -->
                             <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[1500ms] pointer-events-none"></div>
 
@@ -4314,7 +4314,7 @@
                         projAcc = 100;
                     }
 
-                    sums.rpi = Math.min(100, (parseFloat(sums.achievement) * 0.4) + (projAcc * 0.2) + (lmNpRecPct * 0.2) + (cureRate * 0.2)).toFixed(1);
+                    sums.rpi = Math.min(100, (parseFloat(sums.achievement) * 0.7) + (projAcc * 0.1) + (lmNpRecPct * 0.1) + (cureRate * 0.1)).toFixed(1);
                     sums.appUsePct = data.length > 0 ? Number((data.reduce((sum, item) => sum + (parseFloat(item.appUsePct) || 0), 0) / data.length).toFixed(1)) : 0;
 
                     return sums;
@@ -5653,7 +5653,7 @@
                         </div>
 
                         <!-- RPI Card (Center) -->
-                        <div class="flex-1 py-2 px-2 flex items-center justify-center gap-1.5 bg-slate-50/20 dark:bg-slate-900/10">
+                        <div onclick="UI.showRPICriteriaModal()" class="flex-1 py-2 px-2 flex items-center justify-center gap-1.5 bg-slate-50/20 dark:bg-slate-900/10 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Click to view marking criteria">
                             <i class="fa-solid fa-bolt-lightning text-[10px] sm:text-xs ${Calc.getRPIColor(metrics.rpi)}"></i>
                             <span class="text-[9px] sm:text-xs font-black uppercase tracking-wider ${Calc.getRPIColor(metrics.rpi)}">${metrics.rpi} RPI</span>
                         </div>
@@ -8933,6 +8933,70 @@
                     }
                     setTimeout(() => m.classList.add('hidden'), 300);
                 }
+            },
+            showRPICriteriaModal() {
+                const content = `
+                <div class="space-y-4">
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-2 leading-relaxed">
+                        The Recovery Performance Index (RPI) is a consolidated performance score calculated as a weighted average of four key metrics, capped at a maximum of 100 points:
+                    </p>
+                    
+                    <div class="space-y-3">
+                        <!-- MTD Achievement (70%) -->
+                        <div class="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-700/60 border-l-4 border-l-brand-500">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-black text-slate-700 dark:text-slate-200">MTD Achievement Target</span>
+                                <span class="text-xs font-black text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/30 px-1.5 py-0.5 rounded text-[10px]">70% Weight</span>
+                            </div>
+                            <p class="text-[10px] text-slate-500 leading-normal">Month-to-Date Collections divided by the Month Projected Target Amount.</p>
+                            <div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden">
+                                <div class="bg-brand-500 h-full rounded-full" style="width: 70%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Today's Projection Accuracy (10%) -->
+                        <div class="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-700/60 border-l-4 border-l-blue-500">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-black text-slate-700 dark:text-slate-200">Today's Projection Accuracy</span>
+                                <span class="text-xs font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 px-1.5 py-0.5 rounded text-[10px]">10% Weight</span>
+                            </div>
+                            <p class="text-[10px] text-slate-500 leading-normal">Accuracy of today's collections relative to today's forecasted target.</p>
+                            <div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden">
+                                <div class="bg-blue-500 h-full rounded-full" style="width: 10%"></div>
+                            </div>
+                        </div>
+
+                        <!-- LMNP Recovery Rate (10%) -->
+                        <div class="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-700/60 border-l-4 border-l-rose-500">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-black text-slate-700 dark:text-slate-200">LMNP Recovery Rate</span>
+                                <span class="text-xs font-black text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded text-[10px]">10% Weight</span>
+                            </div>
+                            <p class="text-[10px] text-slate-500 leading-normal">Collections progress on Last Month Non-Paying customer targets.</p>
+                            <div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden">
+                                <div class="bg-rose-500 h-full rounded-full" style="width: 10%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Paid Files Rate (10%) -->
+                        <div class="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-700/60 border-l-4 border-l-amber-500">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-black text-slate-700 dark:text-slate-200">Paid Files Rate (Cure Rate)</span>
+                                <span class="text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded text-[10px]">10% Weight</span>
+                            </div>
+                            <p class="text-[10px] text-slate-500 leading-normal">Unique customer paid codes count versus total projected target files count.</p>
+                            <div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden">
+                                <div class="bg-amber-500 h-full rounded-full" style="width: 10%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 bg-indigo-50/40 dark:bg-indigo-950/20 rounded-xl border border-indigo-100 dark:border-indigo-900/50 text-[10px] text-indigo-700 dark:text-indigo-400 text-center font-bold">
+                        <i class="fa-solid fa-circle-info mr-1"></i> Scoring Index is automatically capped at a maximum of 100 points.
+                    </div>
+                </div>
+                `;
+                this.renderModal('RPI Scoring Criteria', content);
             },
             showSuccess(message) {
                 const existing = document.getElementById('success-toast');
