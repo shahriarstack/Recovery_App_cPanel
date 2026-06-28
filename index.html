@@ -4009,6 +4009,7 @@
                                             <th class="p-2 border dark:border-slate-600 bg-slate-100 dark:bg-slate-700 sticky top-0 z-20 font-bold">Total Proj</th>
                                             <th class="p-2 border dark:border-slate-600 bg-green-50 dark:bg-green-900 sticky top-0 z-20">Till Day Coll</th>
                                             <th class="p-2 border dark:border-slate-600 bg-blue-50 dark:bg-blue-900 sticky top-0 z-20">Ach %</th>
+                                            <th class="p-2 border dark:border-slate-600 bg-rose-50 dark:bg-rose-950/60 sticky top-0 z-20 text-rose-600 dark:text-rose-400 font-bold">Remaining Target</th>
                                             
                                             <th class="p-2 border dark:border-slate-600 bg-slate-100 dark:bg-slate-700 sticky top-0 z-20">Today's Proj</th>
                                             <th class="p-2 border dark:border-slate-600 bg-green-50 dark:bg-green-900 sticky top-0 z-20">Today's Coll</th>
@@ -4264,7 +4265,7 @@
                         presetProjReg: 0, presetProjAdv: 0, presetProjTotal: 0,
                         yestProjAmt: 0, yestProjFiles: 0, yestCollAmt: 0, yestCollFiles: 0,
                         lmNpTargetAmt: 0, lmNpTargetFiles: 0, mtdLmNpColl: 0, mtdLmNpFiles: 0,
-                        todayProj: 0, todayColl: 0, appUsePct: 0
+                        todayProj: 0, todayColl: 0, appUsePct: 0, remainingAmt: 0
                     };
 
                     data.forEach(t => {
@@ -4290,6 +4291,7 @@
                         sums.presetProjReg += parseFloat(t.presetProjReg) || 0;
                         sums.presetProjAdv += parseFloat(t.presetProjAdv) || 0;
                         sums.presetProjTotal += parseFloat(t.presetProjTotal) || 0;
+                        sums.remainingAmt += parseFloat(t.remainingAmt) || 0;
                     });
 
                     // Derived Metrics for Totals
@@ -4381,6 +4383,9 @@
                                 <span>${t.tillDayAchievement}%</span>
                             </div>
                         </td>
+                        <td class="p-1.5 border dark:border-slate-600 text-right ${isTotal ? 'font-bold bg-rose-50/30 dark:bg-rose-950/20' : 'font-semibold bg-rose-50/10 dark:bg-rose-950/5'} text-rose-600 dark:text-rose-400">
+                            ৳${Math.round(t.remainingAmt || 0).toLocaleString()}
+                        </td>
                         
                         <td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'font-medium text-slate-700 dark:text-slate-300' : ''}">${parseInt(t.todayProj).toLocaleString()}</td>
                         <td class="p-1.5 border dark:border-slate-600 text-right font-bold ${!isTotal ? 'text-green-600' : ''}">${parseInt(t.todayColl).toLocaleString()}</td>
@@ -4413,7 +4418,7 @@
                 if (tbody) {
                     tbody.innerHTML = '';
                     if (filteredA.length === 0 && filteredB.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="${isCompact ? 13 : 21}" class="px-6 py-8 text-center text-slate-400 italic">No matching records found.</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="${isCompact ? 14 : 22}" class="px-6 py-8 text-center text-slate-400 italic">No matching records found.</td></tr>`;
                     } else {
                         if (filteredA.length > 0) {
                             filteredA.forEach(t => tbody.innerHTML += createRow(t));
