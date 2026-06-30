@@ -72,6 +72,17 @@
     </script>
 
     <style>
+        /* Excel Color Scale styling */
+        .excel-color-scale {
+            background-color: var(--excel-bg-l) !important;
+            color: var(--excel-text-l) !important;
+            font-weight: 600 !important;
+        }
+        .dark .excel-color-scale {
+            background-color: var(--excel-bg-d) !important;
+            color: var(--excel-text-d) !important;
+        }
+
         /* Premium Performance Glow Animations */
         @keyframes topPerformanceShimmer {
             0% {
@@ -4275,6 +4286,42 @@
                     return { ...t, ...m, lastDayAch: ldAch, todayAch: tdAch, appUsePct, totalOd, perFileOd };
                 });
 
+                // Calculate min and max for Per File OD and Total Overdue (excluding total/summary rows)
+                let minPerFileOd = Infinity;
+                let maxPerFileOd = -Infinity;
+                let minTotalOd = Infinity;
+                let maxTotalOd = -Infinity;
+
+                allTerritoryData.forEach(t => {
+                    if (t.perFileOd < minPerFileOd) minPerFileOd = t.perFileOd;
+                    if (t.perFileOd > maxPerFileOd) maxPerFileOd = t.perFileOd;
+                    if (t.totalOd < minTotalOd) minTotalOd = t.totalOd;
+                    if (t.totalOd > maxTotalOd) maxTotalOd = t.totalOd;
+                });
+
+                // Fallbacks if bounds are invalid
+                if (minPerFileOd === Infinity) minPerFileOd = 0;
+                if (maxPerFileOd === -Infinity) maxPerFileOd = 10000;
+                if (minTotalOd === Infinity) minTotalOd = 0;
+                if (maxTotalOd === -Infinity) maxTotalOd = 500000;
+
+                const getExcelColorScale = (val, min, max) => {
+                    const denominator = max - min;
+                    const pct = denominator > 0 ? Math.max(0, Math.min(1, (val - min) / denominator)) : 0.5;
+                    
+                    // We want Green (140) at pct = 0, Yellow (48) at pct = 0.5, and Red (0) at pct = 1.
+                    let h;
+                    if (pct < 0.5) {
+                        const subPct = pct / 0.5;
+                        h = 140 - subPct * (140 - 48); // Green to Yellow
+                    } else {
+                        const subPct = (pct - 0.5) / 0.5;
+                        h = 48 - subPct * 48; // Yellow to Red
+                    }
+
+                    return `style="--excel-bg-l: hsl(${Math.round(h)}, 85%, 92%); --excel-text-l: hsl(${Math.round(h)}, 85%, 20%); --excel-bg-d: hsl(${Math.round(h)}, 45%, 15%); --excel-text-d: hsl(${Math.round(h)}, 85%, 80%);"`;
+                };
+
                 // Calculate global ranks for dynamic top/middle/bottom groups across ALL territories
                 const sortedAll = [...allTerritoryData].sort((a, b) => parseFloat(b.tillDayAchievement || 0) - parseFloat(a.tillDayAchievement || 0));
                 const totalCount = sortedAll.length;
@@ -4410,34 +4457,24 @@
                         }
                     }
 
-                    // Determine Per File OD color (smaller to large -> green to red)
+                    // Determine Per File OD color (Excel-like dynamic color scale)
                     let perFileOdColorClass = '';
+                    let perFileOdStyle = '';
                     if (isTotal) {
                         perFileOdColorClass = 'font-bold bg-rose-50/20 dark:bg-rose-950/20 text-slate-900 dark:text-slate-100';
                     } else {
-                        const val = t.perFileOd || 0;
-                        if (val < 1500) {
-                            perFileOdColorClass = 'font-medium bg-emerald-500/[0.03] dark:bg-emerald-500/[0.01] text-emerald-600 dark:text-emerald-400';
-                        } else if (val <= 4000) {
-                            perFileOdColorClass = 'font-semibold bg-amber-500/[0.03] dark:bg-amber-500/[0.01] text-amber-500 dark:text-amber-450';
-                        } else {
-                            perFileOdColorClass = 'font-bold bg-rose-500/[0.03] dark:bg-rose-500/[0.01] text-rose-600 dark:text-rose-455';
-                        }
+                        perFileOdColorClass = 'excel-color-scale';
+                        perFileOdStyle = getExcelColorScale(t.perFileOd || 0, minPerFileOd, maxPerFileOd);
                     }
 
-                    // Determine Total Overdue color (smaller to large -> green to red)
+                    // Determine Total Overdue color (Excel-like dynamic color scale)
                     let totalOdColorClass = '';
+                    let totalOdStyle = '';
                     if (isTotal) {
                         totalOdColorClass = 'font-bold bg-rose-50/20 dark:bg-rose-950/20 text-slate-900 dark:text-slate-100';
                     } else {
-                        const val = t.totalOd || 0;
-                        if (val < 80000) {
-                            totalOdColorClass = 'font-medium bg-emerald-500/[0.05] dark:bg-emerald-500/[0.02] text-emerald-600 dark:text-emerald-400';
-                        } else if (val <= 250000) {
-                            totalOdColorClass = 'font-semibold bg-amber-500/[0.05] dark:bg-amber-500/[0.02] text-amber-500 dark:text-amber-450';
-                        } else {
-                            totalOdColorClass = 'font-bold bg-rose-500/[0.05] dark:bg-rose-500/[0.02] text-rose-600 dark:text-rose-455';
-                        }
+                        totalOdColorClass = 'excel-color-scale';
+                        totalOdStyle = getExcelColorScale(t.totalOd || 0, minTotalOd, maxTotalOd);
                     }
 
                     return `
@@ -4446,8 +4483,8 @@
                         <td class="p-1.5 border dark:border-slate-600 ${isTotal ? 'text-right' : 'sticky left-10 bg-white dark:bg-dark-card shadow-sm'} font-medium">
                             ${isTotal ? label : t.name}
                         </td>
-                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${perFileOdColorClass}">${Math.round(t.perFileOd).toLocaleString()}</td>
-                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${totalOdColorClass}">${Math.round(t.totalOd).toLocaleString()}</td>
+                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${perFileOdColorClass}" ${perFileOdStyle}>${Math.round(t.perFileOd).toLocaleString()}</td>
+                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${totalOdColorClass}" ${totalOdStyle}>${Math.round(t.totalOd).toLocaleString()}</td>
                         <td class="p-1.5 border dark:border-slate-600 text-center">${t.targetFiles}</td>
                         ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center">${t.mtdProjFiles}</td>` : ''}
                         <td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'font-semibold text-blue-600' : ''}">${t.uniquePaidCodes}</td>
