@@ -4021,8 +4021,8 @@
                                         <tr class="bg-slate-100 dark:bg-slate-700">
                                             <th class="p-2 border dark:border-slate-600 sticky top-0 left-0 bg-slate-100 dark:bg-slate-700 z-30 shadow-sm text-center">Part</th>
                                             <th class="p-2 border dark:border-slate-600 sticky top-0 left-10 bg-slate-100 dark:bg-slate-700 z-30 shadow-sm">Territory</th>
-                                            <th class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-2 border dark:border-slate-600 bg-rose-50/60 dark:bg-rose-950/20 text-rose-700 dark:text-rose-455 font-bold sticky top-0 z-20 text-center" title="Start of Month Per File Overdue">Per File OD <span class="text-[8px] font-medium text-slate-400 dark:text-slate-550 block normal-case tracking-tight">SOM</span></th>
-                                            <th class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-2 border dark:border-slate-600 bg-rose-50/60 dark:bg-rose-950/20 text-rose-700 dark:text-rose-455 font-bold sticky top-0 z-20 text-center" title="Start of Month Total Overdue">Total Overdue <span class="text-[8px] font-medium text-slate-400 dark:text-slate-550 block normal-case tracking-tight">SOM</span></th>
+                                            <th class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-2 border border-red-800 dark:border-red-950 bg-red-800 dark:bg-red-950 text-white font-bold sticky top-0 z-20 text-center" title="Start of Month Per File Overdue">Per File OD <span class="text-[8px] font-medium text-red-200 block normal-case tracking-tight">SOM</span></th>
+                                            <th class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-2 border border-red-800 dark:border-red-950 bg-red-800 dark:bg-red-950 text-white font-bold sticky top-0 z-20 text-center" title="Start of Month Total Overdue">Total Overdue <span class="text-[8px] font-medium text-red-200 block normal-case tracking-tight">SOM</span></th>
                                             <th class="p-2 border dark:border-slate-600 bg-blue-50 dark:bg-slate-800 sticky top-0 z-20">Total Files</th>
                                             ${!isCompact ? `<th class="p-2 border dark:border-slate-600 bg-blue-50 dark:bg-slate-800 sticky top-0 z-20">Proj Files (MTD)</th>` : ''}
                                             <th class="p-2 border dark:border-slate-600 bg-blue-50 dark:bg-slate-800 sticky top-0 z-20">Paid Files</th>
@@ -4413,30 +4413,30 @@
                     // Determine Per File OD color (smaller to large -> green to red)
                     let perFileOdColorClass = '';
                     if (isTotal) {
-                        perFileOdColorClass = 'text-slate-900 dark:text-slate-100';
+                        perFileOdColorClass = 'text-slate-900 dark:text-slate-100 font-bold';
                     } else {
                         const val = t.perFileOd || 0;
                         if (val < 1500) {
-                            perFileOdColorClass = 'text-emerald-500';
+                            perFileOdColorClass = 'text-emerald-600 dark:text-emerald-400 font-semibold';
                         } else if (val <= 4000) {
-                            perFileOdColorClass = 'text-yellow-500';
+                            perFileOdColorClass = 'text-amber-500 dark:text-amber-450 font-semibold';
                         } else {
-                            perFileOdColorClass = 'text-red-500';
+                            perFileOdColorClass = 'text-rose-600 dark:text-rose-400 font-semibold';
                         }
                     }
 
                     // Determine Total Overdue color (smaller to large -> green to red)
                     let totalOdColorClass = '';
                     if (isTotal) {
-                        totalOdColorClass = 'text-slate-900 dark:text-slate-100';
+                        totalOdColorClass = 'text-slate-900 dark:text-slate-100 font-bold';
                     } else {
                         const val = t.totalOd || 0;
                         if (val < 80000) {
-                            totalOdColorClass = 'text-emerald-500';
+                            totalOdColorClass = 'text-emerald-600 dark:text-emerald-400 font-semibold';
                         } else if (val <= 250000) {
-                            totalOdColorClass = 'text-yellow-500';
+                            totalOdColorClass = 'text-amber-500 dark:text-amber-450 font-semibold';
                         } else {
-                            totalOdColorClass = 'text-red-500';
+                            totalOdColorClass = 'text-rose-600 dark:text-rose-400 font-semibold';
                         }
                     }
 
