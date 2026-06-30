@@ -3967,14 +3967,19 @@
                                     <div class="text-xs text-slate-500 italic">Sorted by achievement from top to bottom. Color indicates status relative to current daily target.</div>
                                 </div>
                                 <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-                                    <!-- Overdue Toggle Button -->
-                                    <button type="button" onclick="UI.toggleOdColumns()" id="toggle-od-btn" class="px-2.5 py-1 h-8 text-xs font-bold rounded-lg border ${UI.showOdColumns ? 'border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'} transition flex items-center gap-1.5 shadow-sm" title="Toggle Overdue Columns (Start of Month values)">
-                                        <i class="fa-solid ${UI.showOdColumns ? 'fa-eye' : 'fa-eye-slash'}"></i>
-                                        <span>SOM Overdue</span>
+                                    <!-- Overdue Toggle Button (Minimal & Animated) -->
+                                    <button type="button" onclick="UI.toggleOdColumns()" id="toggle-od-btn" class="group relative px-3 py-1 h-8 text-xs font-bold rounded-lg border transition-all duration-350 ease-out flex items-center gap-2 shadow-sm overflow-hidden ${UI.showOdColumns ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-650 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'}" title="Toggle Overdue Columns (Start of Month values)">
+                                        <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-emerald-500/10 to-teal-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                                        <span class="relative flex h-1.5 w-1.5 shrink-0">
+                                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full ${UI.showOdColumns ? 'bg-emerald-400' : 'bg-slate-400 opacity-75'}"></span>
+                                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 ${UI.showOdColumns ? 'bg-emerald-500' : 'bg-slate-400'}"></span>
+                                        </span>
+                                        <i class="fa-solid ${UI.showOdColumns ? 'fa-eye' : 'fa-eye-slash'} transition-transform duration-300 group-hover:scale-110"></i>
+                                        <span class="relative">SOM Overdue</span>
                                     </button>
-                                    
+
                                     <!-- Daily Req Toggle Button -->
-                                    <button type="button" onclick="UI.toggleDailyReqColumn()" id="toggle-daily-req-btn" class="px-2.5 py-1 h-8 text-xs font-bold rounded-lg border ${UI.showDailyReqColumn ? 'border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'} transition flex items-center gap-1.5 shadow-sm" title="Toggle Daily Req Column">
+                                    <button type="button" onclick="UI.toggleDailyReqColumn()" id="toggle-daily-req-btn" class="px-2.5 py-1 h-8 text-xs font-bold rounded-lg border ${UI.showDailyReqColumn ? 'border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-650 dark:text-slate-305 hover:bg-slate-50 dark:hover:bg-slate-700'} transition flex items-center gap-1.5 shadow-sm" title="Toggle Daily Req Column">
                                         <i class="fa-solid ${UI.showDailyReqColumn ? 'fa-eye' : 'fa-eye-slash'}"></i>
                                         <span>Daily Req</span>
                                     </button>
@@ -4404,22 +4409,35 @@
                             remColor = 'text-slate-500 dark:text-slate-400 font-normal';
                         }
                     }
-                    
-                    let perFileColor = 'text-slate-600 dark:text-slate-400';
-                    let totalOdColor = 'text-slate-600 dark:text-slate-400';
-                    if (!isTotal) {
-                        const pfVal = parseFloat(t.perFileOd) || 0;
-                        if (pfVal < 20000) perFileColor = 'text-emerald-600 dark:text-emerald-400 font-semibold';
-                        else if (pfVal < 60000) perFileColor = 'text-amber-600 dark:text-amber-400 font-semibold';
-                        else perFileColor = 'text-rose-600 dark:text-rose-400 font-bold';
 
-                        const totVal = parseFloat(t.totalOd) || 0;
-                        if (totVal < 500000) totalOdColor = 'text-emerald-600 dark:text-emerald-400 font-semibold';
-                        else if (totVal < 2000000) totalOdColor = 'text-amber-600 dark:text-amber-400 font-semibold';
-                        else totalOdColor = 'text-rose-600 dark:text-rose-400 font-bold';
+                    // Determine Per File OD color (smaller to large -> green to red)
+                    let perFileOdColorClass = '';
+                    if (isTotal) {
+                        perFileOdColorClass = 'font-bold bg-rose-50/20 dark:bg-rose-950/20 text-slate-900 dark:text-slate-100';
                     } else {
-                        perFileColor = 'text-slate-900 dark:text-slate-100 font-extrabold';
-                        totalOdColor = 'text-slate-900 dark:text-slate-100 font-extrabold';
+                        const val = t.perFileOd || 0;
+                        if (val < 1500) {
+                            perFileOdColorClass = 'font-medium bg-emerald-500/[0.03] dark:bg-emerald-500/[0.01] text-emerald-600 dark:text-emerald-400';
+                        } else if (val <= 4000) {
+                            perFileOdColorClass = 'font-semibold bg-amber-500/[0.03] dark:bg-amber-500/[0.01] text-amber-500 dark:text-amber-450';
+                        } else {
+                            perFileOdColorClass = 'font-bold bg-rose-500/[0.03] dark:bg-rose-500/[0.01] text-rose-600 dark:text-rose-455';
+                        }
+                    }
+
+                    // Determine Total Overdue color (smaller to large -> green to red)
+                    let totalOdColorClass = '';
+                    if (isTotal) {
+                        totalOdColorClass = 'font-bold bg-rose-50/20 dark:bg-rose-950/20 text-slate-900 dark:text-slate-100';
+                    } else {
+                        const val = t.totalOd || 0;
+                        if (val < 80000) {
+                            totalOdColorClass = 'font-medium bg-emerald-500/[0.05] dark:bg-emerald-500/[0.02] text-emerald-600 dark:text-emerald-400';
+                        } else if (val <= 250000) {
+                            totalOdColorClass = 'font-semibold bg-amber-500/[0.05] dark:bg-amber-500/[0.02] text-amber-500 dark:text-amber-450';
+                        } else {
+                            totalOdColorClass = 'font-bold bg-rose-500/[0.05] dark:bg-rose-500/[0.02] text-rose-600 dark:text-rose-455';
+                        }
                     }
 
                     return `
@@ -4428,8 +4446,8 @@
                         <td class="p-1.5 border dark:border-slate-600 ${isTotal ? 'text-right' : 'sticky left-10 bg-white dark:bg-dark-card shadow-sm'} font-medium">
                             ${isTotal ? label : t.name}
                         </td>
-                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right text-[10.5px] font-mono tracking-tight ${isTotal ? 'bg-rose-50/20 dark:bg-rose-950/20' : 'bg-rose-50/5 dark:bg-rose-950/5'} ${perFileColor}">${Math.round(t.perFileOd).toLocaleString()}</td>
-                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right text-[10.5px] font-mono tracking-tight ${isTotal ? 'bg-rose-50/20 dark:bg-rose-950/20' : 'bg-rose-50/5 dark:bg-rose-950/5'} ${totalOdColor}">${Math.round(t.totalOd).toLocaleString()}</td>
+                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${perFileOdColorClass}">${Math.round(t.perFileOd).toLocaleString()}</td>
+                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${totalOdColorClass}">${Math.round(t.totalOd).toLocaleString()}</td>
                         <td class="p-1.5 border dark:border-slate-600 text-center">${t.targetFiles}</td>
                         ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center">${t.mtdProjFiles}</td>` : ''}
                         <td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'font-semibold text-blue-600' : ''}">${t.uniquePaidCodes}</td>
@@ -9104,7 +9122,7 @@
                     if (UI.showDailyReqColumn) {
                         btn.className = "px-2.5 py-1 h-8 text-xs font-bold rounded-lg border border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 transition flex items-center gap-1.5 shadow-sm";
                     } else {
-                        btn.className = "px-2.5 py-1 h-8 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-1.5 shadow-sm";
+                        btn.className = "px-2.5 py-1 h-8 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-650 dark:text-slate-305 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-1.5 shadow-sm";
                     }
                 }
             },
@@ -9130,21 +9148,29 @@
                     emptyRowTd.setAttribute('colspan', baseColspan + extra);
                 }
 
-                // Update toggle button style/icon
+                // Update toggle button style/icon dynamically
                 const btn = document.getElementById('toggle-od-btn');
                 if (btn) {
                     const icon = btn.querySelector('i');
                     if (icon) {
                         if (UI.showOdColumns) {
-                            icon.className = 'fa-solid fa-eye';
+                            icon.className = 'fa-solid fa-eye transition-transform duration-300 group-hover:scale-110';
                         } else {
-                            icon.className = 'fa-solid fa-eye-slash';
+                            icon.className = 'fa-solid fa-eye-slash transition-transform duration-300 group-hover:scale-110';
                         }
                     }
+                    
+                    const indicatorDot = btn.querySelector('.relative.flex.h-1.5.w-1.5 .relative.inline-flex');
+                    const indicatorPing = btn.querySelector('.relative.flex.h-1.5.w-1.5 .animate-ping');
+                    
                     if (UI.showOdColumns) {
-                        btn.className = "px-2.5 py-1 h-8 text-xs font-bold rounded-lg border border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 transition flex items-center gap-1.5 shadow-sm";
+                        btn.className = "group relative px-3 py-1 h-8 text-xs font-bold rounded-lg border transition-all duration-350 ease-out flex items-center gap-2 shadow-sm overflow-hidden border-emerald-250 dark:border-emerald-850 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400";
+                        if (indicatorDot) indicatorDot.className = "relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500";
+                        if (indicatorPing) indicatorPing.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400";
                     } else {
-                        btn.className = "px-2.5 py-1 h-8 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-1.5 shadow-sm";
+                        btn.className = "group relative px-3 py-1 h-8 text-xs font-bold rounded-lg border transition-all duration-350 ease-out flex items-center gap-2 shadow-sm overflow-hidden border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-655 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600";
+                        if (indicatorDot) indicatorDot.className = "relative inline-flex rounded-full h-1.5 w-1.5 bg-slate-400";
+                        if (indicatorPing) indicatorPing.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75";
                     }
                 }
             },
