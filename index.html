@@ -1723,6 +1723,8 @@
         const UI = {
             charts: {},
             currentLoginRole: 'officer',
+            showDailyReqColumn: false,
+            showOdColumns: false,
 
             togglePasswordVisibility() {
                 const passwordInput = document.getElementById('password');
@@ -3971,6 +3973,12 @@
                                         <span>Daily Req</span>
                                     </button>
                                     
+                                    <!-- Overdue Toggle Button -->
+                                    <button type="button" onclick="UI.toggleOdColumns()" id="toggle-od-btn" class="px-2.5 py-1 h-8 text-xs font-bold rounded-lg border ${UI.showOdColumns ? 'border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'} transition flex items-center gap-1.5 shadow-sm" title="Toggle Overdue Columns (Start of Month values)">
+                                        <i class="fa-solid ${UI.showOdColumns ? 'fa-eye' : 'fa-eye-slash'}"></i>
+                                        <span>SOM Overdue</span>
+                                    </button>
+                                    
                                     <!-- Search Input -->
                                     <div class="relative w-full sm:w-48">
                                         <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-slate-400">
@@ -4008,6 +4016,8 @@
                                         <tr class="bg-slate-100 dark:bg-slate-700">
                                             <th class="p-2 border dark:border-slate-600 sticky top-0 left-0 bg-slate-100 dark:bg-slate-700 z-30 shadow-sm text-center">Part</th>
                                             <th class="p-2 border dark:border-slate-600 sticky top-0 left-10 bg-slate-100 dark:bg-slate-700 z-30 shadow-sm">Territory</th>
+                                            <th class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-2 border dark:border-slate-600 bg-rose-50/60 dark:bg-rose-950/20 text-rose-700 dark:text-rose-455 font-bold sticky top-0 z-20 text-center" title="Start of Month Per File Overdue">Per File OD <span class="text-[8px] font-medium text-slate-400 dark:text-slate-550 block normal-case tracking-tight">SOM</span></th>
+                                            <th class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-2 border dark:border-slate-600 bg-rose-50/60 dark:bg-rose-950/20 text-rose-700 dark:text-rose-455 font-bold sticky top-0 z-20 text-center" title="Start of Month Total Overdue">Total Overdue <span class="text-[8px] font-medium text-slate-400 dark:text-slate-550 block normal-case tracking-tight">SOM</span></th>
                                             <th class="p-2 border dark:border-slate-600 bg-blue-50 dark:bg-slate-800 sticky top-0 z-20">Total Files</th>
                                             ${!isCompact ? `<th class="p-2 border dark:border-slate-600 bg-blue-50 dark:bg-slate-800 sticky top-0 z-20">Proj Files (MTD)</th>` : ''}
                                             <th class="p-2 border dark:border-slate-600 bg-blue-50 dark:bg-slate-800 sticky top-0 z-20">Paid Files</th>
@@ -4252,7 +4262,12 @@
                     const ldAch = m.yestProjAmt > 0 ? ((m.yestCollAmt / m.yestProjAmt) * 100).toFixed(1) : '0.0';
                     const tdAch = m.todayProj > 0 ? ((m.todayColl / m.todayProj) * 100).toFixed(1) : (m.todayColl > 0 ? '100+' : '0.0');
                     const appUsePct = Calc.getAppUsePercentage(t.id);
-                    return { ...t, ...m, lastDayAch: ldAch, todayAch: tdAch, appUsePct };
+                    
+                    const targetObj = m.rawTargets[0] || {};
+                    const totalOd = parseFloat(targetObj.totalOd || targetObj.total_od) || 0;
+                    const perFileOd = parseFloat(targetObj.perFileOd || targetObj.per_file_od) || 0;
+                    
+                    return { ...t, ...m, lastDayAch: ldAch, todayAch: tdAch, appUsePct, totalOd, perFileOd };
                 });
 
                 // Calculate global ranks for dynamic top/middle/bottom groups across ALL territories
@@ -4276,7 +4291,8 @@
                         presetProjReg: 0, presetProjAdv: 0, presetProjTotal: 0,
                         yestProjAmt: 0, yestProjFiles: 0, yestCollAmt: 0, yestCollFiles: 0,
                         lmNpTargetAmt: 0, lmNpTargetFiles: 0, mtdLmNpColl: 0, mtdLmNpFiles: 0,
-                        todayProj: 0, todayColl: 0, appUsePct: 0, remainingAmt: 0, rdrr: 0
+                        todayProj: 0, todayColl: 0, appUsePct: 0, remainingAmt: 0, rdrr: 0,
+                        totalOd: 0
                     };
 
                     data.forEach(t => {
@@ -4304,9 +4320,11 @@
                         sums.presetProjTotal += parseFloat(t.presetProjTotal) || 0;
                         sums.remainingAmt += parseFloat(t.remainingAmt) || 0;
                         sums.rdrr += parseFloat(t.rdrr) || 0;
+                        sums.totalOd += parseFloat(t.totalOd) || 0;
                     });
 
                     // Derived Metrics for Totals
+                    sums.perFileOd = sums.targetFiles > 0 ? (sums.totalOd / sums.targetFiles) : 0;
                     sums.tillDayAchievement = sums.presetProjTotal > 0 ? ((sums.mtdColl / sums.presetProjTotal) * 100).toFixed(1) : '0.0';
                     sums.achievement = sums.tillDayAchievement;
                     sums.emiAchievement = sums.targetAmt > 0 ? ((sums.mtdColl / sums.targetAmt) * 100).toFixed(1) : '0.0';
@@ -4393,6 +4411,8 @@
                         <td class="p-1.5 border dark:border-slate-600 ${isTotal ? 'text-right' : 'sticky left-10 bg-white dark:bg-dark-card shadow-sm'} font-medium">
                             ${isTotal ? label : t.name}
                         </td>
+                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${isTotal ? 'font-bold bg-rose-50/30 dark:bg-rose-950/20 text-slate-900 dark:text-slate-100' : 'font-medium bg-rose-50/10 dark:bg-rose-950/5 text-slate-900 dark:text-slate-100'}">${Math.round(t.perFileOd).toLocaleString()}</td>
+                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${isTotal ? 'font-bold bg-rose-50/30 dark:bg-rose-950/20 text-slate-900 dark:text-slate-100' : 'font-medium bg-rose-50/10 dark:bg-rose-950/5 text-slate-900 dark:text-slate-100'}">${Math.round(t.totalOd).toLocaleString()}</td>
                         <td class="p-1.5 border dark:border-slate-600 text-center">${t.targetFiles}</td>
                         ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center">${t.mtdProjFiles}</td>` : ''}
                         <td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'font-semibold text-blue-600' : ''}">${t.uniquePaidCodes}</td>
@@ -4448,7 +4468,10 @@
                 if (tbody) {
                     tbody.innerHTML = '';
                     if (filteredA.length === 0 && filteredB.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="${isCompact ? 14 : 22}" class="px-6 py-8 text-center text-slate-400 italic">No matching records found.</td></tr>`;
+                        let extra = 0;
+                        if (UI.showDailyReqColumn) extra += 1;
+                        if (UI.showOdColumns) extra += 2;
+                        tbody.innerHTML = `<tr><td colspan="${(isCompact ? 16 : 26) + extra}" class="px-6 py-8 text-center text-slate-400 italic">No matching records found.</td></tr>`;
                     } else {
                         if (filteredA.length > 0) {
                             filteredA.forEach(t => tbody.innerHTML += createRow(t));
@@ -9043,8 +9066,11 @@
                 const emptyRowTd = document.querySelector('#ranking-table-body td[colspan]');
                 if (emptyRowTd) {
                     const isCompact = document.getElementById('views-container').innerHTML.includes("UI.renderAdminDashboard('compact')");
-                    const baseColspan = isCompact ? 14 : 22;
-                    emptyRowTd.setAttribute('colspan', baseColspan + (UI.showDailyReqColumn ? 1 : 0));
+                    const baseColspan = isCompact ? 16 : 26;
+                    let extra = 0;
+                    if (UI.showDailyReqColumn) extra += 1;
+                    if (UI.showOdColumns) extra += 2;
+                    emptyRowTd.setAttribute('colspan', baseColspan + extra);
                 }
 
                 // Update toggle button style/icon
@@ -9059,6 +9085,46 @@
                         }
                     }
                     if (UI.showDailyReqColumn) {
+                        btn.className = "px-2.5 py-1 h-8 text-xs font-bold rounded-lg border border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 transition flex items-center gap-1.5 shadow-sm";
+                    } else {
+                        btn.className = "px-2.5 py-1 h-8 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-1.5 shadow-sm";
+                    }
+                }
+            },
+            toggleOdColumns() {
+                UI.showOdColumns = !UI.showOdColumns;
+                const cols = document.querySelectorAll('.od-col');
+                cols.forEach(el => {
+                    if (UI.showOdColumns) {
+                        el.classList.remove('hidden');
+                    } else {
+                        el.classList.add('hidden');
+                    }
+                });
+                
+                // Update empty row colspan
+                const emptyRowTd = document.querySelector('#ranking-table-body td[colspan]');
+                if (emptyRowTd) {
+                    const isCompact = document.getElementById('views-container').innerHTML.includes("UI.renderAdminDashboard('compact')");
+                    const baseColspan = isCompact ? 16 : 26;
+                    let extra = 0;
+                    if (UI.showDailyReqColumn) extra += 1;
+                    if (UI.showOdColumns) extra += 2;
+                    emptyRowTd.setAttribute('colspan', baseColspan + extra);
+                }
+
+                // Update toggle button style/icon
+                const btn = document.getElementById('toggle-od-btn');
+                if (btn) {
+                    const icon = btn.querySelector('i');
+                    if (icon) {
+                        if (UI.showOdColumns) {
+                            icon.className = 'fa-solid fa-eye';
+                        } else {
+                            icon.className = 'fa-solid fa-eye-slash';
+                        }
+                    }
+                    if (UI.showOdColumns) {
                         btn.className = "px-2.5 py-1 h-8 text-xs font-bold rounded-lg border border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 transition flex items-center gap-1.5 shadow-sm";
                     } else {
                         btn.className = "px-2.5 py-1 h-8 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-1.5 shadow-sm";
