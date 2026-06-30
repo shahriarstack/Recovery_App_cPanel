@@ -72,12 +72,6 @@
     </script>
 
     <style>
-        :root {
-            --od-lightness: 42%;
-        }
-        .dark {
-            --od-lightness: 60%;
-        }
         /* Premium Performance Glow Animations */
         @keyframes topPerformanceShimmer {
             0% {
@@ -4281,18 +4275,6 @@
                     return { ...t, ...m, lastDayAch: ldAch, todayAch: tdAch, appUsePct, totalOd, perFileOd };
                 });
 
-                // Calculate min/max overdue values for dynamic color scale
-                let minPerFileOd = Infinity, maxPerFileOd = -Infinity;
-                let minTotalOd = Infinity, maxTotalOd = -Infinity;
-                allTerritoryData.forEach(t => {
-                    if (t.perFileOd < minPerFileOd) minPerFileOd = t.perFileOd;
-                    if (t.perFileOd > maxPerFileOd) maxPerFileOd = t.perFileOd;
-                    if (t.totalOd < minTotalOd) minTotalOd = t.totalOd;
-                    if (t.totalOd > maxTotalOd) maxTotalOd = t.totalOd;
-                });
-                if (minPerFileOd === Infinity) { minPerFileOd = 0; maxPerFileOd = 1; }
-                if (minTotalOd === Infinity) { minTotalOd = 0; maxTotalOd = 1; }
-
                 // Calculate global ranks for dynamic top/middle/bottom groups across ALL territories
                 const sortedAll = [...allTerritoryData].sort((a, b) => parseFloat(b.tillDayAchievement || 0) - parseFloat(a.tillDayAchievement || 0));
                 const totalCount = sortedAll.length;
@@ -4428,32 +4410,34 @@
                         }
                     }
 
-                    // Determine Per File OD color scale (smaller to large -> green-yellow-red)
+                    // Determine Per File OD color (smaller to large -> green to red)
                     let perFileOdColorClass = '';
-                    let perFileOdStyle = '';
                     if (isTotal) {
                         perFileOdColorClass = 'font-bold bg-rose-50/20 dark:bg-rose-950/20 text-slate-900 dark:text-slate-100';
                     } else {
                         const val = t.perFileOd || 0;
-                        let p = (maxPerFileOd > minPerFileOd) ? (val - minPerFileOd) / (maxPerFileOd - minPerFileOd) : 0;
-                        p = Math.max(0, Math.min(1, p));
-                        let hue = p < 0.5 ? 130 - (p / 0.5) * 70 : 60 - ((p - 0.5) / 0.5) * 60;
-                        perFileOdStyle = `style="color: hsl(${hue}, 82%, var(--od-lightness, 42%)) !important;"`;
-                        perFileOdColorClass = 'font-bold bg-slate-500/[0.015] dark:bg-slate-500/[0.005]';
+                        if (val < 1500) {
+                            perFileOdColorClass = 'font-normal text-emerald-600 dark:text-emerald-400';
+                        } else if (val <= 4000) {
+                            perFileOdColorClass = 'font-normal text-amber-500 dark:text-amber-400';
+                        } else {
+                            perFileOdColorClass = 'font-normal text-rose-600 dark:text-rose-400';
+                        }
                     }
 
-                    // Determine Total Overdue color scale (smaller to large -> green-yellow-red)
+                    // Determine Total Overdue color (smaller to large -> green to red)
                     let totalOdColorClass = '';
-                    let totalOdStyle = '';
                     if (isTotal) {
                         totalOdColorClass = 'font-bold bg-rose-50/20 dark:bg-rose-950/20 text-slate-900 dark:text-slate-100';
                     } else {
                         const val = t.totalOd || 0;
-                        let p = (maxTotalOd > minTotalOd) ? (val - minTotalOd) / (maxTotalOd - minTotalOd) : 0;
-                        p = Math.max(0, Math.min(1, p));
-                        let hue = p < 0.5 ? 130 - (p / 0.5) * 70 : 60 - ((p - 0.5) / 0.5) * 60;
-                        totalOdStyle = `style="color: hsl(${hue}, 82%, var(--od-lightness, 42%)) !important;"`;
-                        totalOdColorClass = 'font-bold bg-slate-500/[0.015] dark:bg-slate-500/[0.005]';
+                        if (val < 80000) {
+                            totalOdColorClass = 'font-normal text-emerald-600 dark:text-emerald-400';
+                        } else if (val <= 250000) {
+                            totalOdColorClass = 'font-normal text-amber-500 dark:text-amber-400';
+                        } else {
+                            totalOdColorClass = 'font-normal text-rose-600 dark:text-rose-400';
+                        }
                     }
 
                     return `
@@ -4462,8 +4446,8 @@
                         <td class="p-1.5 border dark:border-slate-600 ${isTotal ? 'text-right' : 'sticky left-10 bg-white dark:bg-dark-card shadow-sm'} font-medium">
                             ${isTotal ? label : t.name}
                         </td>
-                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${perFileOdColorClass}" ${perFileOdStyle}>${Math.round(t.perFileOd).toLocaleString()}</td>
-                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${totalOdColorClass}" ${totalOdStyle}>${Math.round(t.totalOd).toLocaleString()}</td>
+                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${perFileOdColorClass}">${Math.round(t.perFileOd).toLocaleString()}</td>
+                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${totalOdColorClass}">${Math.round(t.totalOd).toLocaleString()}</td>
                         <td class="p-1.5 border dark:border-slate-600 text-center">${t.targetFiles}</td>
                         ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center">${t.mtdProjFiles}</td>` : ''}
                         <td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'font-semibold text-blue-600' : ''}">${t.uniquePaidCodes}</td>
