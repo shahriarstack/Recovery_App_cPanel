@@ -3967,16 +3967,16 @@
                                     <div class="text-xs text-slate-500 italic">Sorted by achievement from top to bottom. Color indicates status relative to current daily target.</div>
                                 </div>
                                 <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-                                    <!-- Daily Req Toggle Button -->
-                                    <button type="button" onclick="UI.toggleDailyReqColumn()" id="toggle-daily-req-btn" class="px-2.5 py-1 h-8 text-xs font-bold rounded-lg border ${UI.showDailyReqColumn ? 'border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'} transition flex items-center gap-1.5 shadow-sm" title="Toggle Daily Req Column">
-                                        <i class="fa-solid ${UI.showDailyReqColumn ? 'fa-eye' : 'fa-eye-slash'}"></i>
-                                        <span>Daily Req</span>
-                                    </button>
-                                    
                                     <!-- Overdue Toggle Button -->
                                     <button type="button" onclick="UI.toggleOdColumns()" id="toggle-od-btn" class="px-2.5 py-1 h-8 text-xs font-bold rounded-lg border ${UI.showOdColumns ? 'border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'} transition flex items-center gap-1.5 shadow-sm" title="Toggle Overdue Columns (Start of Month values)">
                                         <i class="fa-solid ${UI.showOdColumns ? 'fa-eye' : 'fa-eye-slash'}"></i>
                                         <span>SOM Overdue</span>
+                                    </button>
+                                    
+                                    <!-- Daily Req Toggle Button -->
+                                    <button type="button" onclick="UI.toggleDailyReqColumn()" id="toggle-daily-req-btn" class="px-2.5 py-1 h-8 text-xs font-bold rounded-lg border ${UI.showDailyReqColumn ? 'border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'} transition flex items-center gap-1.5 shadow-sm" title="Toggle Daily Req Column">
+                                        <i class="fa-solid ${UI.showDailyReqColumn ? 'fa-eye' : 'fa-eye-slash'}"></i>
+                                        <span>Daily Req</span>
                                     </button>
                                     
                                     <!-- Search Input -->
@@ -4404,6 +4404,23 @@
                             remColor = 'text-slate-500 dark:text-slate-400 font-normal';
                         }
                     }
+                    
+                    let perFileColor = 'text-slate-600 dark:text-slate-400';
+                    let totalOdColor = 'text-slate-600 dark:text-slate-400';
+                    if (!isTotal) {
+                        const pfVal = parseFloat(t.perFileOd) || 0;
+                        if (pfVal < 20000) perFileColor = 'text-emerald-600 dark:text-emerald-400 font-semibold';
+                        else if (pfVal < 60000) perFileColor = 'text-amber-600 dark:text-amber-400 font-semibold';
+                        else perFileColor = 'text-rose-600 dark:text-rose-400 font-bold';
+
+                        const totVal = parseFloat(t.totalOd) || 0;
+                        if (totVal < 500000) totalOdColor = 'text-emerald-600 dark:text-emerald-400 font-semibold';
+                        else if (totVal < 2000000) totalOdColor = 'text-amber-600 dark:text-amber-400 font-semibold';
+                        else totalOdColor = 'text-rose-600 dark:text-rose-400 font-bold';
+                    } else {
+                        perFileColor = 'text-slate-900 dark:text-slate-100 font-extrabold';
+                        totalOdColor = 'text-slate-900 dark:text-slate-100 font-extrabold';
+                    }
 
                     return `
                     <tr class="${isTotal ? 'bg-slate-200 dark:bg-slate-700 font-bold border-y-2 border-slate-300 dark:border-slate-600' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition interactive-row border-b border-slate-100 dark:border-slate-700'} text-slate-700 dark:text-slate-300">
@@ -4411,8 +4428,8 @@
                         <td class="p-1.5 border dark:border-slate-600 ${isTotal ? 'text-right' : 'sticky left-10 bg-white dark:bg-dark-card shadow-sm'} font-medium">
                             ${isTotal ? label : t.name}
                         </td>
-                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${isTotal ? 'font-bold bg-rose-50/30 dark:bg-rose-950/20 text-slate-900 dark:text-slate-100' : 'font-medium bg-rose-50/10 dark:bg-rose-950/5 text-slate-900 dark:text-slate-100'}">${Math.round(t.perFileOd).toLocaleString()}</td>
-                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${isTotal ? 'font-bold bg-rose-50/30 dark:bg-rose-950/20 text-slate-900 dark:text-slate-100' : 'font-medium bg-rose-50/10 dark:bg-rose-950/5 text-slate-900 dark:text-slate-100'}">${Math.round(t.totalOd).toLocaleString()}</td>
+                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right text-[10.5px] font-mono tracking-tight ${isTotal ? 'bg-rose-50/20 dark:bg-rose-950/20' : 'bg-rose-50/5 dark:bg-rose-950/5'} ${perFileColor}">${Math.round(t.perFileOd).toLocaleString()}</td>
+                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right text-[10.5px] font-mono tracking-tight ${isTotal ? 'bg-rose-50/20 dark:bg-rose-950/20' : 'bg-rose-50/5 dark:bg-rose-950/5'} ${totalOdColor}">${Math.round(t.totalOd).toLocaleString()}</td>
                         <td class="p-1.5 border dark:border-slate-600 text-center">${t.targetFiles}</td>
                         ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center">${t.mtdProjFiles}</td>` : ''}
                         <td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'font-semibold text-blue-600' : ''}">${t.uniquePaidCodes}</td>
