@@ -4413,30 +4413,30 @@
                     // Determine Per File OD color (smaller to large -> green to red)
                     let perFileOdColorClass = '';
                     if (isTotal) {
-                        perFileOdColorClass = 'font-bold bg-rose-50/20 dark:bg-rose-950/20 text-slate-900 dark:text-slate-100';
+                        perFileOdColorClass = 'text-slate-900 dark:text-slate-100';
                     } else {
                         const val = t.perFileOd || 0;
                         if (val < 1500) {
-                            perFileOdColorClass = 'font-medium bg-emerald-500/[0.03] dark:bg-emerald-500/[0.01] text-emerald-600 dark:text-emerald-400';
+                            perFileOdColorClass = 'text-emerald-500';
                         } else if (val <= 4000) {
-                            perFileOdColorClass = 'font-medium bg-amber-500/[0.03] dark:bg-amber-500/[0.01] text-amber-500 dark:text-amber-450';
+                            perFileOdColorClass = 'text-yellow-500';
                         } else {
-                            perFileOdColorClass = 'font-medium bg-rose-500/[0.03] dark:bg-rose-500/[0.01] text-rose-600 dark:text-rose-455';
+                            perFileOdColorClass = 'text-red-500';
                         }
                     }
 
                     // Determine Total Overdue color (smaller to large -> green to red)
                     let totalOdColorClass = '';
                     if (isTotal) {
-                        totalOdColorClass = 'font-bold bg-rose-50/20 dark:bg-rose-950/20 text-slate-900 dark:text-slate-100';
+                        totalOdColorClass = 'text-slate-900 dark:text-slate-100';
                     } else {
                         const val = t.totalOd || 0;
                         if (val < 80000) {
-                            totalOdColorClass = 'font-medium bg-emerald-500/[0.05] dark:bg-emerald-500/[0.02] text-emerald-600 dark:text-emerald-400';
+                            totalOdColorClass = 'text-emerald-500';
                         } else if (val <= 250000) {
-                            totalOdColorClass = 'font-medium bg-amber-500/[0.05] dark:bg-amber-500/[0.02] text-amber-500 dark:text-amber-450';
+                            totalOdColorClass = 'text-yellow-500';
                         } else {
-                            totalOdColorClass = 'font-medium bg-rose-500/[0.05] dark:bg-rose-500/[0.02] text-rose-600 dark:text-rose-455';
+                            totalOdColorClass = 'text-red-500';
                         }
                     }
 
