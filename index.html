@@ -3966,9 +3966,9 @@
                                     </h3>
                                     <div class="text-xs text-slate-500 italic">Sorted by achievement from top to bottom. Color indicates status relative to current daily target.</div>
                                 </div>
-                                <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+                                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
                                     <!-- Overdue Toggle Button (Minimal & Animated) -->
-                                    <button type="button" onclick="UI.toggleOdColumns()" id="toggle-od-btn" class="group relative px-3 py-1 h-8 text-xs font-bold rounded-lg border transition-all duration-350 ease-out flex items-center gap-2 shadow-sm overflow-hidden ${UI.showOdColumns ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-650 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'}" title="Toggle Overdue Columns (Start of Month values)">
+                                    <button type="button" onclick="UI.toggleOdColumns()" id="toggle-od-btn" class="group relative px-2.5 py-0.5 h-7 text-[11px] font-bold rounded-lg border transition-all duration-350 ease-out flex items-center gap-1.5 shadow-sm overflow-hidden backdrop-blur-sm ${UI.showOdColumns ? 'border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400' : 'border-white/10 dark:border-slate-700/30 bg-white/45 dark:bg-slate-900/30 text-slate-650 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-800/40'}" title="Toggle Overdue Columns (Start of Month values)">
                                         <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-emerald-500/10 to-teal-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
                                         <span class="relative flex h-1.5 w-1.5 shrink-0">
                                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full ${UI.showOdColumns ? 'bg-emerald-400' : 'bg-slate-400 opacity-75'}"></span>
@@ -3979,36 +3979,36 @@
                                     </button>
 
                                     <!-- Daily Req Toggle Button -->
-                                    <button type="button" onclick="UI.toggleDailyReqColumn()" id="toggle-daily-req-btn" class="px-2.5 py-1 h-8 text-xs font-bold rounded-lg border ${UI.showDailyReqColumn ? 'border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-650 dark:text-slate-305 hover:bg-slate-50 dark:hover:bg-slate-700'} transition flex items-center gap-1.5 shadow-sm" title="Toggle Daily Req Column">
+                                    <button type="button" onclick="UI.toggleDailyReqColumn()" id="toggle-daily-req-btn" class="px-2.5 py-0.5 h-7 text-[11px] font-bold rounded-lg border transition-all duration-200 flex items-center gap-1.5 shadow-sm backdrop-blur-sm ${UI.showDailyReqColumn ? 'border-brand-500/30 bg-brand-500/10 dark:bg-brand-950/30 text-brand-600 dark:text-brand-400' : 'border-white/10 dark:border-slate-700/30 bg-white/45 dark:bg-slate-900/30 text-slate-650 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-800/40'}" title="Toggle Daily Req Column">
                                         <i class="fa-solid ${UI.showDailyReqColumn ? 'fa-eye' : 'fa-eye-slash'}"></i>
                                         <span>Daily Req</span>
                                     </button>
                                     
                                     <!-- Search Input -->
-                                    <div class="relative w-full sm:w-48">
+                                    <div class="relative w-full sm:w-44">
                                         <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-slate-400">
-                                            <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
+                                            <i class="fa-solid fa-magnifying-glass text-[9px]"></i>
                                         </span>
-                                        <input type="text" id="ranking-search" oninput="UI.filterRankingTable()" placeholder="Filter territory..." value="${UI.rankingSearchVal || ''}" class="w-full pl-8 pr-2.5 py-1 h-8 rounded-lg border bg-slate-50/50 dark:bg-slate-800/50 dark:border-slate-600 focus:ring-1 focus:ring-brand-500 text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-sm outline-none">
+                                        <input type="text" id="ranking-search" oninput="UI.filterRankingTable()" placeholder="Filter territory..." value="${UI.rankingSearchVal || ''}" class="w-full pl-7 pr-2.5 py-0.5 h-7 rounded-lg border border-white/10 dark:border-slate-700/30 bg-white/45 dark:bg-slate-900/30 text-[11px] font-medium text-slate-700 dark:text-slate-200 shadow-sm outline-none focus:border-brand-500/60 dark:focus:border-brand-500/60 transition-all backdrop-blur-sm">
                                     </div>
                                     
                                     <!-- Part Filter -->
-                                    <div class="relative w-full sm:w-28">
-                                        <select id="ranking-part-filter" onchange="UI.filterRankingTable()" class="w-full pl-2 pr-6 py-1 h-8 rounded-lg border bg-slate-50/50 dark:bg-slate-800/50 dark:border-slate-600 focus:ring-1 focus:ring-brand-500 text-xs font-bold text-slate-700 dark:text-slate-200 appearance-none shadow-sm cursor-pointer border-slate-200 dark:border-slate-700">
+                                    <div class="relative w-full sm:w-24">
+                                        <select id="ranking-part-filter" onchange="UI.filterRankingTable()" class="w-full pl-2 pr-6 py-0.5 h-7 rounded-lg border border-white/10 dark:border-slate-700/30 bg-white/45 dark:bg-slate-900/30 text-[11px] font-bold text-slate-700 dark:text-slate-200 appearance-none shadow-sm cursor-pointer focus:border-brand-500/60 dark:focus:border-brand-500/60 transition-all backdrop-blur-sm">
                                             <option value="All" ${UI.rankingPartVal === 'All' ? 'selected' : ''}>All Parts</option>
                                             <option value="A" ${UI.rankingPartVal === 'A' ? 'selected' : ''}>Part A</option>
                                             <option value="B" ${UI.rankingPartVal === 'B' ? 'selected' : ''}>Part B</option>
                                         </select>
-                                        <span class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-slate-400 text-[10px]">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-slate-400 text-[9px]">
                                             <i class="fa-solid fa-chevron-down"></i>
                                         </span>
                                     </div>
                                     
-                                    <div class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
-                                        <button onclick="UI.renderAdminDashboard('compact')" class="px-3 py-1.5 text-xs font-bold rounded-md transition-all ${isCompact ? 'bg-white dark:bg-slate-600 text-brand-600 shadow' : 'text-slate-500 hover:text-slate-700'}">
+                                    <div class="flex items-center space-x-0.5 bg-white/30 dark:bg-slate-900/30 border border-white/10 dark:border-slate-700/30 p-0.5 rounded-lg backdrop-blur-sm">
+                                        <button onclick="UI.renderAdminDashboard('compact')" class="px-2.5 py-1 text-[11px] font-bold rounded-md transition-all ${isCompact ? 'bg-white/80 dark:bg-slate-700/80 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}">
                                             <i class="fa-solid fa-compress mr-1"></i> Focused
                                         </button>
-                                        <button onclick="UI.renderAdminDashboard('full')" class="px-3 py-1.5 text-xs font-bold rounded-md transition-all ${!isCompact ? 'bg-white dark:bg-slate-600 text-brand-600 shadow' : 'text-slate-500 hover:text-slate-700'}">
+                                        <button onclick="UI.renderAdminDashboard('full')" class="px-2.5 py-1 text-[11px] font-bold rounded-md transition-all ${!isCompact ? 'bg-white/80 dark:bg-slate-700/80 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}">
                                             <i class="fa-solid fa-expand mr-1"></i> Detailed
                                         </button>
                                     </div>
