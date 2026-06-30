@@ -4391,7 +4391,7 @@
                         achColorStyle = 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white font-bold';
                     }
 
-                    const lastAchColorClass = (!isTotal && parseFloat(t.lastDayAch) < parseFloat(totalGrand.lastDayAch)) ? 'text-red-650' : 'text-orange-500';
+                    const lastAchColorClass = (!isTotal && parseFloat(t.lastDayAch) < parseFloat(totalGrand.lastDayAch)) ? 'text-red-650 font-semibold' : 'text-orange-500 font-semibold';
                     
                     const remAmt = Math.round(t.remainingAmt || 0);
                     let remColor = '';
@@ -4438,53 +4438,53 @@
                     }
 
                     return `
-                    <tr class="${isTotal ? 'bg-slate-200 dark:bg-slate-700 font-bold border-y-2 border-slate-300 dark:border-slate-600' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition interactive-row border-b border-slate-100 dark:border-slate-700'} text-slate-700 dark:text-slate-300">
-                        <td class="p-1.5 border dark:border-slate-600 ${isTotal ? '' : 'sticky left-0 bg-white dark:bg-dark-card'} text-center">${isTotal ? '' : t.part}</td>
-                        <td class="p-1.5 border dark:border-slate-600 ${isTotal ? 'text-right' : 'sticky left-10 bg-white dark:bg-dark-card shadow-sm'} font-medium">
+                    <tr class="${isTotal ? 'bg-slate-100 dark:bg-slate-800/90 font-bold border-y border-slate-350 dark:border-slate-700' : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors interactive-row border-b border-slate-100 dark:border-slate-800/60'} text-slate-700 dark:text-slate-300 text-[11px]">
+                        <td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 ${isTotal ? '' : 'sticky left-0 bg-white dark:bg-dark-card'} text-center">${isTotal ? '' : t.part}</td>
+                        <td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 ${isTotal ? 'text-right' : 'sticky left-10 bg-white dark:bg-dark-card shadow-sm'} font-medium">
                             ${isTotal ? label : t.name}
                         </td>
-                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${perFileOdColorClass}">${Math.round(t.perFileOd).toLocaleString()}</td>
-                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${totalOdColorClass}">${Math.round(t.totalOd).toLocaleString()}</td>
-                        <td class="p-1.5 border dark:border-slate-600 text-center">${t.targetFiles}</td>
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center">${t.mtdProjFiles}</td>` : ''}
-                        <td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'font-semibold text-blue-600' : ''}">${t.uniquePaidCodes}</td>
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'text-red-500' : ''}">${t.tillDateNonPayFiles}</td>` : ''}
+                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-right font-mono ${perFileOdColorClass}">${Math.round(t.perFileOd).toLocaleString()}</td>
+                        <td class="od-col ${UI.showOdColumns ? '' : 'hidden'} py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-right font-mono ${totalOdColorClass}">${Math.round(t.totalOd).toLocaleString()}</td>
+                        <td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-center font-mono">${t.targetFiles}</td>
+                        ${!isCompact ? `<td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-center font-mono">${t.mtdProjFiles}</td>` : ''}
+                        <td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-center font-mono ${!isTotal ? 'font-semibold text-blue-600 dark:text-blue-400' : ''}">${t.uniquePaidCodes}</td>
+                        ${!isCompact ? `<td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-center font-mono ${!isTotal ? 'text-red-500 font-semibold' : ''}">${t.tillDateNonPayFiles}</td>` : ''}
                         
-                        <td class="p-1.5 border dark:border-slate-600 text-right font-medium">${parseInt(t.targetAmt).toLocaleString()}</td>
+                        <td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-right font-mono font-medium">${parseInt(t.targetAmt).toLocaleString()}</td>
                         
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'text-slate-500' : ''}">${parseInt(t.presetProjReg).toLocaleString()}</td>` : ''}
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'text-slate-500' : ''}">${parseInt(t.presetProjAdv).toLocaleString()}</td>` : ''}
+                        ${!isCompact ? `<td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-right font-mono ${!isTotal ? 'text-slate-400 dark:text-slate-500' : ''}">${parseInt(t.presetProjReg).toLocaleString()}</td>` : ''}
+                        ${!isCompact ? `<td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-right font-mono ${!isTotal ? 'text-slate-400 dark:text-slate-500' : ''}">${parseInt(t.presetProjAdv).toLocaleString()}</td>` : ''}
                         
-                        <td class="p-1.5 border dark:border-slate-600 text-right font-bold ${!isTotal ? 'text-brand-600' : ''}">${parseInt(t.presetProjTotal).toLocaleString()}</td>
-                        <td class="p-1.5 border dark:border-slate-600 text-right font-bold ${!isTotal ? 'text-green-600' : ''}">${parseInt(t.mtdColl).toLocaleString()}</td>
-                        <td class="p-1.5 border dark:border-slate-600 text-center font-bold ${achColorStyle}">
+                        <td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-right font-mono font-bold ${!isTotal ? 'text-brand-600 dark:text-brand-400' : ''}">${parseInt(t.presetProjTotal).toLocaleString()}</td>
+                        <td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-right font-mono font-bold ${!isTotal ? 'text-green-600 dark:text-green-400' : ''}">${parseInt(t.mtdColl).toLocaleString()}</td>
+                        <td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-center font-mono font-bold ${achColorStyle}">
                             <div class="flex items-center justify-center gap-1.5">
                                 <span>${t.tillDayAchievement}%</span>
                             </div>
                         </td>
-                        <td class="p-1.5 border dark:border-slate-600 text-right ${isTotal ? 'bg-rose-50/30 dark:bg-rose-950/20' : 'bg-rose-50/10 dark:bg-rose-950/5'} ${remColor}">
+                        <td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-right font-mono ${isTotal ? 'bg-rose-50/30 dark:bg-rose-950/20' : 'bg-rose-50/10 dark:bg-rose-950/5'} ${remColor}">
                             ${remAmt.toLocaleString()}
                         </td>
-                        <td class="daily-req-col ${UI.showDailyReqColumn ? '' : 'hidden'} p-1.5 border dark:border-slate-600 text-right ${isTotal ? 'font-bold bg-amber-50/30 dark:bg-amber-950/20 text-slate-900 dark:text-slate-100' : 'font-medium bg-amber-50/10 dark:bg-amber-950/5 text-slate-900 dark:text-slate-100'}">
+                        <td class="daily-req-col ${UI.showDailyReqColumn ? '' : 'hidden'} py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-right font-mono ${isTotal ? 'font-bold bg-amber-50/30 dark:bg-amber-950/20 text-slate-900 dark:text-slate-100' : 'font-medium bg-amber-50/10 dark:bg-amber-950/5 text-slate-700 dark:text-slate-300'}">
                             ${Math.round(t.rdrr || 0).toLocaleString()}
                         </td>
                         
-                        <td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'font-medium text-slate-700 dark:text-slate-300' : ''}">${parseInt(t.todayProj).toLocaleString()}</td>
-                        <td class="p-1.5 border dark:border-slate-600 text-right font-bold ${!isTotal ? 'text-green-600' : ''}">${parseInt(t.todayColl).toLocaleString()}</td>
-                        <td class="p-1.5 border dark:border-slate-600 text-center font-bold text-fuchsia-600 bg-fuchsia-50 dark:bg-fuchsia-900/10">${t.todayAch}%</td>
+                        <td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-right font-mono ${!isTotal ? 'font-medium text-slate-700 dark:text-slate-300' : ''}">${parseInt(t.todayProj).toLocaleString()}</td>
+                        <td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-right font-mono font-bold ${!isTotal ? 'text-green-600 dark:text-green-400' : ''}">${parseInt(t.todayColl).toLocaleString()}</td>
+                        <td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-center font-mono font-bold text-fuchsia-600 bg-fuchsia-50 dark:bg-fuchsia-900/10">${t.todayAch}%</td>
  
-                        <td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'text-slate-500' : ''} border-l-2 border-slate-100 dark:border-slate-600">${parseInt(t.yestProjAmt).toLocaleString()}</td>
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'text-slate-500' : ''}">${t.yestProjFiles}</td>` : ''}
-                        <td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'text-slate-500' : ''}">${parseInt(t.yestCollAmt).toLocaleString()}</td>
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'text-slate-500' : ''}">${t.yestCollFiles}</td>` : ''}
-                        <td class="p-1.5 border dark:border-slate-600 text-center font-bold ${lastAchColorClass}">${t.lastDayAch}%</td>
+                        <td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-right font-mono ${!isTotal ? 'text-slate-400 dark:text-slate-550' : ''} border-l-2 border-slate-200 dark:border-slate-700/60">${parseInt(t.yestProjAmt).toLocaleString()}</td>
+                        ${!isCompact ? `<td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-center font-mono ${!isTotal ? 'text-slate-400 dark:text-slate-550' : ''}">${t.yestProjFiles}</td>` : ''}
+                        <td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-right font-mono ${!isTotal ? 'text-slate-400 dark:text-slate-550' : ''}">${parseInt(t.yestCollAmt).toLocaleString()}</td>
+                        ${!isCompact ? `<td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-center font-mono ${!isTotal ? 'text-slate-400 dark:text-slate-550' : ''}">${t.yestCollFiles}</td>` : ''}
+                        <td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-center font-mono font-bold ${lastAchColorClass}">${t.lastDayAch}%</td>
                         
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-right ${!isTotal ? 'text-rose-800 bg-rose-50 dark:bg-rose-900/20' : ''} border-l-2 border-slate-100 dark:border-slate-600">${parseInt(t.lmNpTargetAmt).toLocaleString()}</td>` : ''}
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center ${!isTotal ? 'text-rose-800 bg-rose-50 dark:bg-rose-900/20' : ''}">${t.lmNpTargetFiles}</td>` : ''}
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-right font-bold ${!isTotal ? 'text-rose-600' : ''}">${parseInt(t.mtdLmNpColl).toLocaleString()}</td>` : ''}
-                        ${!isCompact ? `<td class="p-1.5 border dark:border-slate-600 text-center font-bold ${!isTotal ? 'text-rose-600' : ''}">${t.mtdLmNpFiles}</td>` : ''}
-                        <td class="p-1.5 border dark:border-slate-600 text-center font-bold border-l-2 border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/40">
-                            <span onclick="UI.showAppUseModal('${t.id}')" class="cursor-pointer hover:opacity-80 transition-opacity inline-flex items-center px-2 py-0.5 rounded-full text-xs font-black ${
+                        ${!isCompact ? `<td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-right font-mono ${!isTotal ? 'text-rose-800 bg-rose-50 dark:bg-rose-900/20' : ''} border-l-2 border-slate-200 dark:border-slate-700/60">${parseInt(t.lmNpTargetAmt).toLocaleString()}</td>` : ''}
+                        ${!isCompact ? `<td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-center font-mono ${!isTotal ? 'text-rose-850 bg-rose-50 dark:bg-rose-900/20' : ''}">${t.lmNpTargetFiles}</td>` : ''}
+                        ${!isCompact ? `<td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-right font-mono font-bold ${!isTotal ? 'text-rose-600' : ''}">${parseInt(t.mtdLmNpColl).toLocaleString()}</td>` : ''}
+                        ${!isCompact ? `<td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-center font-bold ${!isTotal ? 'text-rose-600' : ''}">${t.mtdLmNpFiles}</td>` : ''}
+                        <td class="py-0.5 px-1.5 border border-slate-200/50 dark:border-slate-700/40 text-center font-bold border-l-2 border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40">
+                            <span onclick="UI.showAppUseModal('${t.id}')" class="cursor-pointer hover:opacity-80 transition-opacity inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black ${
                                 t.appUsePct >= 90 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
                                 t.appUsePct >= 70 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
                                 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
