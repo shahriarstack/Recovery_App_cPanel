@@ -3701,19 +3701,19 @@
                                         ACTIVE MONTH: ${activeMonth}
                                     </div>
                             </div>
-                            <div class="flex items-center gap-3">
-                                <button onclick="UI.openSystemSettingsModal()" class="flex items-center px-4 py-2 bg-white dark:bg-slate-800 border-2 border-brand-500 text-brand-600 dark:text-brand-400 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-all font-bold text-sm shadow-lg shadow-brand-500/10 hover-lift">
-                                    <i class="fa-solid fa-gear mr-2"></i> Settings
+                            <div class="flex items-center gap-2.5">
+                                <button onclick="UI.openSystemSettingsModal()" class="flex items-center h-8 px-3 bg-white/45 dark:bg-slate-900/30 backdrop-blur-sm border border-white/10 dark:border-slate-700/30 text-brand-600 dark:text-brand-400 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all font-semibold text-xs shadow-sm hover-lift">
+                                    <i class="fa-solid fa-gear mr-1.5 opacity-80"></i> Settings
                                 </button>
-                                <button onclick="UI.captureDashboard()" class="flex items-center px-4 py-2 bg-white dark:bg-slate-800 border-2 border-brand-500 text-brand-600 dark:text-brand-400 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-all font-bold text-sm shadow-lg shadow-brand-500/10 hover-lift hidden md:flex">
-                                    <i class="fa-solid fa-camera-retro mr-2"></i> Capture
+                                <button onclick="UI.captureDashboard()" class="flex items-center h-8 px-3 bg-white/45 dark:bg-slate-900/30 backdrop-blur-sm border border-white/10 dark:border-slate-700/30 text-brand-600 dark:text-brand-400 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all font-semibold text-xs shadow-sm hover-lift hidden md:flex">
+                                    <i class="fa-solid fa-camera-retro mr-1.5 opacity-80"></i> Capture
                                 </button>
-                                <button onclick="UI.downloadAdminSummaryCSV()" class="flex items-center px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all font-bold text-sm shadow-lg shadow-emerald-500/20 hover-lift relative overflow-hidden group">
+                                <button onclick="UI.downloadAdminSummaryCSV()" class="flex items-center h-8 px-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg hover:from-emerald-600 hover:to-teal-700 transition-all font-semibold text-xs shadow-sm hover-lift relative overflow-hidden group">
                                     <div class="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-                                    <i class="fa-solid fa-cloud-arrow-down mr-2 relative z-10"></i> <span class="relative z-10">Summary Data</span>
+                                    <i class="fa-solid fa-cloud-arrow-down mr-1.5 relative z-10 opacity-90"></i> <span class="relative z-10">Summary Data</span>
                                 </button>
-                                <button onclick="Router.navigate('admin-performance')" class="flex items-center px-4 py-2 bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-all font-bold text-sm shadow-lg shadow-brand-500/20 hover-lift">
-                                    <i class="fa-solid fa-chart-line mr-2"></i> Performance Analytics
+                                <button onclick="Router.navigate('admin-performance')" class="flex items-center h-8 px-3 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-all font-semibold text-xs shadow-sm hover-lift">
+                                    <i class="fa-solid fa-chart-line mr-1.5 opacity-90"></i> Performance Analytics
                                 </button>
                             </div>
                         </div>
