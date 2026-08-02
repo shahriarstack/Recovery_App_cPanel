@@ -22,6 +22,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $pdo = getDbConnection();
 
+// Ensure customers table exists with vehicle_reg_no column
+$pdo->exec("CREATE TABLE IF NOT EXISTS customers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id VARCHAR(100) NOT NULL,
+    customer_name VARCHAR(255),
+    vehicle_reg_no VARCHAR(100),
+    phone VARCHAR(50),
+    first_inst_date VARCHAR(50),
+    inst_size DECIMAL(15, 2),
+    overdue_inst_no INT,
+    overdue_taka DECIMAL(15, 2),
+    total_outstanding DECIMAL(15, 2),
+    last_payment_date VARCHAR(50),
+    last_3_month_1 DECIMAL(15, 2),
+    last_3_month_2 DECIMAL(15, 2),
+    last_3_month_3 DECIMAL(15, 2),
+    upazila_code VARCHAR(100),
+    upazila_name VARCHAR(255),
+    territory_name VARCHAR(100),
+    INDEX idx_customer_id (customer_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+try {
+    $pdo->exec("ALTER TABLE customers ADD COLUMN vehicle_reg_no VARCHAR(100) AFTER customer_name");
+} catch (Exception $e) {
+    // Column already exists, ignore
+}
+
+
 // Cache management helper
 $cacheFile = __DIR__ . '/db_cache.json';
 function invalidateCache() {
@@ -44,21 +73,38 @@ try {
 
             date_default_timezone_set('Asia/Dhaka');
 
-            // Return cached data if available (Super fast read!)
-            if (file_exists($cacheFile)) {
-                $cachedData = json_decode(file_get_contents($cacheFile), true);
-                if (is_array($cachedData)) {
-                    $cachedData['server_date'] = date('Y-m-d');
-                    $cachedData['server_time'] = date('Y-m-d H:i:s');
-                    echo json_encode($cachedData);
-                    break;
+            if (isset($_GET['clear_cache'])) {
+                invalidateCache();
+            }
+
+            $role = isset($_GET['role']) ? $_GET['role'] : '';
+            $territoryIdParam = isset($_GET['territoryId']) ? $_GET['territoryId'] : '';
+            $usernameParam = isset($_GET['username']) ? $_GET['username'] : '';
+
+            // Resolve missing territoryId via username fallbacks (matching client-side logic)
+            if (empty($territoryIdParam) && !empty($usernameParam)) {
+                if ($role === 'officer') {
+                    $stmt = $pdo->prepare("SELECT territory_id FROM users WHERE username = ?");
+                    $stmt->execute([$usernameParam]);
+                    $territoryIdParam = $stmt->fetchColumn();
+
+                    if (empty($territoryIdParam)) {
+                        $stmt = $pdo->prepare("SELECT id FROM territories WHERE name = ? OR officer = ?");
+                        $stmt->execute([$usernameParam, $usernameParam]);
+                        $territoryIdParam = $stmt->fetchColumn();
+                    }
+                } else if ($role === 'area_head') {
+                    $stmt = $pdo->prepare("SELECT territory_id FROM users WHERE username = ?");
+                    $stmt->execute([$usernameParam]);
+                    $territoryIdParam = $stmt->fetchColumn();
                 }
             }
 
-            $tables = ['users', 'territories', 'targets', 'projections', 'collections', 'offroad_vehicles', 'settlements', 'vehicle_performance'];
+            $filteredTables = ['targets', 'projections', 'collections', 'offroad_vehicles', 'settlements'];
             $result = [];
 
-            foreach ($tables as $table) {
+            // Query users, territories, and vehicle performance directly (small tables)
+            foreach (['users', 'territories', 'vehicle_performance'] as $table) {
                 $stmt = $pdo->query("SELECT * FROM `$table`");
                 $result[$table] = $stmt->fetchAll();
             }
@@ -80,16 +126,73 @@ try {
             }
             $result['unlocks'] = $unlocks;
 
+            // Handle filtering for large operational tables
+            if ($role === 'admin') {
+                // Admin gets everything
+                foreach ($filteredTables as $table) {
+                    $stmt = $pdo->query("SELECT * FROM `$table`");
+                    $result[$table] = $stmt->fetchAll();
+                }
+            } else if (($role === 'officer' || $role === 'area_head') && !empty($territoryIdParam)) {
+                // Filter by territory
+                $territoryIds = array_filter(array_map('trim', explode(',', $territoryIdParam)));
+                if (!empty($territoryIds)) {
+                    $placeholders = implode(',', array_fill(0, count($territoryIds), '?'));
+                    foreach ($filteredTables as $table) {
+                        $stmt = $pdo->prepare("SELECT * FROM `$table` WHERE territory_id IN ($placeholders)");
+                        $stmt->execute($territoryIds);
+                        $result[$table] = $stmt->fetchAll();
+                    }
+                } else {
+                    foreach ($filteredTables as $table) {
+                        $result[$table] = [];
+                    }
+                }
+            } else {
+                // Logged out / initial load - return empty for large tables to load login page instantly!
+                foreach ($filteredTables as $table) {
+                    $result[$table] = [];
+                }
+            }
+
+            // Fetch customers dynamically based on query parameters to prevent massive payload hanging on mobile
+            if ($role === 'admin') {
+                // Show top 100 for admin preview
+                $stmt = $pdo->query("SELECT * FROM `customers` LIMIT 100");
+                $result['customers'] = $stmt->fetchAll();
+            } else if (!empty($territoryIdParam)) {
+                $territoryIds = array_filter(array_map('trim', explode(',', $territoryIdParam)));
+                if (!empty($territoryIds)) {
+                    $placeholders = implode(',', array_fill(0, count($territoryIds), '?'));
+                    $stmt = $pdo->prepare("SELECT name FROM territories WHERE id IN ($placeholders)");
+                    $stmt->execute($territoryIds);
+                    $tNames = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                    
+                    if (!empty($tNames)) {
+                        $likeClauses = [];
+                        $likeParams = [];
+                        foreach ($tNames as $name) {
+                            $likeClauses[] = "LOWER(territory_name) LIKE ?";
+                            $likeParams[] = '%' . strtolower($name) . '%';
+                        }
+                        $stmt = $pdo->prepare("SELECT * FROM `customers` WHERE " . implode(' OR ', $likeClauses));
+                        $stmt->execute($likeParams);
+                        $result['customers'] = $stmt->fetchAll();
+                    } else {
+                        $result['customers'] = [];
+                    }
+                } else {
+                    $result['customers'] = [];
+                }
+            } else {
+                $result['customers'] = [];
+            }
+
             // Inject server time as well for fresh responses
             $result['server_date'] = date('Y-m-d');
             $result['server_time'] = date('Y-m-d H:i:s');
 
-            $jsonResponse = json_encode($result);
-            
-            // Save to cache for subsequent page loads
-            @file_put_contents($cacheFile, $jsonResponse);
-
-            echo $jsonResponse;
+            echo json_encode($result);
             break;
 
         case 'update':
@@ -97,7 +200,7 @@ try {
             $collection = $input['collection'];
             $item = $input['item'];
 
-            $validTables = ['collections', 'projections', 'offroad_vehicles', 'settlements', 'territories', 'users', 'system_settings'];
+            $validTables = ['collections', 'projections', 'offroad_vehicles', 'settlements', 'territories', 'users', 'system_settings', 'customers'];
             if (!in_array($collection, $validTables)) throw new Exception("Invalid collection specified");
 
             // Get valid columns for the table dynamically to prevent SQL errors from frontend properties
@@ -108,6 +211,11 @@ try {
             $dbItem = [];
             foreach ($item as $key => $val) {
                 if ($key === 'id') continue;
+                
+                // Explicitly normalize boolean values to 1 or 0 for database safety
+                if (is_bool($val)) {
+                    $val = $val ? 1 : 0;
+                }
                 
                 if (in_array($key, $validColumns)) {
                     $dbItem[$key] = $val;
@@ -157,7 +265,7 @@ try {
             $collection = $input['collection'];
             $id = $input['id'];
 
-            $validTables = ['collections', 'projections', 'offroad_vehicles', 'settlements', 'territories', 'users'];
+            $validTables = ['collections', 'projections', 'offroad_vehicles', 'settlements', 'territories', 'users', 'customers'];
             if (!in_array($collection, $validTables)) throw new Exception("Invalid collection");
 
             $stmt = $pdo->prepare("DELETE FROM `$collection` WHERE id = ?");
@@ -243,6 +351,30 @@ try {
                 $stmt = $pdo->prepare("INSERT INTO vehicle_performance (customer_id, customer_name, model, km1, km2, earning, overdue_no, overdue_amt, extra1, extra2) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 foreach ($data as $v) {
                     $stmt->execute([$v['customerId'], $v['customerName'], $v['model'], $v['km1'], $v['km2'], $v['earning'], $v['overdueNo'], $v['overdueAmt'], $v['extra1'], $v['extra2']]);
+                }
+            }
+
+            $pdo->commit();
+            invalidateCache(); // Clear cache on modification
+            echo json_encode(['success' => true]);
+            break;
+
+        case 'sync-customers':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Method Not Allowed");
+            $data = $input['data'];
+
+            $pdo->beginTransaction();
+            $pdo->exec("DELETE FROM customers");
+
+            if (!empty($data)) {
+                $stmt = $pdo->prepare("INSERT INTO customers (customer_id, customer_name, vehicle_reg_no, phone, first_inst_date, inst_size, overdue_inst_no, overdue_taka, total_outstanding, last_payment_date, last_3_month_1, last_3_month_2, last_3_month_3, upazila_code, upazila_name, territory_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                foreach ($data as $c) {
+                    $stmt->execute([
+                        $c['customerId'], $c['customerName'], isset($c['vehicleRegNo']) ? $c['vehicleRegNo'] : '', $c['phone'], $c['firstInstDate'], 
+                        $c['instSize'], $c['overdueInstNo'], $c['overdueTaka'], $c['totalOutstanding'], 
+                        $c['lastPaymentDate'], $c['last3Month1'], $c['last3Month2'], $c['last3Month3'], 
+                        $c['upazilaCode'], $c['upazilaName'], $c['territoryName']
+                    ]);
                 }
             }
 

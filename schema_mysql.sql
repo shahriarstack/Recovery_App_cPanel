@@ -122,6 +122,28 @@ CREATE TABLE IF NOT EXISTS vehicle_performance (
     extra2 TEXT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Customers table (For "My Customers" view and Collection pre-filling)
+CREATE TABLE IF NOT EXISTS customers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id VARCHAR(100) NOT NULL,
+    customer_name VARCHAR(255),
+    vehicle_reg_no VARCHAR(100),
+    phone VARCHAR(50),
+    first_inst_date VARCHAR(50),
+    inst_size DECIMAL(15, 2),
+    overdue_inst_no INT,
+    overdue_taka DECIMAL(15, 2),
+    total_outstanding DECIMAL(15, 2),
+    last_payment_date VARCHAR(50),
+    last_3_month_1 DECIMAL(15, 2),
+    last_3_month_2 DECIMAL(15, 2),
+    last_3_month_3 DECIMAL(15, 2),
+    upazila_code VARCHAR(100),
+    upazila_name VARCHAR(255),
+    territory_name VARCHAR(100),
+    INDEX idx_customer_id (customer_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- System Settings table
 CREATE TABLE IF NOT EXISTS system_settings (
     `key` VARCHAR(255) PRIMARY KEY,
