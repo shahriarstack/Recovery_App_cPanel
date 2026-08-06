@@ -1,4 +1,898 @@
-window.UI = {
+// GLOBAL FETCH INTERCEPTOR: Generic Retry Mechanism
+        const originalFetch = window.fetch;
+        window.fetch = async function(url, options) {
+            let retries = 5;
+            let lastError = null;
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const res = await originalFetch(url, options);
+                    
+                    if (typeof url === 'string' && url.includes('/api')) {
+                        if (!res.ok) {
+                            throw new Error("Server error " + res.status);
+                        }
+                    }
+                    return res;
+                } catch (err) {
+                    lastError = err;
+                    console.warn(`Fetch attempt ${i + 1} failed for ${url}:`, err.message);
+                    if (i < retries - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
+                    }
+                }
+            }
+            throw lastError;
+        };
+
+        window.filterPerformanceAnalytics = function() {
+            const searchVal = (document.getElementById('perf-search')?.value || '').toLowerCase();
+            const minAch = parseFloat(document.getElementById('perf-min-ach')?.value || 0);
+            
+            const minAchValSpan = document.getElementById('perf-min-ach-val');
+            if (minAchValSpan) minAchValSpan.innerText = minAch + '%';
+            
+            const activeBtn = document.querySelector('.preset-btn.active');
+            const preset = activeBtn ? activeBtn.getAttribute('data-preset') : 'all';
+            
+            const rows = document.querySelectorAll('#perf-analytics-table-body tr');
+            let visibleCount = 0;
+            rows.forEach(row => {
+                if (row.id === 'perf-no-results') return;
+                
+                const name = (row.getAttribute('data-name') || '').toLowerCase();
+                const officer = (row.getAttribute('data-officer') || '').toLowerCase();
+                const ach = parseFloat(row.getAttribute('data-ach') || 0);
+                
+                const matchesSearch = name.includes(searchVal) || officer.includes(searchVal);
+                let matchesPreset = true;
+                if (preset === 'excellent') matchesPreset = ach >= 90;
+                else if (preset === 'good') matchesPreset = ach >= 70 && ach < 90;
+                else if (preset === 'warning') matchesPreset = ach >= 40 && ach < 70;
+                else if (preset === 'critical') matchesPreset = ach < 40;
+                
+                const matchesSlider = ach >= minAch;
+                
+                if (matchesSearch && matchesPreset && matchesSlider) {
+                    row.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+            
+            const noResultsRow = document.getElementById('perf-no-results');
+            if (noResultsRow) {
+                if (visibleCount === 0) noResultsRow.classList.remove('hidden');
+                else noResultsRow.classList.add('hidden');
+            }
+        };
+
+        window.setPerfPreset = function(presetType, btn) {
+            document.querySelectorAll('.preset-btn').forEach(b => {
+                b.classList.remove('active', 'bg-brand-600', 'text-white', 'shadow-lg', 'shadow-brand-500/20');
+                b.classList.add('bg-white', 'dark:bg-slate-800', 'text-slate-600', 'dark:text-slate-300', 'border-slate-200', 'dark:border-slate-700');
+            });
+            btn.classList.add('active', 'bg-brand-600', 'text-white', 'shadow-lg', 'shadow-brand-500/20');
+            btn.classList.remove('bg-white', 'dark:bg-slate-800', 'text-slate-600', 'dark:text-slate-300', 'border-slate-200', 'dark:border-slate-700');
+            
+            const slider = document.getElementById('perf-min-ach');
+            if (slider) {
+                if (presetType === 'excellent') slider.value = 90;
+                else if (presetType === 'good') slider.value = 70;
+                else if (presetType === 'warning') slider.value = 40;
+                else if (presetType === 'critical') slider.value = 0;
+                else slider.value = 0;
+            }
+            
+            window.filterPerformanceAnalytics();
+        };
+
+        const Utils = {
+            getLocalDate(d) {
+                const db = Store.cache;
+                let cutoffHours = 0;
+                if (db && db.system_settings) {
+                    const setting = db.system_settings.find(s => s.key === 'cutoff_extension_hours');
+                    if (setting) cutoffHours = parseFloat(setting.value) || 0;
+                }
+
+                let targetDate;
+                if (!d) {
+                    const now = new Date(Date.now() + (Store.clientServerDiff || 0));
+                    now.setHours(now.getHours() - cutoffHours);
+                    targetDate = now;
+                } else {
+                    targetDate = new Date(d);
+                }
+
+                try {
+                    const formatter = new Intl.DateTimeFormat('en-US', {
+                        timeZone: 'Asia/Dhaka',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    });
+                    const parts = formatter.formatToParts(targetDate);
+                    const year = parts.find(p => p.type === 'year').value;
+                    const month = parts.find(p => p.type === 'month').value;
+                    const day = parts.find(p => p.type === 'day').value;
+                    return `${year}-${month}-${day}`;
+                } catch (e) {
+                    return new Date(targetDate.getTime() - targetDate.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                }
+            },
+            getActiveMonth() {
+                const db = Store.cache;
+                if (db && db.system_settings) {
+                    const setting = db.system_settings.find(s => s.key === 'active_month');
+                    if (setting && setting.value) return setting.value;
+                }
+                return this.getLocalDate().slice(0, 7);
+            },
+            getMonthBounds() {
+                const activeMonth = this.getActiveMonth();
+                const [year, month] = activeMonth.split('-').map(Number);
+                const lastDay = new Date(year, month, 0);
+                const lastDayStr = this.getLocalDate(lastDay);
+                
+                // UX Optimization: If physically in next month but active month hasn't changed (extended month),
+                // dynamically extend the endOfMonth boundary to today's date so collections display in history forms.
+                const realTodayStr = this.getLocalDate();
+                const end = realTodayStr > lastDayStr && realTodayStr.startsWith(activeMonth.slice(0, 4)) ? realTodayStr : lastDayStr;
+                
+                return { startOfMonth: `${activeMonth}-01`, endOfMonth: end };
+            }
+        };
+
+        /**
+         * 1. DATA LAYER
+         */
+        const Store = {
+            cache: null,
+            apiUrl: '/api',
+            clientServerDiff: 0,
+
+            convertKeys(arr) {
+                if (!arr) return;
+                arr.forEach(item => {
+                    for (let key in item) {
+                        if (typeof item[key] === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(item[key])) {
+                            item[key] = item[key].split('T')[0];
+                        }
+                        if (key.includes('_')) {
+                            const camel = key.replace(/_([a-z])/g, g => g[1].toUpperCase());
+                            if (item[camel] === undefined) {
+                                item[camel] = item[key];
+                            }
+                        }
+                    }
+                });
+            },
+
+            async init() {
+                let waitTimeout;
+                try {
+                    const loaderText = document.getElementById('loader-text');
+                    if (loaderText) {
+                        loaderText.innerText = "Connecting...";
+                        waitTimeout = setTimeout(() => {
+                            if (loaderText) loaderText.innerText = "Waking up database... this may take a few seconds";
+                        }, 2000);
+                    }
+
+                    const res = await fetch(`${this.apiUrl}/db?t=${Date.now()}`);
+                    if (waitTimeout) clearTimeout(waitTimeout);
+                    if (loaderText) loaderText.innerText = "Processing";
+
+                    const data = await res.json();
+
+                    if (data.error) {
+                        console.error("Backend Error:", data.error);
+                        return null;
+                    }
+
+                    // Calculate client-server clock difference if serverTime is provided
+                    if (data.serverTime) {
+                        const serverMs = new Date(data.serverTime.replace(' ', 'T') + '+06:00').getTime();
+                        if (!isNaN(serverMs)) {
+                            Store.clientServerDiff = serverMs - Date.now();
+                        }
+                    }
+
+                    // If DB is empty (based on territories), seed it
+                    if (data.territories && data.territories.length === 0) {
+                        console.log("Database empty, seeding initial data...");
+                        await this.seed();
+                        return await this.init();
+                    }
+
+                    // Bridge database snake_case keys to UI camelCase dynamically
+                    ['users', 'targets', 'projections', 'collections', 'offroad_vehicles', 'settlements', 'vehicle_performance'].forEach(collection => {
+                        if (data[collection]) this.convertKeys(data[collection]);
+                    });
+
+                    this.cache = data;
+
+                    // Auto-migration for entries submitted today physically but saved as May 31st under old date-capping rules,
+                    // and for entries submitted on extended days that are missing an active_month field:
+                    (async () => {
+                        try {
+                            const activeMonth = data.system_settings?.find(s => s.key === 'active_month')?.value;
+                            if (activeMonth === '2026-05') {
+                                // Today is June 1st physically, which starts at 1780250400000 ms local epoch
+                                const startOfTodayLocal = new Date();
+                                startOfTodayLocal.setHours(0,0,0,0);
+                                const startOfTodayTimestamp = startOfTodayLocal.getTime();
+
+                                let migrated = false;
+
+                                // 1. Migrate collections entered physically today that got saved as May 31st
+                                if (data.collections) {
+                                    for (const c of data.collections) {
+                                        if (c.timestamp >= startOfTodayTimestamp && c.date === '2026-05-31') {
+                                            c.date = '2026-06-01';
+                                            c.active_month = '2026-05';
+                                            c.activeMonth = '2026-05';
+                                            console.log("Auto-migrating collection date:", c.receipt);
+                                            await fetch(`${this.apiUrl}/update`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ collection: 'collections', item: {
+                                                    id: c.id,
+                                                    date: '2026-06-01',
+                                                    active_month: '2026-05'
+                                                }})
+                                            });
+                                            migrated = true;
+                                        }
+                                    }
+                                }
+
+                                // 2. Migrate existing collections saved on June 1st/2nd physically without active_month
+                                if (data.collections) {
+                                    for (const c of data.collections) {
+                                        if (c.date.startsWith('2026-06') && !c.active_month && !c.activeMonth) {
+                                            c.active_month = '2026-05';
+                                            c.activeMonth = '2026-05';
+                                            console.log("Auto-migrating collection active_month:", c.receipt);
+                                            await fetch(`${this.apiUrl}/update`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ collection: 'collections', item: {
+                                                    id: c.id,
+                                                    active_month: '2026-05'
+                                                }})
+                                            });
+                                            migrated = true;
+                                        }
+                                    }
+                                }
+
+                                // 3. Migrate existing projections saved on June 1st/2nd physically without active_month
+                                if (data.projections) {
+                                    for (const p of data.projections) {
+                                        if (p.date.startsWith('2026-06') && !p.active_month && !p.activeMonth) {
+                                            p.active_month = '2026-05';
+                                            p.activeMonth = '2026-05';
+                                            console.log("Auto-migrating projection active_month for territory:", p.territoryId || p.territory_id);
+                                            await fetch(`${this.apiUrl}/update`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ collection: 'projections', item: {
+                                                    id: p.id,
+                                                    active_month: '2026-05'
+                                                }})
+                                            });
+                                            migrated = true;
+                                        }
+                                    }
+                                }
+
+                                // 4. If a territory has collections on June 1st but projection is on May 31st:
+                                if (data.projections && data.collections) {
+                                    const activeTIds = new Set(data.collections.filter(c => c.date === '2026-06-01').map(c => c.territoryId || c.territory_id));
+                                    for (const tId of activeTIds) {
+                                        const projJune1 = data.projections.find(p => (p.territoryId === tId || p.territory_id === tId) && p.date === '2026-06-01');
+                                        if (!projJune1) {
+                                            const projMay31 = data.projections.find(p => (p.territoryId === tId || p.territory_id === tId) && p.date === '2026-05-31');
+                                            if (projMay31) {
+                                                console.log("Auto-migrating projection for territory:", tId);
+                                                await fetch(`${this.apiUrl}/update`, {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ collection: 'projections', item: {
+                                                        territory_id: tId,
+                                                        date: '2026-06-01',
+                                                        regular_amount: projMay31.regularAmount || projMay31.amount || 0,
+                                                        advance_amount: projMay31.advanceAmount || 0,
+                                                        amount: projMay31.amount || 0,
+                                                        file_count: projMay31.fileCount || 0,
+                                                        active_month: '2026-05'
+                                                    }})
+                                                });
+                                                migrated = true;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (migrated) {
+                                    console.log("Auto-migration complete. Refreshing UI cache...");
+                                    const refreshRes = await fetch(`${this.apiUrl}/db?t=${Date.now()}`);
+                                    const refreshData = await refreshRes.json();
+                                    ['users', 'targets', 'projections', 'collections', 'offroad_vehicles', 'settlements', 'vehicle_performance'].forEach(collection => {
+                                        if (refreshData[collection]) this.convertKeys(refreshData[collection]);
+                                    });
+                                    this.cache = refreshData;
+                                    
+                                    setTimeout(() => {
+                                        if (document.getElementById('officer-dashboard-panel')) {
+                                            UI.renderOfficerDashboard();
+                                        } else if (document.getElementById('views-container').innerHTML.includes('Admin Intelligence Dashboard')) {
+                                            UI.renderAdminDashboard();
+                                        }
+                                    }, 100);
+                                }
+                            }
+                        } catch (err) {
+                            console.error("Auto-migration error:", err);
+                        }
+                    })();
+
+                    return data;
+                } catch (err) {
+                    if (typeof waitTimeout !== 'undefined') clearTimeout(waitTimeout);
+                    console.error("Failed to connect to Backend:", err);
+                    return null;
+                }
+            },
+
+            async seed() {
+                const rawTerritories = [
+                    { part: 'A', name: 'Bogura' }, { part: 'A', name: 'Chapainawabgonj' }, { part: 'A', name: 'Dinajpur' },
+                    { part: 'A', name: 'Natore' }, { part: 'A', name: 'Rajshahi' }, { part: 'A', name: 'Rangpur' },
+                    { part: 'A', name: 'Nilphamari' }, { part: 'A', name: 'Jashore' }, { part: 'A', name: 'Kushtia' },
+                    { part: 'A', name: 'Khulna' }, { part: 'A', name: 'Manikganj' }, { part: 'A', name: 'Munshiganj 1' },
+                    { part: 'A', name: 'Munshiganj-2' }, { part: 'A', name: 'Narayanganj' }, { part: 'A', name: 'Narshingdi' },
+                    { part: 'A', name: 'Sirajganj' }, { part: 'A', name: 'Savar' }, { part: 'A', name: 'Tongi' },
+                    { part: 'A', name: 'Gazipur' }, { part: 'A', name: 'Dhaka' }, { part: 'A', name: 'Head Office' },
+                    { part: 'B', name: 'Barguna' }, { part: 'B', name: 'Barishal' }, { part: 'B', name: 'Brahmanaria' },
+                    { part: 'B', name: 'Chandpur-1' }, { part: 'B', name: 'Chandpur-2' }, { part: 'B', name: 'Chattogram North' },
+                    { part: 'B', name: 'Chattogram South' }, { part: 'B', name: "Cox'sBazar" }, { part: 'B', name: 'Cumilla-1' },
+                    { part: 'B', name: 'Cumilla-2' }, { part: 'B', name: 'Faridpur' }, { part: 'B', name: 'Feni' },
+                    { part: 'B', name: 'Gopalganj' }, { part: 'B', name: 'Hobiganj' }, { part: 'B', name: 'Jamalpur' },
+                    { part: 'B', name: 'Kishoreganj' }, { part: 'B', name: 'Laxmipur' }, { part: 'B', name: 'Mymensingh' },
+                    { part: 'B', name: 'Netrokona' }, { part: 'B', name: 'Noakhali-1' }, { part: 'B', name: 'Noakhali-2' },
+                    { part: 'B', name: 'Sylhet' }, { part: 'B', name: 'Tangail' }
+                ];
+
+                const territories = rawTerritories.map((t) => ({
+                    id: t.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase(),
+                    name: t.name,
+                    part: t.part,
+                    officer: t.name
+                }));
+
+                const users = [
+                    { username: 'admin', officerName: 'System Admin', role: 'admin', password: 'Admin@4321' },
+                    ...territories.map(t => ({
+                        username: t.name,
+                        officerName: `${t.name} Officer`,
+                        role: 'officer',
+                        password: '1234',
+                        territoryId: t.id
+                    }))
+                ];
+
+                await fetch(`${this.apiUrl}/sync-targets`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ territories, targets: [] })
+                });
+
+                await fetch(`${this.apiUrl}/sync-users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ users })
+                });
+            },
+
+            get() {
+                return this.cache;
+            },
+
+            async update(collection, item) {
+                // Remove redundant property if it's new
+                if (String(item.id).startsWith('new_')) delete item.id;
+
+                const res = await fetch(`${this.apiUrl}/update`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ collection, item })
+                });
+                const updatedItem = await res.json();
+                if (updatedItem.error) throw new Error(updatedItem.error);
+                this.convertKeys([updatedItem]);
+
+                // Update local cache for performance
+                const idx = this.cache[collection].findIndex(x => String(x.id) === String(updatedItem.id));
+                if (idx !== -1) this.cache[collection][idx] = updatedItem;
+                else this.cache[collection].push(updatedItem);
+
+                return updatedItem;
+            },
+
+            async delete(collection, id) {
+                await fetch(`${this.apiUrl}/delete`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ collection, id })
+                });
+                this.cache[collection] = this.cache[collection].filter(x => x.id !== id);
+            },
+
+            async deleteMany(collection, ids) {
+                for (const id of ids) {
+                    await this.delete(collection, id);
+                }
+            }
+        };
+
+        /**
+         * 2. CALCULATION ENGINE
+         */
+        const Calc = {
+            getMetrics(territoryId = null) {
+                const db = Store.get();
+                const todayStr = Utils.getLocalDate();
+                const currentMonth = Utils.getActiveMonth();
+                const todayParts = todayStr.split('-').map(Number);
+                
+                // Pure UTC calendar calculations to avoid client timezone offset shift bugs
+                const todayUTC = new Date(Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2]));
+                const yesterdayUTC = new Date(todayUTC);
+                yesterdayUTC.setUTCDate(yesterdayUTC.getUTCDate() - 1);
+                const yesterdayStr = yesterdayUTC.toISOString().split('T')[0];
+
+                let collections = db.collections.filter(c => (c.activeMonth || c.active_month || c.date.slice(0, 7)) === currentMonth);
+                let targets = db.targets.filter(t => t.month === currentMonth);
+                let projections = db.projections.filter(p => (p.activeMonth || p.active_month || p.date.slice(0, 7)) === currentMonth);
+
+                if (territoryId) {
+                    if (Array.isArray(territoryId)) {
+                        collections = collections.filter(c => territoryId.includes(c.territoryId) || territoryId.includes(c.territory_id));
+                        targets = targets.filter(t => territoryId.includes(t.territoryId) || territoryId.includes(t.territory_id));
+                        projections = projections.filter(p => territoryId.includes(p.territoryId) || territoryId.includes(p.territory_id));
+                    } else if (String(territoryId).includes(',')) {
+                        const ids = String(territoryId).split(',').filter(Boolean);
+                        collections = collections.filter(c => ids.includes(c.territoryId) || ids.includes(c.territory_id));
+                        targets = targets.filter(t => ids.includes(t.territoryId) || ids.includes(t.territory_id));
+                        projections = projections.filter(p => ids.includes(p.territoryId) || ids.includes(p.territory_id));
+                    } else {
+                        collections = collections.filter(c => c.territoryId === territoryId || c.territory_id === territoryId);
+                        targets = targets.filter(t => t.territoryId === territoryId || t.territory_id === territoryId);
+                        projections = projections.filter(p => p.territoryId === territoryId || p.territory_id === territoryId);
+                    }
+                }
+
+                const targetAmt = targets.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+                const targetFiles = targets.reduce((sum, t) => sum + (parseInt(t.files) || 0), 0);
+                const lmNpTargetAmt = targets.reduce((sum, t) => sum + (parseFloat(t.lmNpTargetAmount) || 0), 0);
+                const lmNpTargetFiles = targets.reduce((sum, t) => sum + (parseInt(t.lmNpTargetFiles) || 0), 0);
+
+                const mtdColl = collections.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
+                const uniquePaidCodes = new Set(collections.map(c => c.customerCode)).size;
+                const tillDateNonPayFiles = Math.max(0, targetFiles - uniquePaidCodes);
+
+                const mtdLmNpColl = collections.filter(c => c.isLmNp).reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
+                const mtdLmNpFiles = new Set(collections.filter(c => c.isLmNp).map(c => c.customerCode)).size;
+
+                const presetProjReg = targets.reduce((sum, t) => sum + (parseFloat(t.projReg || t.proj_reg) || 0), 0);
+                const presetProjAdv = targets.reduce((sum, t) => sum + (parseFloat(t.projAdv || t.proj_adv) || 0), 0);
+                const presetProjTotal = presetProjReg + presetProjAdv;
+
+                const mtdProjRegular = projections.reduce((sum, p) => sum + (parseFloat(p.regularAmount) || parseFloat(p.amount) || 0), 0);
+                const mtdProjAdvance = projections.reduce((sum, p) => sum + (parseFloat(p.advanceAmount) || 0), 0);
+                const mtdProjTotal = mtdProjRegular + mtdProjAdvance;
+                const mtdProjFiles = projections.reduce((sum, p) => sum + (parseInt(p.fileCount) || 0), 0);
+
+                const yestProjEntries = projections.filter(p => p.date === yesterdayStr);
+                const yestProjAmt = yestProjEntries.reduce((sum, p) => sum + (parseFloat(p.regularAmount) || parseFloat(p.amount) || 0) + (parseFloat(p.advanceAmount) || 0), 0);
+                const yestProjFiles = yestProjEntries.reduce((sum, p) => sum + (parseInt(p.fileCount) || 0), 0);
+                const yestCollEntries = collections.filter(c => c.date === yesterdayStr);
+                const yestCollAmt = yestCollEntries.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
+                const yestCollFiles = new Set(yestCollEntries.map(c => c.customerCode)).size;
+
+                const todayProjEntries = projections.filter(p => p.date === todayStr);
+                const todayProj = todayProjEntries.reduce((sum, p) => sum + (parseFloat(p.regularAmount) || parseFloat(p.amount) || 0) + (parseFloat(p.advanceAmount) || 0), 0);
+                const todayColl = collections.filter(c => c.date === todayStr).reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
+
+                const achievement = presetProjTotal > 0 ? (mtdColl / presetProjTotal) * 100 : 0;
+                const emiAchievement = targetAmt > 0 ? (mtdColl / targetAmt) * 100 : 0;
+                const tillDayAchievement = achievement; // Keep for compatibility
+                const lmNpRecPct = lmNpTargetAmt > 0 ? (mtdLmNpColl / lmNpTargetAmt) * 100 : 0;
+                const cureRate = targetFiles > 0 ? (uniquePaidCodes / targetFiles) * 100 : 0;
+
+                let projAcc = 0;
+                if (todayProj > 0) {
+                    const diff = Math.abs(todayProj - todayColl);
+                    projAcc = Math.max(0, (1 - (diff / todayProj)) * 100);
+                } else if (todayColl > 0 && todayProj === 0) {
+                    projAcc = 0;
+                } else {
+                    projAcc = 100;
+                }
+
+                // Rigorous Days Left & Run Rate math for both standard and extended months
+                const [activeYear, activeMonthNum] = currentMonth.split('-').map(Number);
+                const realTodayStr = Utils.getLocalDate();
+                
+                let daysLeft = 0;
+                if (realTodayStr.slice(0, 7) === currentMonth) {
+                    const daysInMonth = new Date(activeYear, activeMonthNum, 0).getDate();
+                    const dayOfMonth = todayParts[2];
+                    daysLeft = daysInMonth - dayOfMonth + 1; // Include today in remaining days calculation
+                } else if (realTodayStr.slice(0, 7) < currentMonth) {
+                    const daysInMonth = new Date(activeYear, activeMonthNum, 0).getDate();
+                    daysLeft = daysInMonth;
+                } else {
+                    daysLeft = 0; // Exceeded the active month, treat as final/extended days
+                }
+
+                const remainingAmt = Math.max(0, presetProjTotal - mtdColl);
+                const rdrr = daysLeft > 0 ? remainingAmt / daysLeft : remainingAmt;
+
+                const rpi = Math.min(100, (achievement * 0.7) + (projAcc * 0.1) + (lmNpRecPct * 0.1) + (cureRate * 0.1));
+
+                return {
+                    targetAmt, targetFiles,
+                    mtdColl, todayColl, remainingAmt, rdrr,
+                    achievement: achievement.toFixed(1),
+                    emiAchievement: emiAchievement.toFixed(1),
+                    lmNpRecPct: lmNpRecPct.toFixed(1),
+                    cureRate: cureRate.toFixed(1),
+                    projAcc: projAcc.toFixed(1),
+                    rpi: rpi.toFixed(1),
+                    uniquePaidCodes,
+                    tillDateNonPayFiles,
+                    mtdProjRegular, mtdProjAdvance, mtdProjTotal, mtdProjFiles,
+                    presetProjReg, presetProjAdv, presetProjTotal,
+                    tillDayAchievement: tillDayAchievement.toFixed(1),
+                    yestProjAmt, yestProjFiles, yestCollAmt, yestCollFiles,
+                    lmNpTargetAmt, lmNpTargetFiles, mtdLmNpColl, mtdLmNpFiles,
+                    todayProj,
+                    rawCollections: collections,
+                    rawTargets: targets
+                };
+            },
+
+            getRPIColor(score) {
+                if (score >= 90) return 'text-green-500';
+                if (score >= 70) return 'text-yellow-500';
+                return 'text-red-500';
+            },
+
+            getRPIBg(score) {
+                if (score >= 90) return 'bg-green-100 dark:bg-green-900/30 border-green-200';
+                if (score >= 70) return 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-200';
+                return 'bg-red-100 dark:bg-red-900/30 border-red-200';
+            },
+
+            getAppUsePercentage(territoryId) {
+                if (!territoryId) return 0;
+                
+                const db = Store.get();
+                if (!db || !db.projections || !db.collections) return 0;
+
+                const holidaysStr = db.system_settings?.find(s => s.key === 'holidays')?.value || '';
+                const holidays = holidaysStr.split(',').map(s => s.trim()).filter(Boolean);
+                
+                const activeMonth = Utils.getActiveMonth();
+                const bounds = Utils.getMonthBounds();
+                const startOfMonth = bounds.startOfMonth;
+                const endOfMonth = bounds.endOfMonth;
+                const today = Utils.getLocalDate();
+                
+                const calcEndDate = (today < startOfMonth) ? startOfMonth : (today > endOfMonth ? endOfMonth : today);
+                
+                const dates = [];
+                const [year, month] = activeMonth.split('-').map(Number);
+                const [endYear, endMonth, endDay] = calcEndDate.split('-').map(Number);
+                let curr = new Date(year, month - 1, 1);
+                const endD = new Date(endYear, endMonth - 1, endDay);
+                while (curr <= endD) {
+                    const yStr = curr.getFullYear();
+                    const mStr = String(curr.getMonth() + 1).padStart(2, '0');
+                    const dStr = String(curr.getDate()).padStart(2, '0');
+                    const dateString = `${yStr}-${mStr}-${dStr}`;
+
+                    if (curr.getDay() !== 5 && !holidays.includes(dateString)) { // Skip Friday and Holidays
+                        dates.push(dateString);
+                    }
+                    curr.setDate(curr.getDate() + 1);
+                }
+                
+                if (dates.length === 0) return 100;
+                
+                const ids = String(territoryId).split(',').filter(Boolean);
+                const territoryProjs = db.projections.filter(p => ids.includes(p.territoryId || p.territory_id) && (p.activeMonth || p.active_month) === activeMonth);
+                const territoryColls = db.collections.filter(c => ids.includes(c.territoryId || c.territory_id) && (c.activeMonth || c.active_month) === activeMonth);
+                
+                let totalScore = 0;
+                
+                dates.forEach(d => {
+                    const projs = territoryProjs.filter(p => p.date === d);
+                    const hasColl = territoryColls.some(c => c.date === d);
+                    
+                    let dayScore = 0;
+                    if (projs.length > 0) {
+                        dayScore += 40;
+                        
+                        let isOnTime = false;
+                        for (const proj of projs) {
+                            if (proj.timestamp) {
+                                const pTime = new Date(Number(proj.timestamp));
+                                let pHour = 12;
+                                try {
+                                    pHour = parseInt(new Intl.DateTimeFormat('en-US', {
+                                        timeZone: 'Asia/Dhaka',
+                                        hour: 'numeric',
+                                        hour12: false
+                                    }).format(pTime)) || 0;
+                                } catch (e) {
+                                    pHour = pTime.getHours();
+                                }
+                                if (pHour < 10) {
+                                    isOnTime = true;
+                                    break;
+                                }
+                            } else {
+                                isOnTime = true;
+                                break;
+                            }
+                        }
+                        if (isOnTime) {
+                            dayScore += 20;
+                        }
+                    }
+                    
+                    if (hasColl) {
+                        dayScore += 40;
+                    }
+                    
+                    totalScore += dayScore;
+                });
+                
+                return Number((totalScore / dates.length).toFixed(1));
+            },
+
+            getAppUseDetails(territoryId) {
+                if (!territoryId) return { pct: 0, details: [] };
+                
+                const db = Store.get();
+                if (!db || !db.projections || !db.collections) return { pct: 0, details: [] };
+
+                const holidaysStr = db.system_settings?.find(s => s.key === 'holidays')?.value || '';
+                const holidays = holidaysStr.split(',').map(s => s.trim()).filter(Boolean);
+                
+                const activeMonth = Utils.getActiveMonth();
+                const bounds = Utils.getMonthBounds();
+                const startOfMonth = bounds.startOfMonth;
+                const endOfMonth = bounds.endOfMonth;
+                const today = Utils.getLocalDate();
+                
+                const calcEndDate = (today < startOfMonth) ? startOfMonth : (today > endOfMonth ? endOfMonth : today);
+                
+                const dates = [];
+                const [year, month] = activeMonth.split('-').map(Number);
+                const [endYear, endMonth, endDay] = calcEndDate.split('-').map(Number);
+                let curr = new Date(year, month - 1, 1);
+                const endD = new Date(endYear, endMonth - 1, endDay);
+                while (curr <= endD) {
+                    const yStr = curr.getFullYear();
+                    const mStr = String(curr.getMonth() + 1).padStart(2, '0');
+                    const dStr = String(curr.getDate()).padStart(2, '0');
+                    const dateString = `${yStr}-${mStr}-${dStr}`;
+
+                    if (curr.getDay() !== 5 && !holidays.includes(dateString)) { // Skip Friday and Holidays
+                        dates.push(dateString);
+                    }
+                    curr.setDate(curr.getDate() + 1);
+                }
+                
+                if (dates.length === 0) return { pct: 100, details: [] };
+                
+                const ids = String(territoryId).split(',').filter(Boolean);
+                const territoryProjs = db.projections.filter(p => ids.includes(p.territoryId || p.territory_id) && (p.activeMonth || p.active_month) === activeMonth);
+                const territoryColls = db.collections.filter(c => ids.includes(c.territoryId || c.territory_id) && (c.activeMonth || c.active_month) === activeMonth);
+                
+                let totalScore = 0;
+                const details = [];
+                
+                dates.forEach(d => {
+                    const projs = territoryProjs.filter(p => p.date === d);
+                    const hasColl = territoryColls.some(c => c.date === d);
+                    
+                    let dayScore = 0;
+                    let hasProj = false;
+                    let isOnTime = false;
+                    
+                    if (projs.length > 0) {
+                        hasProj = true;
+                        dayScore += 40;
+                        
+                        for (const proj of projs) {
+                            if (proj.timestamp) {
+                                const pTime = new Date(Number(proj.timestamp));
+                                let pHour = 12;
+                                try {
+                                    pHour = parseInt(new Intl.DateTimeFormat('en-US', {
+                                        timeZone: 'Asia/Dhaka',
+                                        hour: 'numeric',
+                                        hour12: false
+                                    }).format(pTime)) || 0;
+                                } catch (e) {
+                                    pHour = pTime.getHours();
+                                }
+                                if (pHour < 10) {
+                                    isOnTime = true;
+                                    break;
+                                }
+                            } else {
+                                isOnTime = true;
+                                break;
+                            }
+                        }
+                        if (isOnTime) {
+                            dayScore += 20;
+                        }
+                    }
+                    
+                    if (hasColl) {
+                        dayScore += 40;
+                    }
+                    
+                    totalScore += dayScore;
+                    details.push({
+                        date: d,
+                        hasProj,
+                        isOnTime,
+                        hasColl,
+                        dayScore
+                    });
+                });
+                
+                return {
+                    pct: Number((totalScore / dates.length).toFixed(1)),
+                    details
+                };
+            }
+        };
+
+        /**
+         * 3. AUTHENTICATION LAYER
+         */
+        const Auth = {
+            currentUser: null,
+
+            async login(username, password, requiredRole = 'officer') {
+                UI.toggleLoader(true);
+                try {
+                    const db = await Store.init();
+                    if (!db) return;
+
+                    // Username acts as Territory for officer, Password acts as Employee ID
+                    let user = db.users.find(u => u.username === username && u.password === password);
+
+                    // Fallback for default Admin password as requested
+                    if (!user && requiredRole === 'admin' && password === 'Admin@4321') {
+                        user = { id: 'admin_sys', username: username, role: 'admin', territoryId: null, officerName: 'System Admin' };
+                    }
+
+                    if (user) {
+                        if (user.role !== requiredRole) {
+                            alert(`Access Denied: You are trying to login as ${user.role} from the ${requiredRole === 'admin' ? 'Admin' : 'Officer'} tab.`);
+                            UI.toggleLoader(false);
+                            return;
+                        }
+                        this.currentUser = user;
+                        localStorage.setItem('currentUser', JSON.stringify(user));
+                        UI.initApp();
+                    } else {
+                        alert('Invalid credentials');
+                    }
+                } finally {
+                    UI.toggleLoader(false);
+                }
+            },
+
+            async checkSession() {
+                const stored = localStorage.getItem('currentUser');
+                if (stored) {
+                    this.currentUser = JSON.parse(stored);
+                    // Store.init is already handled in window.onload
+                    UI.initApp();
+                    return true;
+                }
+                return false;
+            },
+
+            logout() {
+                this.currentUser = null;
+                localStorage.removeItem('currentUser');
+                location.reload();
+            }
+        };
+
+        /**
+         * 4. UI RENDERING & LOGIC
+         */
+        const Router = {
+            navigate(viewId) {
+                if (Auth.currentUser?.role) {
+                    localStorage.setItem('currentView_' + Auth.currentUser.role, viewId);
+                }
+
+                // Default header titles/subtitles mapping
+                const defaultTitles = {
+                    'admin-dashboard': { title: 'Admin Dashboard', subtitle: 'Executive Performance Control' },
+                    'admin-data-entry': { title: 'Data Entry Setup', subtitle: 'Monthly Targets & Projections' },
+                    'admin-users': { title: 'User Management', subtitle: 'Credentials & Permissions' },
+                    'admin-area-heads': { title: 'Area Heads', subtitle: 'Region Configurations' },
+                    'area-head-dashboard': { title: 'Area Head Dashboard', subtitle: 'Regional Monitoring' },
+                    'admin-offroad': { title: 'Offroad Tracker', subtitle: 'Out of Operations Recovery' },
+                    'admin-settlements': { title: 'Settlements Monitor', subtitle: 'Discount & Waiver Approval Status' },
+                    'admin-history': { title: 'Global Collection History', subtitle: 'Master Record of All Collections' },
+                    'admin-vehicle-perf': { title: 'Vehicle Performance', subtitle: 'Recovery Status by Customer' },
+                    'admin-projections': { title: 'Projection Monitor', subtitle: 'Missing & Submitted Projections' },
+                    'admin-performance': { title: 'Strategic Analytics', subtitle: 'Collection Momentum & Performance' },
+                    'officer-dashboard': { title: 'Dashboard', subtitle: '' },
+                    'officer-projection': { title: 'Projections', subtitle: 'Submit Daily Recovery Estimate' },
+                    'officer-collection': { title: 'Collection Entry', subtitle: 'Post Recovery Receipts' },
+                    'officer-offroad': { title: 'Offroad Tracker', subtitle: 'Active Offroad Vehicles' },
+                    'officer-settlements': { title: 'Settlement Status', subtitle: 'Discounts & Waivers Tracker' },
+                    'officer-history': { title: 'Collection History', subtitle: 'Track Your Payments' },
+                    'officer-analytics': { title: 'Vehicle Analytics', subtitle: 'Interactive Recovery Insights' }
+                };
+
+                const headerInfo = defaultTitles[viewId] || { title: '', subtitle: '' };
+                if (typeof UI !== 'undefined' && UI.updateHeader) {
+                    UI.updateHeader(headerInfo.title, headerInfo.subtitle, '');
+                }
+
+                const container = document.getElementById('views-container');
+                container.innerHTML = '';
+
+                // Auto hide sidebar on mobile/desktop selection
+                UI.closeSidebar();
+
+                document.querySelectorAll('.nav-item').forEach(el => {
+                    el.classList.remove('bg-brand-50', 'text-brand-700', 'dark:bg-slate-800', 'dark:text-brand-400');
+                    el.classList.add('text-slate-600', 'dark:text-slate-300');
+                });
+
+                if (viewId === 'admin-dashboard') UI.renderAdminDashboard();
+                else if (viewId === 'admin-data-entry') UI.renderDataEntry();
+                else if (viewId === 'admin-users') UI.renderUserManagement();
+                else if (viewId === 'admin-area-heads') UI.renderAdminAreaHeads();
+                else if (viewId === 'area-head-dashboard') UI.renderAreaHeadDashboard();
+                else if (viewId === 'admin-offroad') UI.renderAdminOffroadView();
+                else if (viewId === 'admin-settlements') UI.renderAdminSettlementsView();
+                else if (viewId === 'admin-history') UI.renderAdminHistory();
+                else if (viewId === 'admin-vehicle-perf') UI.renderAdminVehiclePerf();
+                else if (viewId === 'admin-projections') UI.renderAdminProjections();
+                else if (viewId === 'admin-performance') UI.renderAdminPerformance();
+                else if (viewId === 'officer-dashboard') UI.renderOfficerDashboard();
+                else if (viewId === 'officer-projection') UI.renderProjectionForm();
+                else if (viewId === 'officer-collection') UI.renderCollectionForm();
+                else if (viewId === 'officer-offroad') UI.renderOfficerOffroadTracker();
+                else if (viewId === 'officer-settlements') UI.renderOfficerSettlementsView();
+                else if (viewId === 'officer-history') UI.renderOfficerHistory();
+                else if (viewId === 'officer-analytics') UI.renderOfficerVehicleAnalytics();
+            },
+        };
+
+        const UI = {
             charts: {},
             currentLoginRole: 'officer',
             showDailyReqColumn: false,
@@ -83,7 +977,7 @@ window.UI = {
                         else if (d.dayScore >= 60) scoreColor = 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/20';
                         
                         html += `
-                            <div class="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 transition-colors">
+                            <div class="flex items-center justify-between p-3 rounded-2xl border border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 transition-colors">
                                 <div class="flex items-center gap-4">
                                     <div class="w-12 text-center">
                                         <div class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">${dayName}</div>
@@ -250,7 +1144,6 @@ window.UI = {
                 let activeMonth = db.system_settings?.find(s => s.key === 'active_month')?.value || Utils.getLocalDate().slice(0, 7);
                 let cutoffHours = parseInt(db.system_settings?.find(s => s.key === 'cutoff_extension_hours')?.value || 0);
                 let holidaysStr = db.system_settings?.find(s => s.key === 'holidays')?.value || '';
-                let systemHold = db.system_settings?.find(s => s.key === 'system_hold')?.value === 'true';
                 
                 window.tempHolidays = holidaysStr ? holidaysStr.split(',').map(s=>s.trim()).filter(Boolean) : [];
 
@@ -268,16 +1161,15 @@ window.UI = {
                     </div>
 
                     <!-- TABS HEADER -->
-                    <div class="flex space-x-2 mb-4 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                    <div class="flex space-x-2 mb-6 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
                         <button type="button" onclick="UI.switchSettingsTab('general')" id="tab-btn-general" class="flex-1 py-2 text-xs font-bold rounded-lg bg-white dark:bg-slate-700 shadow-sm text-brand-600 transition-all">General Settings</button>
-                        <button type="button" onclick="UI.switchSettingsTab('access')" id="tab-btn-access" class="flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all">Access Control</button>
                         <button type="button" onclick="UI.switchSettingsTab('holidays')" id="tab-btn-holidays" class="flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all">Holiday Manager</button>
                     </div>
 
                     <!-- TAB: GENERAL SETTINGS -->
                     <div id="tab-content-general" class="block animate-entry">
                         <!-- CURRENT STATUS CARD -->
-                        <div class="mb-4 p-4 bg-slate-900 text-white rounded-xl shadow-xl border border-slate-800 overflow-hidden relative group">
+                        <div class="mb-6 p-4 bg-slate-900 text-white rounded-2xl shadow-xl border border-slate-800 overflow-hidden relative group">
                             <div class="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity transform rotate-12">
                                 <i class="fa-solid fa-microchip text-7xl"></i>
                             </div>
@@ -306,16 +1198,16 @@ window.UI = {
                         </div>
 
                         <form onsubmit="event.preventDefault(); UI.saveSystemSettings(this);" class="space-y-6">
-                            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700">
                                 <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Active Operational Month</label>
                                 <input type="month" name="active_month" value="${activeMonth}" required class="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm font-bold shadow-sm">
                                 <p class="text-[10px] text-slate-400 mt-2 italic font-medium"><i class="fa-solid fa-circle-info mr-1"></i> Dashboard and reporting will strictly follow this month.</p>
                             </div>
 
-                            <div class="p-4 bg-brand-50/50 dark:bg-brand-900/10 rounded-xl border border-brand-100 dark:border-brand-900/20">
+                            <div class="p-4 bg-brand-50/50 dark:bg-brand-900/10 rounded-2xl border border-brand-100 dark:border-brand-900/20">
                                 <div class="flex justify-between items-center mb-4">
                                     <label class="block text-xs font-black text-brand-600 dark:text-brand-400 uppercase tracking-widest">Cutoff Extension</label>
-                                    <span id="cutoff-time-display" class="px-3 py-1 bg-brand-600 text-white text-[10px] font-black rounded-full shadow-md shadow-brand-500/30">${getCutoffLabel(cutoffHours)}</span>
+                                    <span id="cutoff-time-display" class="px-3 py-1 bg-brand-600 text-white text-[10px] font-black rounded-full shadow-lg shadow-brand-500/30">${getCutoffLabel(cutoffHours)}</span>
                                 </div>
                                 
                                 <div class="px-2">
@@ -337,35 +1229,8 @@ window.UI = {
 
                             <div class="flex justify-end space-x-3 pt-2">
                                 <button type="button" onclick="UI.closeModal('generic-modal')" class="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Cancel</button>
-                                <button type="submit" class="px-8 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-brand-500/25 hover-lift">
+                                <button type="submit" class="px-8 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-brand-500/25 hover-lift">
                                     <i class="fa-solid fa-floppy-disk mr-2"></i> Save General Settings
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- TAB: ACCESS CONTROL -->
-                    <div id="tab-content-access" class="hidden animate-entry">
-                        <form onsubmit="event.preventDefault(); UI.saveAccessSettings(this);" class="space-y-6">
-                            <div class="p-4 bg-red-50/50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/20 mb-4">
-                                <div class="flex justify-between items-center mb-2">
-                                    <label class="block text-xs font-black text-red-600 dark:text-red-400 uppercase tracking-widest flex items-center">
-                                        <i class="fa-solid fa-shield-halved mr-2"></i> System Hold (Lockdown)
-                                    </label>
-                                    <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" name="system_hold" class="sr-only peer" ${systemHold ? 'checked' : ''}>
-                                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-red-600"></div>
-                                    </label>
-                                </div>
-                                <p class="text-[10px] text-slate-500 leading-relaxed">
-                                    <span class="font-bold text-red-600 dark:text-red-400">Warning:</span> Enabling this will pause ALL new collection and projection entries system-wide until disabled.
-                                </p>
-                            </div>
-
-                            <div class="flex justify-end space-x-3 pt-2 border-t border-slate-100 dark:border-slate-700 mt-4">
-                                <button type="button" onclick="UI.closeModal('generic-modal')" class="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Cancel</button>
-                                <button type="submit" class="px-8 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-brand-500/25 hover-lift">
-                                    <i class="fa-solid fa-floppy-disk mr-2"></i> Save Access Settings
                                 </button>
                             </div>
                         </form>
@@ -373,7 +1238,7 @@ window.UI = {
 
                     <!-- TAB: HOLIDAYS -->
                     <div id="tab-content-holidays" class="hidden animate-entry">
-                        <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700 mb-4">
+                        <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 mb-6">
                             <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Add New Holiday</label>
                             <div class="flex space-x-2">
                                 <input type="date" id="holiday-input-date" class="flex-1 p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm font-bold shadow-sm">
@@ -384,7 +1249,7 @@ window.UI = {
                             <p class="text-[10px] text-slate-400 mt-2 italic font-medium"><i class="fa-solid fa-circle-info mr-1"></i> Added dates will automatically be skipped in App Use % calculation.</p>
                         </div>
                         
-                        <div class="mb-4">
+                        <div class="mb-6">
                             <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 dark:border-slate-700 pb-2">Active Holidays</h3>
                             <div id="holiday-badges-container" class="flex flex-wrap gap-2">
                                 <!-- Injected by JS -->
@@ -393,7 +1258,7 @@ window.UI = {
 
                         <div class="flex justify-end space-x-3 pt-2 border-t border-slate-100 dark:border-slate-700 mt-4">
                             <button type="button" onclick="UI.closeModal('generic-modal')" class="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Cancel</button>
-                            <button type="button" onclick="UI.saveHolidaySettings(this)" class="px-8 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-brand-500/25 hover-lift">
+                            <button type="button" onclick="UI.saveHolidaySettings(this)" class="px-8 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-brand-500/25 hover-lift">
                                 <i class="fa-solid fa-floppy-disk mr-2"></i> Save Holidays
                             </button>
                         </div>
@@ -455,63 +1320,27 @@ window.UI = {
                 }
             },
 
-            async saveAccessSettings(form) {
-                const system_hold = form.system_hold.checked ? 'true' : 'false';
-
-                const submitBtn = form.querySelector('button[type="submit"]');
-                const originalBtnHtml = submitBtn.innerHTML;
-
-                UI.toggleLoader(true);
-                try {
-                    const res = await fetch(Store.apiUrl + '/settings', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ key: 'system_hold', value: system_hold })
-                    });
-                    const out = await res.json();
-                    if (!res.ok) throw new Error(out.error || 'System hold save failed');
-
-                    await Store.init();
-
-                    submitBtn.innerHTML = '<i class="fa-solid fa-check-double mr-2"></i> Saved Successfully!';
-                    submitBtn.className = submitBtn.className.replace('bg-brand-600', 'bg-emerald-600');
-
-                    setTimeout(() => {
-                        UI.closeModal('generic-modal');
-                        Router.navigate('admin-dashboard');
-                    }, 800);
-
-                } catch (e) {
-                    console.error(e);
-                    alert('Error saving settings: ' + e.message);
-                    submitBtn.innerHTML = originalBtnHtml;
-                    submitBtn.className = submitBtn.className.replace('bg-emerald-600', 'bg-brand-600');
-                } finally {
-                    UI.toggleLoader(false);
-                }
-            },
-
             switchSettingsTab(tabId) {
-                const tabs = ['general', 'access', 'holidays'];
+                const btnGen = document.getElementById('tab-btn-general');
+                const btnHol = document.getElementById('tab-btn-holidays');
+                const contentGen = document.getElementById('tab-content-general');
+                const contentHol = document.getElementById('tab-content-holidays');
                 
-                tabs.forEach(id => {
-                    const btn = document.getElementById(`tab-btn-${id}`);
-                    const content = document.getElementById(`tab-content-${id}`);
-                    
-                    if (id === tabId) {
-                        if(btn) btn.className = "flex-1 py-2 text-xs font-bold rounded-lg bg-white dark:bg-slate-700 shadow-sm text-brand-600 transition-all";
-                        if(content) {
-                            content.classList.remove('hidden');
-                            content.classList.add('block');
-                        }
-                    } else {
-                        if(btn) btn.className = "flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all";
-                        if(content) {
-                            content.classList.remove('block');
-                            content.classList.add('hidden');
-                        }
-                    }
-                });
+                if (tabId === 'general') {
+                    btnGen.className = "flex-1 py-2 text-xs font-bold rounded-lg bg-white dark:bg-slate-700 shadow-sm text-brand-600 transition-all";
+                    btnHol.className = "flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all";
+                    contentGen.classList.remove('hidden');
+                    contentGen.classList.add('block');
+                    contentHol.classList.remove('block');
+                    contentHol.classList.add('hidden');
+                } else {
+                    btnHol.className = "flex-1 py-2 text-xs font-bold rounded-lg bg-white dark:bg-slate-700 shadow-sm text-brand-600 transition-all";
+                    btnGen.className = "flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all";
+                    contentHol.classList.remove('hidden');
+                    contentHol.classList.add('block');
+                    contentGen.classList.remove('block');
+                    contentGen.classList.add('hidden');
+                }
             },
 
             renderHolidayBadges() {
@@ -807,7 +1636,7 @@ window.UI = {
                         <!-- PENDING APPROVAL QUEUE -->
                         ${pendingAreaHeads.length > 0 ? `
                             <div class="glass-panel rounded-xl border border-amber-500/20 bg-amber-500/5 dark:bg-amber-500/10 overflow-hidden shadow-md">
-                                <div class="px-3 py-2.5 border-b border-amber-500/20 bg-amber-500/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                <div class="px-6 py-4 border-b border-amber-500/20 bg-amber-500/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                     <div>
                                         <h3 class="text-base font-black text-amber-800 dark:text-amber-400 flex items-center gap-2">
                                             <i class="fa-solid fa-hourglass-half animate-pulse"></i> Pending Territory Requests
@@ -828,7 +1657,7 @@ window.UI = {
                     }).join(', ');
 
                     return `
-                                            <div class="px-3 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-amber-500/5 dark:hover:bg-amber-500/10 transition">
+                                            <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-amber-500/5 dark:hover:bg-amber-500/10 transition">
                                                 <div>
                                                     <h4 class="font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
                                                         <span>${ah.officerName || ah.username}</span>
@@ -858,16 +1687,16 @@ window.UI = {
                             </div>
                         ` : ''}
 
-                        <div class="glass-panel rounded-xl shadow-md dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700">
+                        <div class="glass-panel rounded-xl shadow-lg dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700">
                             <div class="overflow-x-auto">
                                 <table class="w-full text-sm text-left">
                                     <thead class="bg-slate-50 dark:bg-slate-800 text-xs text-slate-500 uppercase font-bold">
                                         <tr>
-                                            <th class="px-3 py-2.5">Area Head Name</th>
-                                            <th class="px-3 py-2.5">Username</th>
-                                            <th class="px-3 py-2.5">Password</th>
-                                            <th class="px-3 py-2.5">Assigned Territories</th>
-                                            <th class="px-3 py-2.5 text-center">Actions</th>
+                                            <th class="px-6 py-4">Area Head Name</th>
+                                            <th class="px-6 py-4">Username</th>
+                                            <th class="px-6 py-4">Password</th>
+                                            <th class="px-6 py-4">Assigned Territories</th>
+                                            <th class="px-6 py-4 text-center">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
@@ -879,11 +1708,11 @@ window.UI = {
                     }).join(', ');
                     return `
                                                 <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                                                    <td class="px-3 py-2.5 font-bold">${ah.officerName || '-'}</td>
-                                                    <td class="px-3 py-2.5 font-mono">${ah.username}</td>
-                                                    <td class="px-3 py-2.5 font-mono">${ah.password}</td>
-                                                    <td class="px-3 py-2.5 text-xs italic">${names || 'None'}</td>
-                                                    <td class="px-3 py-2.5 text-center">
+                                                    <td class="px-6 py-4 font-bold">${ah.officerName || '-'}</td>
+                                                    <td class="px-6 py-4 font-mono">${ah.username}</td>
+                                                    <td class="px-6 py-4 font-mono">${ah.password}</td>
+                                                    <td class="px-6 py-4 text-xs italic">${names || 'None'}</td>
+                                                    <td class="px-6 py-4 text-center">
                                                         <div class="flex justify-center items-center gap-2">
                                                             <button onclick="UI.openAreaHeadModal('${ah.id}')" class="text-blue-500 hover:text-blue-600 transition" title="Edit">
                                                                 <i class="fa-solid fa-pen-to-square"></i>
@@ -1207,7 +2036,7 @@ window.UI = {
                             </button>
 
                             ${currentRequested.length > 0 ? `
-                                <div class="mt-4 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 text-xs font-bold flex items-center">
+                                <div class="mt-6 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 text-xs font-bold flex items-center">
                                     <i class="fa-solid fa-hourglass-half mr-2 animate-spin"></i> Pending request for ${currentRequested.length} regions
                                 </div>
                             ` : ''}
@@ -1249,10 +2078,10 @@ window.UI = {
                         </div>
 
                         <!-- Aggregate Overview Categories -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             
                             <!-- Category 1: Financial Totals -->
-                            <div class="glass-panel p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-md relative overflow-hidden group hover-lift">
+                            <div class="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-lg relative overflow-hidden group hover-lift">
                                 <div class="absolute right-0 top-0 opacity-5 text-emerald-600 transform translate-x-4 -translate-y-4 group-hover:scale-110 transition-transform">
                                     <i class="fa-solid fa-sack-dollar text-9xl"></i>
                                 </div>
@@ -1276,7 +2105,7 @@ window.UI = {
                             </div>
 
                             <!-- Category 2: File Coverage -->
-                            <div class="glass-panel p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-md relative overflow-hidden group hover-lift">
+                            <div class="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-lg relative overflow-hidden group hover-lift">
                                 <div class="absolute right-0 top-0 opacity-5 text-blue-600 transform translate-x-4 -translate-y-4 group-hover:scale-110 transition-transform">
                                     <i class="fa-solid fa-folder-open text-9xl"></i>
                                 </div>
@@ -1300,7 +2129,7 @@ window.UI = {
                             </div>
 
                             <!-- Category 3: Daily Operations -->
-                            <div class="glass-panel p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-md relative overflow-hidden group hover-lift">
+                            <div class="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-lg relative overflow-hidden group hover-lift">
                                 <div class="absolute right-0 top-0 opacity-5 text-purple-600 transform translate-x-4 -translate-y-4 group-hover:scale-110 transition-transform">
                                     <i class="fa-solid fa-calendar-day text-9xl"></i>
                                 </div>
@@ -1325,8 +2154,8 @@ window.UI = {
                         </div>
 
                         <!-- Desktop View Table (hidden on mobile) -->
-                        <div class="hidden md:block glass-panel rounded-xl shadow-md dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700 mt-5 animate-entry">
-                            <div class="px-3 py-2.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center">
+                        <div class="hidden md:block glass-panel rounded-xl shadow-lg dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700 mt-8 animate-entry">
+                            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center">
                                 <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center">
                                     <i class="fa-solid fa-map-location-dot text-brand-500 mr-2"></i> Territory Performance Breakdown
                                 </h3>
@@ -1336,10 +2165,10 @@ window.UI = {
                                 <table class="w-full text-sm text-left whitespace-nowrap">
                                     <thead class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-wider">
                                         <tr class="divide-x divide-slate-200 dark:divide-slate-700">
-                                            <th class="px-3 py-2.5" rowspan="2">Territory</th>
-                                            <th class="px-3 py-2.5 text-center bg-emerald-50/40 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-400" colspan="3">Financial Totals</th>
-                                            <th class="px-3 py-2.5 text-center bg-blue-50/40 dark:bg-blue-900/10 text-blue-700 dark:text-blue-400" colspan="3">File Coverage</th>
-                                            <th class="px-3 py-2.5 text-center bg-purple-50/40 dark:bg-purple-900/10 text-purple-700 dark:text-purple-400" colspan="3">Daily Operations</th>
+                                            <th class="px-6 py-4" rowspan="2">Territory</th>
+                                            <th class="px-6 py-4 text-center bg-emerald-50/40 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-400" colspan="3">Financial Totals</th>
+                                            <th class="px-6 py-4 text-center bg-blue-50/40 dark:bg-blue-900/10 text-blue-700 dark:text-blue-400" colspan="3">File Coverage</th>
+                                            <th class="px-6 py-4 text-center bg-purple-50/40 dark:bg-purple-900/10 text-purple-700 dark:text-purple-400" colspan="3">Daily Operations</th>
                                         </tr>
                                         <tr class="divide-x divide-slate-200 dark:divide-slate-700 border-t border-slate-200 dark:border-slate-700 text-[10px]">
                                             <th class="px-4 py-2 text-right bg-emerald-50/20 dark:bg-emerald-900/5">Target (Proj)</th>
@@ -1362,7 +2191,7 @@ window.UI = {
 
                     return `
                                                 <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition divide-x divide-slate-100 dark:divide-slate-700 ${isDoingBad ? 'bg-rose-500/5 dark:bg-rose-500/10' : ''}">
-                                                    <td class="px-3 py-2.5 font-bold text-slate-900 dark:text-white">
+                                                    <td class="px-6 py-4 font-bold text-slate-900 dark:text-white">
                                                         <div class="flex flex-col gap-1">
                                                             <div class="flex items-center gap-1.5 flex-wrap">
                                                                 <span>${t.name}</span>
@@ -1406,7 +2235,7 @@ window.UI = {
                     const missingProj = parseInt(t.todayProj) === 0;
 
                     return `
-                                    <div class="glass-panel p-3.5 rounded-xl border relative overflow-hidden bg-white dark:bg-dark-card shadow-md ${isDoingBad ? 'border-rose-300 dark:border-rose-800/60 bg-rose-500/5' : 'border-slate-200 dark:border-slate-700/50'}">
+                                    <div class="glass-panel p-5 rounded-2xl border relative overflow-hidden bg-white dark:bg-dark-card shadow-md ${isDoingBad ? 'border-rose-300 dark:border-rose-800/60 bg-rose-500/5' : 'border-slate-200 dark:border-slate-700/50'}">
                                         <div class="flex justify-between items-start gap-2 border-b border-slate-100 dark:border-slate-800 pb-3 mb-3">
                                             <div>
                                                 <h4 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
@@ -1498,14 +2327,14 @@ window.UI = {
                 container.innerHTML = `
                     <div class="animate-entry space-y-4">
                         <div class="flex justify-end items-center mb-2">
-                            <button onclick="UI.downloadPerformanceCSV()" class="flex items-center px-3 py-1.5 bg-white dark:bg-slate-800 border border-emerald-500 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-all font-bold text-xs shadow-md shadow-emerald-500/10 hover-lift">
+                            <button onclick="UI.downloadPerformanceCSV()" class="flex items-center px-3 py-1.5 bg-white dark:bg-slate-800 border border-emerald-500 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-all font-bold text-xs shadow-lg shadow-emerald-500/10 hover-lift">
                                 <i class="fa-solid fa-file-csv mr-1.5"></i> Download CSV
                             </button>
                         </div>
 
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             <!-- TOP COLLECTORS -->
-                            <div class="glass-panel rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-md hover-lift">
+                            <div class="glass-panel rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-lg hover-lift">
                                 <div class="px-4 py-2.5 bg-gradient-to-r from-emerald-500/10 to-transparent border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
                                     <h3 class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
                                         <i class="fa-solid fa-crown text-emerald-500"></i> Top Collectors (MTD)
@@ -1544,7 +2373,7 @@ window.UI = {
                             </div>
 
                             <!-- TOP ACHIEVEMENT % -->
-                            <div class="glass-panel rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-md hover-lift">
+                            <div class="glass-panel rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-lg hover-lift">
                                 <div class="px-4 py-2.5 bg-gradient-to-r from-blue-500/10 to-transparent border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
                                     <h3 class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
                                         <i class="fa-solid fa-bolt-lightning text-blue-500"></i> Efficiency Leaders (Ach %)
@@ -1585,7 +2414,7 @@ window.UI = {
                             </div>
 
                             <!-- LAST DAY PERFORMANCE -->
-                            <div class="glass-panel rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-md hover-lift">
+                            <div class="glass-panel rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-lg hover-lift">
                                 <div class="px-4 py-2.5 bg-gradient-to-r from-purple-500/10 to-transparent border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
                                     <h3 class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
                                         <i class="fa-solid fa-fire text-purple-500"></i> Yesterday's Momentum
@@ -1624,7 +2453,7 @@ window.UI = {
                             </div>
 
                             <!-- BELOW PERFORMERS -->
-                            <div class="glass-panel rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-md hover-lift border-rose-100 dark:border-rose-900/30">
+                            <div class="glass-panel rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-lg hover-lift border-rose-100 dark:border-rose-900/30">
                                 <div class="px-4 py-2.5 bg-gradient-to-r from-rose-500/10 to-transparent border-b border-rose-100 dark:border-rose-900/30 flex items-center justify-between">
                                     <h3 class="text-xs font-bold text-rose-800 dark:text-rose-400 flex items-center gap-1.5">
                                         <i class="fa-solid fa-triangle-exclamation text-rose-500"></i> Attention Required
@@ -1666,7 +2495,7 @@ window.UI = {
                         </div>
 
                         <!-- ALL TERRITORIES PERFORMANCE LEDGER -->
-                        <div class="glass-panel p-4 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-xl mt-5 space-y-6">
+                        <div class="glass-panel p-6 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-xl mt-8 space-y-6">
                             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 dark:border-slate-800 pb-5">
                                 <div>
                                     <h3 class="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2.5">
@@ -1682,7 +2511,7 @@ window.UI = {
                             </div>
 
                             <!-- INTERACTIVE CONTROL DECK -->
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 bg-slate-50 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
                                 <!-- Search Input -->
                                 <div class="relative">
                                     <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -1695,7 +2524,7 @@ window.UI = {
 
                                 <!-- Preset Chips -->
                                 <div class="flex items-center gap-1.5 flex-wrap">
-                                    <button onclick="window.setPerfPreset('all', this)" data-preset="all" class="preset-btn active px-3 py-2 text-[10px] font-black rounded-lg border transition-all bg-brand-600 text-white shadow-md shadow-brand-500/20">
+                                    <button onclick="window.setPerfPreset('all', this)" data-preset="all" class="preset-btn active px-3 py-2 text-[10px] font-black rounded-lg border transition-all bg-brand-600 text-white shadow-lg shadow-brand-500/20">
                                         ALL
                                     </button>
                                     <button onclick="window.setPerfPreset('excellent', this)" data-preset="excellent" class="preset-btn px-3 py-2 text-[10px] font-black rounded-lg border transition-all bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
@@ -1724,7 +2553,7 @@ window.UI = {
                             </div>
 
                             <!-- LEADERBOARD TABLE -->
-                            <div class="overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-800 shadow-inner">
+                            <div class="overflow-x-auto rounded-2xl border border-slate-100 dark:border-slate-800 shadow-inner">
                                 <table class="w-full text-left border-collapse whitespace-nowrap">
                                     <thead class="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[10px]">
                                         <tr class="divide-x divide-slate-100 dark:divide-slate-700">
@@ -2087,7 +2916,7 @@ window.UI = {
                         </div>
 
                         <!-- COMPACT METRIC TABLE -->
-                        <div class="mb-4 overflow-hidden rounded-xl shadow-md border border-white/20 bg-gradient-to-r from-brand-600 to-blue-500 text-white relative group">
+                        <div class="mb-4 overflow-hidden rounded-xl shadow-lg border border-white/20 bg-gradient-to-r from-brand-600 to-blue-500 text-white relative group">
                             <!-- Creative premium lighting effects -->
                             <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+')] opacity-25 pointer-events-none"></div>
                             
@@ -2095,19 +2924,19 @@ window.UI = {
                                 <tbody class="divide-y divide-white/20">
                                     <!-- Row 1 -->
                                     <tr class="hover:bg-white/10 transition duration-300">
-                                        <td class="px-2.5 py-1.5 border-r border-white/20 w-1/4">
+                                        <td class="p-2.5 border-r border-white/20 w-1/4">
                                             <div class="flex justify-between items-center">
                                                 <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Total Target (proj)</span>
                                                 <span class="font-black text-white">${parseInt(metrics.presetProjTotal).toLocaleString()}</span>
                                             </div>
                                         </td>
-                                        <td class="px-2.5 py-1.5 border-r border-white/20 w-1/4">
+                                        <td class="p-2.5 border-r border-white/20 w-1/4">
                                             <div class="flex justify-between items-center">
                                                 <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Total Files</span>
                                                 <span class="font-black text-white">${metrics.targetFiles}</span>
                                             </div>
                                         </td>
-                                        <td class="px-2.5 py-1.5 border-r border-white/20 w-1/4">
+                                        <td class="p-2.5 border-r border-white/20 w-1/4">
                                              <div class="flex justify-between items-center">
                                                 <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Today Proj</span>
                                                 <span class="font-black text-white">${parseInt(metrics.todayProj).toLocaleString()}</span>
@@ -2122,19 +2951,19 @@ window.UI = {
                                     </tr>
                                     <!-- Row 2 -->
                                     <tr class="hover:bg-white/10 transition duration-300">
-                                        <td class="px-2.5 py-1.5 border-r border-white/20">
+                                        <td class="p-2.5 border-r border-white/20">
                                             <div class="flex justify-between items-center">
                                                 <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Till Date Coll</span>
                                                 <span class="font-black text-green-200">${parseInt(metrics.mtdColl).toLocaleString()}</span>
                                             </div>
                                         </td>
-                                        <td class="px-2.5 py-1.5 border-r border-white/20">
+                                        <td class="p-2.5 border-r border-white/20">
                                             <div class="flex justify-between items-center">
                                                 <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Coll Files</span>
                                                 <span class="font-black text-green-200">${metrics.uniquePaidCodes}</span>
                                             </div>
                                         </td>
-                                        <td class="px-2.5 py-1.5 border-r border-white/20">
+                                        <td class="p-2.5 border-r border-white/20">
                                             <div class="flex justify-between items-center">
                                                 <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Collection</span>
                                                 <span class="font-black text-green-200">${parseInt(metrics.todayColl).toLocaleString()}</span>
@@ -2149,19 +2978,19 @@ window.UI = {
                                     </tr>
                                     <!-- Row 3 -->
                                     <tr class="hover:bg-white/10 transition duration-300">
-                                        <td class="px-2.5 py-1.5 border-r border-white/20">
+                                        <td class="p-2.5 border-r border-white/20">
                                             <div class="flex justify-between items-center">
                                                 <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Ach % (MTD)</span>
                                                 <span class="font-black text-blue-100">${metrics.tillDayAchievement}%</span>
                                             </div>
                                         </td>
-                                        <td class="px-2.5 py-1.5 border-r border-white/20">
+                                        <td class="p-2.5 border-r border-white/20">
                                              <div class="flex justify-between items-center">
                                                 <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Uncollected</span>
                                                 <span class="font-black text-red-200">${metrics.tillDateNonPayFiles}</span>
                                              </div>
                                         </td>
-                                        <td class="px-2.5 py-1.5 border-r border-white/20">
+                                        <td class="p-2.5 border-r border-white/20">
                                              <div class="flex justify-between items-center">
                                                 <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Ach % (Today)</span>
                                                 <span class="font-black text-fuchsia-200">${todayAch}%</span>
@@ -2178,7 +3007,7 @@ window.UI = {
                         </div>
                         
                         <!-- PART-WISE EXECUTIVE SUMMARY (NEW) -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
                             <!-- Part A Card -->
                             <div class="relative overflow-hidden rounded-xl bg-white/70 dark:bg-dark-card/60 backdrop-blur-sm border border-emerald-100/80 dark:border-emerald-950 shadow-md group hover-lift transition-all">
                                  <div class="absolute -right-4 -top-4 opacity-5 transform rotate-12 transition-transform group-hover:scale-110 group-hover:opacity-10">
@@ -2298,7 +3127,7 @@ window.UI = {
                             </div>
                         </div>
 
-                        <div class="glass-panel p-4 rounded-xl shadow-md dark:bg-dark-card border-t-4 border-brand-500">
+                        <div class="glass-panel p-6 rounded-xl shadow-lg dark:bg-dark-card border-t-4 border-brand-500">
                             <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                                 <div>
                                     <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
@@ -2359,41 +3188,41 @@ window.UI = {
                                 <table class="w-full text-xs text-left border-collapse whitespace-nowrap">
                                     <thead class="text-slate-600 dark:text-slate-200 uppercase tracking-wider font-bold text-[11px]">
                                         <tr class="bg-slate-100 dark:bg-slate-700">
-                                            <th class="px-2.5 py-1.5 border dark:border-slate-600 sticky top-0 left-0 bg-slate-100 dark:bg-slate-700 z-30 shadow-sm text-center">Part</th>
-                                            <th class="px-2.5 py-1.5 border dark:border-slate-600 sticky top-0 left-10 bg-slate-100 dark:bg-slate-700 z-30 shadow-sm">Territory</th>
+                                            <th class="p-2 border dark:border-slate-600 sticky top-0 left-0 bg-slate-100 dark:bg-slate-700 z-30 shadow-sm text-center">Part</th>
+                                            <th class="p-2 border dark:border-slate-600 sticky top-0 left-10 bg-slate-100 dark:bg-slate-700 z-30 shadow-sm">Territory</th>
                                             <th class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-2 border border-red-800 dark:border-red-950 bg-red-800 dark:bg-red-950 text-white font-bold sticky top-0 z-20 text-center" title="Start of Month Per File Overdue">Per File OD <span class="text-[8px] font-medium text-red-200 block normal-case tracking-tight">SOM</span></th>
                                             <th class="od-col ${UI.showOdColumns ? '' : 'hidden'} p-2 border border-red-800 dark:border-red-950 bg-red-800 dark:bg-red-950 text-white font-bold sticky top-0 z-20 text-center" title="Start of Month Total Overdue">Total Overdue <span class="text-[8px] font-medium text-red-200 block normal-case tracking-tight">SOM</span></th>
-                                            <th class="px-2.5 py-1.5 border dark:border-slate-600 bg-blue-50 dark:bg-slate-800 sticky top-0 z-20">Total Files</th>
-                                            ${!isCompact ? `<th class="px-2.5 py-1.5 border dark:border-slate-600 bg-blue-50 dark:bg-slate-800 sticky top-0 z-20">Proj Files (MTD)</th>` : ''}
-                                            <th class="px-2.5 py-1.5 border dark:border-slate-600 bg-blue-50 dark:bg-slate-800 sticky top-0 z-20">Paid Files</th>
-                                            ${!isCompact ? `<th class="px-2.5 py-1.5 border dark:border-slate-600 bg-blue-50 dark:bg-slate-800 sticky top-0 z-20">Non-Pay Files</th>` : ''}
+                                            <th class="p-2 border dark:border-slate-600 bg-blue-50 dark:bg-slate-800 sticky top-0 z-20">Total Files</th>
+                                            ${!isCompact ? `<th class="p-2 border dark:border-slate-600 bg-blue-50 dark:bg-slate-800 sticky top-0 z-20">Proj Files (MTD)</th>` : ''}
+                                            <th class="p-2 border dark:border-slate-600 bg-blue-50 dark:bg-slate-800 sticky top-0 z-20">Paid Files</th>
+                                            ${!isCompact ? `<th class="p-2 border dark:border-slate-600 bg-blue-50 dark:bg-slate-800 sticky top-0 z-20">Non-Pay Files</th>` : ''}
                                             
-                                            <th class="px-2.5 py-1.5 border dark:border-slate-600 bg-slate-100 dark:bg-slate-700 sticky top-0 z-20">Total EMI</th>
+                                            <th class="p-2 border dark:border-slate-600 bg-slate-100 dark:bg-slate-700 sticky top-0 z-20">Total EMI</th>
                                             
-                                            ${!isCompact ? `<th class="px-2.5 py-1.5 border dark:border-slate-600 bg-slate-100 dark:bg-slate-700 sticky top-0 z-20">Target Proj (Reg)</th>` : ''}
-                                            ${!isCompact ? `<th class="px-2.5 py-1.5 border dark:border-slate-600 bg-slate-100 dark:bg-slate-700 sticky top-0 z-20">Target Proj (Adv)</th>` : ''}
+                                            ${!isCompact ? `<th class="p-2 border dark:border-slate-600 bg-slate-100 dark:bg-slate-700 sticky top-0 z-20">Target Proj (Reg)</th>` : ''}
+                                            ${!isCompact ? `<th class="p-2 border dark:border-slate-600 bg-slate-100 dark:bg-slate-700 sticky top-0 z-20">Target Proj (Adv)</th>` : ''}
                                             
-                                            <th class="px-2.5 py-1.5 border dark:border-slate-600 bg-slate-100 dark:bg-slate-700 sticky top-0 z-20 font-bold">Total Proj</th>
-                                            <th class="px-2.5 py-1.5 border dark:border-slate-600 bg-green-50 dark:bg-green-900 sticky top-0 z-20">Till Day Coll</th>
-                                            <th class="px-2.5 py-1.5 border dark:border-slate-600 bg-blue-50 dark:bg-blue-900 sticky top-0 z-20">Ach %</th>
-                                            <th class="px-2.5 py-1.5 border dark:border-slate-600 bg-rose-50 dark:bg-rose-950/60 sticky top-0 z-20 text-rose-600 dark:text-rose-400 font-bold">Remaining Tar.</th>
+                                            <th class="p-2 border dark:border-slate-600 bg-slate-100 dark:bg-slate-700 sticky top-0 z-20 font-bold">Total Proj</th>
+                                            <th class="p-2 border dark:border-slate-600 bg-green-50 dark:bg-green-900 sticky top-0 z-20">Till Day Coll</th>
+                                            <th class="p-2 border dark:border-slate-600 bg-blue-50 dark:bg-blue-900 sticky top-0 z-20">Ach %</th>
+                                            <th class="p-2 border dark:border-slate-600 bg-rose-50 dark:bg-rose-950/60 sticky top-0 z-20 text-rose-600 dark:text-rose-400 font-bold">Remaining Tar.</th>
                                             <th class="daily-req-col ${UI.showDailyReqColumn ? '' : 'hidden'} p-2 border dark:border-slate-600 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 font-bold sticky top-0 z-20">Daily Req</th>
                                             
-                                            <th class="px-2.5 py-1.5 border dark:border-slate-600 bg-slate-100 dark:bg-slate-700 sticky top-0 z-20">Today's Proj</th>
-                                            <th class="px-2.5 py-1.5 border dark:border-slate-600 bg-green-50 dark:bg-green-900 sticky top-0 z-20">Today's Coll</th>
-                                            <th class="px-2.5 py-1.5 border dark:border-slate-600 bg-fuchsia-100 dark:bg-fuchsia-900 text-fuchsia-700 font-bold sticky top-0 z-20">Today Ach %</th>
+                                            <th class="p-2 border dark:border-slate-600 bg-slate-100 dark:bg-slate-700 sticky top-0 z-20">Today's Proj</th>
+                                            <th class="p-2 border dark:border-slate-600 bg-green-50 dark:bg-green-900 sticky top-0 z-20">Today's Coll</th>
+                                            <th class="p-2 border dark:border-slate-600 bg-fuchsia-100 dark:bg-fuchsia-900 text-fuchsia-700 font-bold sticky top-0 z-20">Today Ach %</th>
                                             
-                                            <th class="px-2.5 py-1.5 border dark:border-slate-600 bg-orange-50 dark:bg-orange-900 border-l-2 border-slate-200 dark:border-slate-600 sticky top-0 z-20">Last Day Proj Amt</th>
-                                            ${!isCompact ? `<th class="px-2.5 py-1.5 border dark:border-slate-600 bg-orange-50 dark:bg-orange-900 sticky top-0 z-20">Last Day Proj Files</th>` : ''}
-                                            <th class="px-2.5 py-1.5 border dark:border-slate-600 bg-orange-50 dark:bg-orange-900 sticky top-0 z-20">Last Day Coll Amt</th>
-                                            ${!isCompact ? `<th class="px-2.5 py-1.5 border dark:border-slate-600 bg-orange-50 dark:bg-orange-900 sticky top-0 z-20">Last Day Coll Files</th>` : ''}
-                                            <th class="px-2.5 py-1.5 border dark:border-slate-600 bg-orange-100 dark:bg-orange-900 font-bold text-orange-700 sticky top-0 z-20">Last Day Ach%</th>
+                                            <th class="p-2 border dark:border-slate-600 bg-orange-50 dark:bg-orange-900 border-l-2 border-slate-200 dark:border-slate-600 sticky top-0 z-20">Last Day Proj Amt</th>
+                                            ${!isCompact ? `<th class="p-2 border dark:border-slate-600 bg-orange-50 dark:bg-orange-900 sticky top-0 z-20">Last Day Proj Files</th>` : ''}
+                                            <th class="p-2 border dark:border-slate-600 bg-orange-50 dark:bg-orange-900 sticky top-0 z-20">Last Day Coll Amt</th>
+                                            ${!isCompact ? `<th class="p-2 border dark:border-slate-600 bg-orange-50 dark:bg-orange-900 sticky top-0 z-20">Last Day Coll Files</th>` : ''}
+                                            <th class="p-2 border dark:border-slate-600 bg-orange-100 dark:bg-orange-900 font-bold text-orange-700 sticky top-0 z-20">Last Day Ach%</th>
  
-                                            ${!isCompact ? `<th class="px-2.5 py-1.5 border dark:border-slate-600 bg-rose-50 dark:bg-rose-900 border-l-2 border-slate-200 dark:border-slate-600 sticky top-0 z-20">LM NP Amount</th>` : ''}
-                                            ${!isCompact ? `<th class="px-2.5 py-1.5 border dark:border-slate-600 bg-rose-50 dark:bg-rose-900 sticky top-0 z-20">LM NP Files</th>` : ''}
-                                            ${!isCompact ? `<th class="px-2.5 py-1.5 border dark:border-slate-600 bg-rose-50 dark:bg-rose-900 sticky top-0 z-20">LM NP Rec (Amt)</th>` : ''}
-                                            ${!isCompact ? `<th class="px-2.5 py-1.5 border dark:border-slate-600 bg-rose-50 dark:bg-rose-900 sticky top-0 z-20">LM NP Rec (Files)</th>` : ''}
-<th class="px-2.5 py-1.5 border dark:border-slate-600 bg-violet-100 dark:bg-violet-900 text-violet-700 font-bold border-l-2 border-slate-200 dark:border-slate-600 text-center sticky top-0 z-20">App Use %</th>
+                                            ${!isCompact ? `<th class="p-2 border dark:border-slate-600 bg-rose-50 dark:bg-rose-900 border-l-2 border-slate-200 dark:border-slate-600 sticky top-0 z-20">LM NP Amount</th>` : ''}
+                                            ${!isCompact ? `<th class="p-2 border dark:border-slate-600 bg-rose-50 dark:bg-rose-900 sticky top-0 z-20">LM NP Files</th>` : ''}
+                                            ${!isCompact ? `<th class="p-2 border dark:border-slate-600 bg-rose-50 dark:bg-rose-900 sticky top-0 z-20">LM NP Rec (Amt)</th>` : ''}
+                                            ${!isCompact ? `<th class="p-2 border dark:border-slate-600 bg-rose-50 dark:bg-rose-900 sticky top-0 z-20">LM NP Rec (Files)</th>` : ''}
+<th class="p-2 border dark:border-slate-600 bg-violet-100 dark:bg-violet-900 text-violet-700 font-bold border-l-2 border-slate-200 dark:border-slate-600 text-center sticky top-0 z-20">App Use %</th>
                                         </tr>
                                     </thead>
                                     <tbody id="ranking-table-body"></tbody>
@@ -2401,8 +3230,8 @@ window.UI = {
                             </div>
                         </div>
 
-                        <div class="mt-4">
-                            <div class="glass-panel p-4 rounded-xl shadow-md dark:bg-dark-card hover-lift">
+                        <div class="mt-6">
+                            <div class="glass-panel p-6 rounded-xl shadow-lg dark:bg-dark-card hover-lift">
                                 <h3 class="text-lg font-bold mb-4 text-slate-800 dark:text-white flex items-center">
                                     <i class="fa-solid fa-file-export mr-2 text-brand-500"></i> Reports & Exports
                                 </h3>
@@ -2441,9 +3270,9 @@ window.UI = {
                             </div>
                         </div>
                         
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-5">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
                             <!-- Top Performing Card -->
-                            <div class="glass-panel p-3.5 rounded-xl shadow-md dark:bg-dark-card border-l-4 border-emerald-500 hover-lift">
+                            <div class="glass-panel p-5 rounded-xl shadow-lg dark:bg-dark-card border-l-4 border-emerald-500 hover-lift">
                                 <div class="flex items-center justify-between mb-3.5">
                                     <h3 class="text-base font-extrabold text-slate-800 dark:text-white flex items-center">
                                         <i class="fa-solid fa-trophy text-amber-500 mr-2 text-lg"></i> Top Performing Territories
@@ -2480,7 +3309,7 @@ window.UI = {
                             </div>
 
                             <!-- Critical Card -->
-                            <div class="glass-panel p-3.5 rounded-xl shadow-md dark:bg-dark-card border-l-4 border-rose-500 hover-lift">
+                            <div class="glass-panel p-5 rounded-xl shadow-lg dark:bg-dark-card border-l-4 border-rose-500 hover-lift">
                                 <div class="flex items-center justify-between mb-3.5">
                                     <h3 class="text-base font-extrabold text-slate-800 dark:text-white flex items-center">
                                         <i class="fa-solid fa-triangle-exclamation text-rose-505 mr-2 text-lg animate-pulse"></i> Critical Attention Needed
@@ -2509,13 +3338,13 @@ window.UI = {
                             </div>
                         </div>
 
-                        <div class="mt-5 pt-6 border-t border-slate-200 dark:border-slate-700">
-                            <h3 class="text-xl font-bold mb-4 text-slate-800 dark:text-white flex items-center">
+                        <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
+                            <h3 class="text-xl font-bold mb-6 text-slate-800 dark:text-white flex items-center">
                                 <i class="fa-solid fa-brain text-brand-500 mr-2"></i> Strategic Analytics
                             </h3>
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                                <div class="glass-panel p-4 rounded-xl shadow-md dark:bg-dark-card lg:col-span-2 hover-lift">
-                                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div class="glass-panel p-6 rounded-xl shadow-lg dark:bg-dark-card lg:col-span-2 hover-lift">
+                                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                                         <h4 class="font-bold text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wide flex items-center">
                                             <i class="fa-solid fa-arrow-trend-up mr-2 text-brand-500"></i> Collection Momentum
                                         </h4>
@@ -2541,7 +3370,7 @@ window.UI = {
                                 </div>
 
                                 <div class="space-y-6">
-                                    <div class="glass-panel p-4 rounded-xl shadow-md dark:bg-dark-card hover-lift">
+                                    <div class="glass-panel p-6 rounded-xl shadow-lg dark:bg-dark-card hover-lift">
                                         <h4 class="font-bold mb-4 text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                                             <i class="fa-solid fa-wallet mr-2 text-blue-500"></i> Channel Mix (MTD)
                                         </h4>
@@ -2550,7 +3379,7 @@ window.UI = {
                                         </div>
                                     </div>
 
-                                    <div class="glass-panel p-4 rounded-xl shadow-md dark:bg-dark-card hover-lift border-l-4 border-rose-500">
+                                    <div class="glass-panel p-6 rounded-xl shadow-lg dark:bg-dark-card hover-lift border-l-4 border-rose-500">
                                         <h4 class="font-bold mb-2 text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                                             LMNP Efficiency
                                         </h4>
@@ -2908,7 +3737,7 @@ window.UI = {
                     <div class="animate-entry">
                         <div class="mb-4 flex flex-col md:flex-row justify-end items-stretch md:items-center gap-3">
                             <div class="flex flex-wrap items-center gap-3 justify-end">
-                                <button onclick="UI.openOffroadModal()" class="px-4 py-2 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 transition flex items-center font-bold text-sm">
+                                <button onclick="UI.openOffroadModal()" class="px-4 py-2 bg-red-600 text-white rounded-lg shadow-lg hover:bg-red-700 transition flex items-center font-bold text-sm">
                                     <i class="fa-solid fa-plus mr-2"></i> New Report
                                 </button>
                                 
@@ -2924,36 +3753,36 @@ window.UI = {
                         </div>
 
                         <!-- Admin Offroad Dashboard -->
-                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-                            <div class="glass-panel p-3.5 rounded-xl border-b-4 border-slate-500 shadow-sm hover-lift bg-slate-100/50 relative overflow-hidden group">
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                            <div class="glass-panel p-5 rounded-2xl border-b-4 border-slate-500 shadow-sm hover-lift bg-slate-100/50 relative overflow-hidden group">
                                 <div class="absolute right-0 top-0 opacity-5 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform">
                                     <i class="fa-solid fa-clipboard-list text-6xl"></i>
                                 </div>
                                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Result</p>
                                 <p class="text-3xl font-black text-slate-800 dark:text-white">${totalFiltered}</p>
                             </div>
-                            <div class="glass-panel p-3.5 rounded-xl border-l-4 border-orange-500 shadow-sm hover-lift bg-orange-50/20 relative overflow-hidden group">
+                            <div class="glass-panel p-5 rounded-2xl border-l-4 border-orange-500 shadow-sm hover-lift bg-orange-50/20 relative overflow-hidden group">
                                 <div class="absolute right-0 top-0 opacity-5 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform text-orange-600">
                                     <i class="fa-solid fa-truck-pickup text-6xl"></i>
                                 </div>
                                 <p class="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1">Captured</p>
                                 <p class="text-3xl font-black text-slate-800 dark:text-white">${captured}</p>
                             </div>
-                            <div class="glass-panel p-3.5 rounded-xl border-l-4 border-blue-500 shadow-sm hover-lift bg-blue-50/20 relative overflow-hidden group">
+                            <div class="glass-panel p-5 rounded-2xl border-l-4 border-blue-500 shadow-sm hover-lift bg-blue-50/20 relative overflow-hidden group">
                                 <div class="absolute right-0 top-0 opacity-5 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform text-blue-600">
                                     <i class="fa-solid fa-car-burst text-6xl"></i>
                                 </div>
                                 <p class="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Accident</p>
                                 <p class="text-3xl font-black text-slate-800 dark:text-white">${accident}</p>
                             </div>
-                            <div class="glass-panel p-3.5 rounded-xl border-l-4 border-indigo-500 shadow-sm hover-lift bg-indigo-50/20 relative overflow-hidden group">
+                            <div class="glass-panel p-5 rounded-2xl border-l-4 border-indigo-500 shadow-sm hover-lift bg-indigo-50/20 relative overflow-hidden group">
                                 <div class="absolute right-0 top-0 opacity-5 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform text-indigo-600">
                                     <i class="fa-solid fa-building-shield text-6xl"></i>
                                 </div>
                                 <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Thana</p>
                                 <p class="text-3xl font-black text-slate-800 dark:text-white">${thana}</p>
                             </div>
-                            <div class="glass-panel p-3.5 rounded-xl border-l-4 border-rose-500 shadow-sm hover-lift bg-rose-50/20 relative overflow-hidden group">
+                            <div class="glass-panel p-5 rounded-2xl border-l-4 border-rose-500 shadow-sm hover-lift bg-rose-50/20 relative overflow-hidden group">
                                 <div class="absolute right-0 top-0 opacity-5 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform text-rose-600">
                                     <i class="fa-solid fa-magnifying-glass-location text-6xl"></i>
                                 </div>
@@ -2963,21 +3792,21 @@ window.UI = {
                         </div>
 
                         <!-- Filter Bar -->
-                        <div class="glass-panel p-4 rounded-xl border border-slate-200 dark:border-slate-700 mb-4 flex flex-wrap gap-4 items-end bg-slate-50/50">
+                        <div class="glass-panel p-4 rounded-xl border border-slate-200 dark:border-slate-700 mb-6 flex flex-wrap gap-4 items-end bg-slate-50/50">
                             <div class="flex-1 min-w-[200px]">
                                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Territory</label>
-                                <select id="offroad-filter-territory" onchange="UI.renderAdminOffroadView('${viewMode}')" class="w-full px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-brand-500 shadow-sm">
+                                <select id="offroad-filter-territory" onchange="UI.renderAdminOffroadView('${viewMode}')" class="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-brand-500 shadow-sm">
                                     <option value="">All Territories</option>
                                     ${db.territories.map(t => `<option value="${t.id}" ${fTerritory === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
                                 </select>
                             </div>
                             <div class="flex-1 min-w-[150px]">
                                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Month</label>
-                                <input type="month" id="offroad-filter-month" value="${fMonth}" onchange="UI.renderAdminOffroadView('${viewMode}')" class="w-full px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-brand-500 shadow-sm">
+                                <input type="month" id="offroad-filter-month" value="${fMonth}" onchange="UI.renderAdminOffroadView('${viewMode}')" class="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-brand-500 shadow-sm">
                             </div>
                             <div class="flex-1 min-w-[180px]">
                                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Reason</label>
-                                <select id="offroad-filter-reason" onchange="UI.renderAdminOffroadView('${viewMode}')" class="w-full px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-brand-500 shadow-sm">
+                                <select id="offroad-filter-reason" onchange="UI.renderAdminOffroadView('${viewMode}')" class="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:border-brand-500 shadow-sm">
                                     <option value="">All Reasons</option>
                                     <option value="Accident" ${fReason === 'Accident' ? 'selected' : ''}>Accident</option>
                                     <option value="Capture" ${fReason === 'Capture' ? 'selected' : ''}>Capture</option>
@@ -2991,38 +3820,38 @@ window.UI = {
                         </div>
 
                         <!-- Data List (Table View) -->
-                        <div class="glass-panel rounded-xl shadow-md dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700">
+                        <div class="glass-panel rounded-xl shadow-lg dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700">
                             <div class="overflow-x-auto">
                                 <table class="w-full text-sm text-left">
                                     <thead class="bg-slate-50 dark:bg-slate-800 text-[10px] text-slate-500 uppercase font-black tracking-widest border-b dark:border-slate-700">
                                         <tr>
-                                            <th class="px-3 py-2.5">In Date</th>
-                                            ${viewMode === 'archive' ? '<th class="px-3 py-2.5">Release</th>' : ''}
-                                            <th class="px-3 py-2.5">Customer Code</th>
-                                            <th class="px-3 py-2.5 w-40">Reason</th>
-                                            <th class="px-3 py-2.5">Territory</th>
-                                            <th class="px-3 py-2.5">Location</th>
-                                            <th class="px-3 py-2.5">Remarks</th>
-                                            <th class="px-3 py-2.5 text-center">Action</th>
+                                            <th class="px-6 py-4">In Date</th>
+                                            ${viewMode === 'archive' ? '<th class="px-6 py-4">Release</th>' : ''}
+                                            <th class="px-6 py-4">Customer Code</th>
+                                            <th class="px-6 py-4 w-40">Reason</th>
+                                            <th class="px-6 py-4">Territory</th>
+                                            <th class="px-6 py-4">Location</th>
+                                            <th class="px-6 py-4">Remarks</th>
+                                            <th class="px-6 py-4 text-center">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
                                         ${allCases.map(v => `
                                             <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/80 transition cursor-pointer group" onclick="if(!event.target.closest('button')) UI.openOffroadModal('${v.id}')">
-                                                <td class="px-3 py-2.5 font-mono text-xs text-slate-500">${v.inDate}</td>
-                                                ${viewMode === 'archive' ? `<td class="px-3 py-2.5 font-mono text-xs text-green-600 font-bold">${v.solveDate || '-'}</td>` : ''}
-                                                <td class="px-3 py-2.5">
+                                                <td class="px-6 py-4 font-mono text-xs text-slate-500">${v.inDate}</td>
+                                                ${viewMode === 'archive' ? `<td class="px-6 py-4 font-mono text-xs text-green-600 font-bold">${v.solveDate || '-'}</td>` : ''}
+                                                <td class="px-6 py-4">
                                                     <span class="font-black text-slate-800 dark:text-white font-mono group-hover:text-brand-600 transition-colors uppercase">${v.customerCode || v.customer_code || 'N/A'}</span>
                                                 </td>
-                                                <td class="px-3 py-2.5">
+                                                <td class="px-6 py-4">
                                                     <span class="px-2 py-1 rounded text-[10px] font-bold uppercase shrink-0 ${UI.getOffroadBadgeColor(v.reason)}">
                                                         <i class="fa-solid ${UI.getOffroadIcon(v.reason)} mr-1"></i> ${v.reason}
                                                     </span>
                                                 </td>
-                                                <td class="px-3 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-400">${v.territoryName}</td>
-                                                <td class="px-3 py-2.5 text-xs max-w-xs truncate">${v.location || 'N/A'}</td>
-                                                <td class="px-3 py-2.5 text-xs italic text-slate-400 max-w-xs truncate">"${v.remarks || ''}"</td>
-                                                <td class="px-3 py-2.5 text-center">
+                                                <td class="px-6 py-4 text-xs font-semibold text-slate-600 dark:text-slate-400">${v.territoryName}</td>
+                                                <td class="px-6 py-4 text-xs max-w-xs truncate">${v.location || 'N/A'}</td>
+                                                <td class="px-6 py-4 text-xs italic text-slate-400 max-w-xs truncate">"${v.remarks || ''}"</td>
+                                                <td class="px-6 py-4 text-center">
                                                     <div class="flex items-center justify-center gap-2">
                                                         ${viewMode === 'active' ? `
                                                             <button onclick="event.stopPropagation(); UI.resolveOffroad('${v.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all border border-green-200" title="Release">
@@ -3062,7 +3891,7 @@ window.UI = {
                         <!-- Redundant header title removed -->
 
                         <!-- FILTER BAR -->
-                        <div class="mb-4 flex flex-col xl:flex-row gap-3 items-center justify-between bg-white dark:bg-dark-card p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <div class="mb-6 flex flex-col xl:flex-row gap-3 items-center justify-between bg-white dark:bg-dark-card p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                             <div class="flex flex-wrap items-center gap-3 w-full xl:w-auto flex-1">
                                 <!-- Search Input -->
                                 <div class="relative w-full sm:w-56">
@@ -3133,7 +3962,7 @@ window.UI = {
                         </div>
 
                         <!-- STATS SUMMARY CARDS -->
-                        <div id="proj-monitor-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div id="proj-monitor-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                             <!-- Populated dynamically -->
                         </div>
 
@@ -3164,7 +3993,7 @@ window.UI = {
                                     <span class="text-[10px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-200/50 dark:border-emerald-800/30 font-bold">Today</span>
                                 </div>
 
-                                <div class="glass-panel rounded-xl shadow-md dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700">
+                                <div class="glass-panel rounded-xl shadow-lg dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700">
                                     <div class="overflow-x-auto">
                                         <table class="w-full text-sm text-left">
                                             <thead id="submitted-projections-thead" class="bg-slate-50 dark:bg-slate-800 text-[10px] text-slate-500 uppercase font-bold tracking-wider">
@@ -3275,28 +4104,28 @@ window.UI = {
                 const statsContainer = document.getElementById('proj-monitor-stats');
                 if (statsContainer) {
                     statsContainer.innerHTML = `
-                        <div class="glass-panel p-4 rounded-xl border-l-4 border-brand-500 shadow-sm relative overflow-hidden group">
+                        <div class="glass-panel p-4 rounded-2xl border-l-4 border-brand-500 shadow-sm relative overflow-hidden group">
                             <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Today's Proj. (Filtered)</p>
                             <h3 class="text-xl font-bold text-slate-800 dark:text-white font-mono">৳${Math.round(totalProjSum).toLocaleString()}</h3>
                             <div class="text-[9px] text-slate-500 mt-1">
                                 Active submissions: ${submitted.length}
                             </div>
                         </div>
-                        <div class="glass-panel p-4 rounded-xl border-l-4 border-emerald-500 shadow-sm relative overflow-hidden group">
+                        <div class="glass-panel p-4 rounded-2xl border-l-4 border-emerald-500 shadow-sm relative overflow-hidden group">
                             <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Today's Collection</p>
                             <h3 class="text-xl font-bold text-slate-800 dark:text-white font-mono">৳${Math.round(totalTodayCollSum).toLocaleString()}</h3>
                             <div class="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold mt-1">
                                 Achievement: ${totalProjSum > 0 ? ((totalTodayCollSum / totalProjSum) * 100).toFixed(1) : '0.0'}%
                             </div>
                         </div>
-                        <div class="glass-panel p-4 rounded-xl border-l-4 border-indigo-500 shadow-sm relative overflow-hidden group">
+                        <div class="glass-panel p-4 rounded-2xl border-l-4 border-indigo-500 shadow-sm relative overflow-hidden group">
                             <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Total Remaining Target</p>
                             <h3 class="text-xl font-bold text-slate-800 dark:text-white font-mono">৳${Math.round(totalRemainingAmtSum).toLocaleString()}</h3>
                             <div class="text-[9px] text-slate-500 mt-1">
                                 Month-end target gap
                             </div>
                         </div>
-                        <div class="glass-panel p-4 rounded-xl border-l-4 border-amber-500 shadow-sm relative overflow-hidden group">
+                        <div class="glass-panel p-4 rounded-2xl border-l-4 border-amber-500 shadow-sm relative overflow-hidden group">
                             <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Per Day Required Approx</p>
                             <h3 class="text-xl font-bold text-slate-800 dark:text-white font-mono">৳${Math.round(totalRdrrSum).toLocaleString()}</h3>
                             <div class="text-[9px] text-slate-500 mt-1">
@@ -3670,7 +4499,7 @@ window.UI = {
                 document.getElementById('views-container').innerHTML = `
             <div class="animate-entry" >
                         <div class="mb-4 flex justify-end items-center gap-2">
-                            <button onclick="UI.openSettlementModal()" class="group flex items-center px-4 py-2 bg-brand-600 text-white rounded-lg shadow-md hover:bg-brand-700 transition hover:-translate-y-0.5">
+                            <button onclick="UI.openSettlementModal()" class="group flex items-center px-4 py-2 bg-brand-600 text-white rounded-lg shadow-lg hover:bg-brand-700 transition hover:-translate-y-0.5">
                                 <i class="fa-solid fa-plus mr-2"></i> Add New
                             </button>
                             <button onclick="UI.exportSettlementCSV()" class="group flex items-center px-4 py-2 bg-white dark:bg-dark-card border border-purple-200 dark:border-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg shadow-sm hover:shadow-md transition hover:-translate-y-0.5">
@@ -3681,21 +4510,21 @@ window.UI = {
 
                         <!--Stats Cards-->
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                            <div class="glass-panel p-3.5 rounded-xl border-l-4 border-purple-500 shadow-sm relative overflow-hidden group">
+                            <div class="glass-panel p-5 rounded-2xl border-l-4 border-purple-500 shadow-sm relative overflow-hidden group">
                                 <div class="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                                     <i class="fa-solid fa-hand-holding-dollar text-6xl text-purple-600"></i>
                                 </div>
                                 <p class="text-xs font-bold text-purple-600 uppercase tracking-wider mb-1">Early Settlements</p>
                                 <h3 class="text-3xl font-bold text-slate-800 dark:text-white">${countType('Early Settlement')}</h3>
                             </div>
-                            <div class="glass-panel p-3.5 rounded-xl border-l-4 border-blue-500 shadow-sm relative overflow-hidden group">
+                            <div class="glass-panel p-5 rounded-2xl border-l-4 border-blue-500 shadow-sm relative overflow-hidden group">
                                 <div class="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                                     <i class="fa-solid fa-folder-closed text-6xl text-blue-600"></i>
                                 </div>
                                 <p class="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Regular Closures</p>
                                 <h3 class="text-3xl font-bold text-slate-800 dark:text-white">${countType('Regular Close')}</h3>
                             </div>
-                            <div class="glass-panel p-3.5 rounded-xl border-l-4 border-amber-500 shadow-sm relative overflow-hidden group">
+                            <div class="glass-panel p-5 rounded-2xl border-l-4 border-amber-500 shadow-sm relative overflow-hidden group">
                                 <div class="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                                     <i class="fa-solid fa-file-invoice-dollar text-6xl text-amber-600"></i>
                                 </div>
@@ -3705,21 +4534,21 @@ window.UI = {
                         </div>
 
                         <!--Data Table-->
-            <div class="glass-panel rounded-xl shadow-md dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700">
+            <div class="glass-panel rounded-xl shadow-lg dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700">
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="bg-slate-50 dark:bg-slate-800 text-xs text-slate-500 dark:text-slate-400 uppercase font-bold">
                             <tr>
-                                <th class="px-3 py-2.5 w-10 text-center">
+                                <th class="px-6 py-4 w-10 text-center">
                                     <input type="checkbox" id="select-all-settlements" onchange="UI.selectAll('settlements', ['${allIds.join("','")}'])" class="rounded border-slate-300 cursor-pointer">
                                 </th>
-                                <th class="px-3 py-2.5">Date</th>
-                                <th class="px-3 py-2.5">Territory</th>
-                                <th class="px-3 py-2.5">Customer Code</th>
-                                <th class="px-3 py-2.5">Type</th>
-                                <th class="px-3 py-2.5 text-right">Amount</th>
-                                <th class="px-3 py-2.5">Remarks</th>
-                                <th class="px-3 py-2.5 text-center">Action</th>
+                                <th class="px-6 py-4">Date</th>
+                                <th class="px-6 py-4">Territory</th>
+                                <th class="px-6 py-4">Customer Code</th>
+                                <th class="px-6 py-4">Type</th>
+                                <th class="px-6 py-4 text-right">Amount</th>
+                                <th class="px-6 py-4">Remarks</th>
+                                <th class="px-6 py-4 text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
@@ -3731,20 +4560,20 @@ window.UI = {
 
                     return `
                                             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                                                <td class="px-3 py-2.5 text-center">
+                                                <td class="px-6 py-4 text-center">
                                                      <input type="checkbox" onchange="UI.toggleSelect('settlements', '${s.id}')" data-select-type="settlements" data-id="${s.id}" class="rounded border-slate-300 cursor-pointer">
                                                 </td>
-                                                <td class="px-3 py-2.5 font-mono text-slate-600 dark:text-slate-400">${s.date}</td>
-                                                <td class="px-3 py-2.5 font-medium text-slate-800 dark:text-white">${s.territoryName}</td>
-                                                <td class="px-3 py-2.5 font-mono font-bold">${s.customerCode}</td>
-                                                <td class="px-3 py-2.5">
+                                                <td class="px-6 py-4 font-mono text-slate-600 dark:text-slate-400">${s.date}</td>
+                                                <td class="px-6 py-4 font-medium text-slate-800 dark:text-white">${s.territoryName}</td>
+                                                <td class="px-6 py-4 font-mono font-bold">${s.customerCode}</td>
+                                                <td class="px-6 py-4">
                                                     <span class="px-2 py-1 rounded text-xs font-bold ${badgeClass}">${s.type}</span>
                                                 </td>
-                                                <td class="px-3 py-2.5 text-right font-mono text-slate-700 dark:text-slate-300">
+                                                <td class="px-6 py-4 text-right font-mono text-slate-700 dark:text-slate-300">
                                                     ৳${Number(s.amount || 0).toLocaleString()}
                                                 </td>
-                                                <td class="px-3 py-2.5 text-slate-500 italic truncate max-w-xs">${s.remarks || '-'}</td>
-                                                <td class="px-3 py-2.5 text-center">
+                                                <td class="px-6 py-4 text-slate-500 italic truncate max-w-xs">${s.remarks || '-'}</td>
+                                                <td class="px-6 py-4 text-center">
                                                     <button onclick="UI.openSettlementModal('${s.id}')" class="text-slate-400 hover:text-brand-600 transition">
                                                         <i class="fa-solid fa-pen-to-square"></i>
                                                     </button>
@@ -3816,28 +4645,28 @@ window.UI = {
                         </div>
 
                         <!--Summary Cards-->
-                        <div id="admin-history-summary" class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                        <div id="admin-history-summary" class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                             <!-- Injected by JS -->
                         </div>
 
                         <!--Table -->
-            <div class="glass-panel rounded-xl shadow-md dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700">
+            <div class="glass-panel rounded-xl shadow-lg dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700">
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="bg-slate-50 dark:bg-slate-800 text-xs text-slate-500 uppercase font-bold">
                             <tr>
-                                <th class="px-3 py-2 w-10 text-center">
+                                <th class="px-6 py-3 w-10 text-center">
                                     <input type="checkbox" id="select-all-history" class="rounded border-slate-300 cursor-pointer">
                                 </th>
-                                <th class="px-3 py-2">Date</th>
-                                <th class="px-3 py-2">Territory</th>
-                                <th class="px-3 py-2">Receipt</th>
-                                <th class="px-3 py-2">Customer</th>
-                                <th class="px-3 py-2">Mode</th>
-                                <th class="px-3 py-2 text-right text-slate-400">Regular</th>
-                                <th class="px-3 py-2 text-right text-brand-500">Advance</th>
-                                <th class="px-3 py-2 text-right">Total</th>
-                                <th class="px-3 py-2 text-center">Actions</th>
+                                <th class="px-6 py-3">Date</th>
+                                <th class="px-6 py-3">Territory</th>
+                                <th class="px-6 py-3">Receipt</th>
+                                <th class="px-6 py-3">Customer</th>
+                                <th class="px-6 py-3">Mode</th>
+                                <th class="px-6 py-3 text-right text-slate-400">Regular</th>
+                                <th class="px-6 py-3 text-right text-brand-500">Advance</th>
+                                <th class="px-6 py-3 text-right">Total</th>
+                                <th class="px-6 py-3 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="admin-history-table-body" class="divide-y divide-slate-100 dark:divide-slate-700">
@@ -3906,7 +4735,7 @@ window.UI = {
                 // Update Summary
                 // Update Summary
                 document.getElementById('admin-history-summary').innerHTML = `
-                    <div class="glass-panel p-3.5 rounded-xl border-l-4 border-brand-500 shadow-sm relative overflow-hidden group hover-lift">
+                    <div class="glass-panel p-5 rounded-2xl border-l-4 border-brand-500 shadow-sm relative overflow-hidden group hover-lift">
                         <div class="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                             <i class="fa-solid fa-sack-dollar text-6xl text-brand-600"></i>
                          </div>
@@ -3914,7 +4743,7 @@ window.UI = {
                         <h3 class="text-3xl font-bold text-slate-800 dark:text-white">৳ ${Math.round(totalAmt).toLocaleString()}</h3>
                     </div>
 
-                    <div class="glass-panel p-3.5 rounded-xl border-l-4 border-blue-500 shadow-sm relative overflow-hidden group hover-lift">
+                    <div class="glass-panel p-5 rounded-2xl border-l-4 border-blue-500 shadow-sm relative overflow-hidden group hover-lift">
                         <div class="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                             <i class="fa-solid fa-receipt text-6xl text-blue-600"></i>
                         </div>
@@ -3922,7 +4751,7 @@ window.UI = {
                         <h3 class="text-3xl font-bold text-slate-800 dark:text-white">${count}</h3>
                     </div>
 
-                    <div class="glass-panel p-3.5 rounded-xl border-l-4 border-purple-500 shadow-sm relative overflow-hidden group hover-lift">
+                    <div class="glass-panel p-5 rounded-2xl border-l-4 border-purple-500 shadow-sm relative overflow-hidden group hover-lift">
                         <div class="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                              <i class="fa-solid fa-building-columns text-6xl text-purple-600"></i>
                         </div>
@@ -3950,20 +4779,20 @@ window.UI = {
                         const adv = c.advanceAmount || 0;
                         return `
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition" >
-                            <td class="px-3 py-2 text-center">
+                            <td class="px-6 py-3 text-center">
                                  <input type="checkbox" onchange="UI.toggleSelect('history', '${c.id}')" data-select-type="history" data-id="${c.id}" class="rounded border-slate-300 cursor-pointer">
                             </td>
-                            <td class="px-3 py-2 font-mono text-slate-600 dark:text-slate-400 text-xs">${c.date}</td>
-                            <td class="px-3 py-2 font-bold text-slate-700 dark:text-slate-300 text-xs">${c.territoryName}</td>
-                            <td class="px-3 py-2 font-medium text-slate-800 dark:text-white">#${c.receipt}</td>
-                            <td class="px-3 py-2 font-mono text-xs text-brand-600">${c.customerCode || c.customer_code || 'N/A'}</td>
-                            <td class="px-3 py-2">
+                            <td class="px-6 py-3 font-mono text-slate-600 dark:text-slate-400 text-xs">${c.date}</td>
+                            <td class="px-6 py-3 font-bold text-slate-700 dark:text-slate-300 text-xs">${c.territoryName}</td>
+                            <td class="px-6 py-3 font-medium text-slate-800 dark:text-white">#${c.receipt}</td>
+                            <td class="px-6 py-3 font-mono text-xs text-brand-600">${c.customerCode || c.customer_code || 'N/A'}</td>
+                            <td class="px-6 py-3">
                                 <span class="px-2 py-1 rounded text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-700 text-slate-500 border border-slate-200 dark:border-slate-600">${c.mode}</span>
                             </td>
-                            <td class="px-3 py-2 text-right font-mono text-slate-500 text-xs">${parseFloat(reg).toLocaleString()}</td>
-                            <td class="px-3 py-2 text-right font-mono text-brand-500 text-xs">${parseFloat(adv).toLocaleString()}</td>
-                            <td class="px-3 py-2 text-right font-mono font-bold text-slate-800 dark:text-white">${parseFloat(c.amount).toLocaleString()}</td>
-                            <td class="px-3 py-2 text-center space-x-2">
+                            <td class="px-6 py-3 text-right font-mono text-slate-500 text-xs">${parseFloat(reg).toLocaleString()}</td>
+                            <td class="px-6 py-3 text-right font-mono text-brand-500 text-xs">${parseFloat(adv).toLocaleString()}</td>
+                            <td class="px-6 py-3 text-right font-mono font-bold text-slate-800 dark:text-white">${parseFloat(c.amount).toLocaleString()}</td>
+                            <td class="px-6 py-3 text-center space-x-2">
                                 <button onclick="UI.openCollectionModal('${c.id}', '${c.territoryId}')" class="text-blue-500 hover:text-blue-700 p-1 transition" title="Edit">
                                     <i class="fa-solid fa-pen-to-square"></i>
                                 </button>
@@ -4039,10 +4868,10 @@ window.UI = {
                 `);
 
                 document.getElementById('views-container').innerHTML = `
-            <div id="officer-dashboard-panel" class="animate-entry mb-4 sm:mb-4" >
+            <div id="officer-dashboard-panel" class="animate-entry mb-4 sm:mb-6" >
                     
                     <!--Portfolio Health Strip(Green Theme)-->
-                    <div class="animate-entry mb-4 sm:mb-4 rounded-lg bg-gradient-to-r from-brand-600 to-blue-500 shadow-md text-white hover-lift overflow-hidden">
+                    <div class="animate-entry mb-4 sm:mb-6 rounded-lg bg-gradient-to-r from-brand-600 to-blue-500 shadow-md text-white hover-lift overflow-hidden">
                         <div class="grid grid-cols-2 md:grid-cols-5 md:divide-x divide-white/20 bg-white/10 backdrop-blur-sm">
                             <div class="p-3 bg-black/10 md:bg-transparent col-span-2 md:col-span-1 border-b md:border-b-0 border-white/20">
                                 <p class="text-[10px] uppercase tracking-wider opacity-80 mb-0.5">Month Start Total OD</p>
@@ -4072,7 +4901,7 @@ window.UI = {
                     </div>
 
                     <!--RPI & OFFROAD STATUS BANNER - COMPRESSED FOR MOBILE -->
-                    <div class="animate-entry mb-4 sm:mb-4 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-dark-card shadow-sm overflow-hidden flex flex-row divide-x divide-slate-100 dark:divide-slate-700/50">
+                    <div class="animate-entry mb-4 sm:mb-6 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-dark-card shadow-sm overflow-hidden flex flex-row divide-x divide-slate-100 dark:divide-slate-700/50">
                         <!-- Collection History Button (Left) -->
                         <div onclick="Router.navigate('officer-history')" class="flex-1 py-2 px-2 flex items-center justify-center gap-1 hover:bg-slate-50 dark:hover:bg-slate-800/30 cursor-pointer transition-all active:scale-95 duration-100 group text-slate-600 dark:text-slate-300">
                             <i class="fa-solid fa-clock-rotate-left text-[10px] sm:text-xs text-brand-500 group-hover:rotate-[-15deg] group-hover:scale-110 transition-transform"></i>
@@ -4095,7 +4924,7 @@ window.UI = {
                     </div>
 
                     <!--COMPACT METRIC TABLE-->
-                    <div class="animate-entry mb-4 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card">
+                    <div class="animate-entry mb-6 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card">
                         <div class="overflow-x-auto scrollbar-hide">
                             <table class="w-full text-left border-collapse">
                             <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
@@ -4217,7 +5046,7 @@ window.UI = {
                     </div>
 
                     <!--COLLECTION MIX(Regular vs Advance) - NEW CREATIVE SECTION-->
-                    <div class="animate-entry mb-4 sm:mb-4 p-2 rounded-lg bg-white dark:bg-dark-card border border-slate-200 dark:border-slate-700 shadow-sm mt-3">
+                    <div class="animate-entry mb-4 sm:mb-6 p-2 rounded-lg bg-white dark:bg-dark-card border border-slate-200 dark:border-slate-700 shadow-sm mt-3">
                         <div class="flex justify-between items-end mb-1.5 px-1">
                             <div class="flex items-center gap-1.5">
                                 <span class="w-2 h-2 rounded-full bg-slate-500"></span>
@@ -4242,7 +5071,7 @@ window.UI = {
                     </div>
 
                     <!--UNIFIED PROGRESS STATS CARD (File Touch & Collection Achievement)-->
-                    <div class="animate-entry mb-4 sm:mb-4 p-3 rounded-lg bg-white dark:bg-dark-card border border-slate-200 dark:border-slate-700 shadow-sm mt-3 hover-lift">
+                    <div class="animate-entry mb-4 sm:mb-6 p-3 rounded-lg bg-white dark:bg-dark-card border border-slate-200 dark:border-slate-700 shadow-sm mt-3 hover-lift">
                         <!-- File Touch Row -->
                         <div class="mb-3">
                             <div class="flex justify-between items-center mb-1.5 px-0.5">
@@ -4405,31 +5234,31 @@ window.UI = {
                                     </button>
                                 </div>
 
-                                <button onclick="UI.openOffroadModal()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg shadow-md font-bold transition flex items-center text-sm">
+                                <button onclick="UI.openOffroadModal()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg shadow-lg font-bold transition flex items-center text-sm">
                                     <i class="fa-solid fa-plus mr-2"></i> Report New
                                 </button>
                             </div>
                         </div>
 
                         <!-- Mini Dashboard -->
-                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-                            <div class="glass-panel p-4 rounded-xl border-b-4 border-slate-500/50 hover-lift">
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                            <div class="glass-panel p-4 rounded-2xl border-b-4 border-slate-500/50 hover-lift">
                                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total ${viewMode === 'active' ? 'Active' : 'Solved'}</p>
                                 <p class="text-2xl font-black text-slate-800 dark:text-white">${total}</p>
                             </div>
-                            <div class="glass-panel p-4 rounded-xl border-l-4 border-orange-500 hover-lift bg-orange-50/10">
+                            <div class="glass-panel p-4 rounded-2xl border-l-4 border-orange-500 hover-lift bg-orange-50/10">
                                 <p class="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1">Captured</p>
                                 <p class="text-2xl font-black text-slate-800 dark:text-white">${captured}</p>
                             </div>
-                            <div class="glass-panel p-4 rounded-xl border-l-4 border-blue-500 hover-lift bg-blue-50/10">
+                            <div class="glass-panel p-4 rounded-2xl border-l-4 border-blue-500 hover-lift bg-blue-50/10">
                                 <p class="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Accident</p>
                                 <p class="text-2xl font-black text-slate-800 dark:text-white">${accident}</p>
                             </div>
-                            <div class="glass-panel p-4 rounded-xl border-l-4 border-indigo-500 hover-lift bg-indigo-50/10">
+                            <div class="glass-panel p-4 rounded-2xl border-l-4 border-indigo-500 hover-lift bg-indigo-50/10">
                                 <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Thana</p>
                                 <p class="text-2xl font-black text-slate-800 dark:text-white">${thana}</p>
                             </div>
-                            <div class="glass-panel p-4 rounded-xl border-l-4 border-rose-500 hover-lift bg-rose-50/10">
+                            <div class="glass-panel p-4 rounded-2xl border-l-4 border-rose-500 hover-lift bg-rose-50/10">
                                 <p class="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Others</p>
                                 <p class="text-2xl font-black text-slate-800 dark:text-white">${others}</p>
                             </div>
@@ -4449,37 +5278,37 @@ window.UI = {
                             </div>
                         </div>
 
-                        <div class="glass-panel rounded-xl shadow-md dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700">
+                        <div class="glass-panel rounded-xl shadow-lg dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700">
                             <div class="overflow-x-auto">
                                 <table class="w-full text-sm text-left">
                                     <thead class="bg-slate-50 dark:bg-slate-800 text-[10px] text-slate-500 uppercase font-black tracking-widest border-b dark:border-slate-700">
                                         <tr>
-                                            <th class="px-3 py-2.5">In Date</th>
-                                            ${viewMode === 'archive' ? '<th class="px-3 py-2.5">Release Date</th>' : ''}
-                                            <th class="px-3 py-2.5">Customer Code</th>
-                                            <th class="px-3 py-2.5">Incident Type</th>
-                                            <th class="px-3 py-2.5">Location</th>
-                                            <th class="px-3 py-2.5">Remarks</th>
-                                            ${viewMode === 'active' ? '<th class="px-3 py-2.5 text-center">Action</th>' : ''}
+                                            <th class="px-6 py-4">In Date</th>
+                                            ${viewMode === 'archive' ? '<th class="px-6 py-4">Release Date</th>' : ''}
+                                            <th class="px-6 py-4">Customer Code</th>
+                                            <th class="px-6 py-4">Incident Type</th>
+                                            <th class="px-6 py-4">Location</th>
+                                            <th class="px-6 py-4">Remarks</th>
+                                            ${viewMode === 'active' ? '<th class="px-6 py-4 text-center">Action</th>' : ''}
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
                                         ${displayData.map(v => `
                                             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                                                <td class="px-3 py-2.5 font-mono text-xs text-slate-500">${v.inDate}</td>
-                                                ${viewMode === 'archive' ? `<td class="px-3 py-2.5 font-mono text-xs text-green-600 dark:text-green-400 font-bold">${v.solveDate || '-'}</td>` : ''}
-                                                <td class="px-3 py-2.5">
+                                                <td class="px-6 py-4 font-mono text-xs text-slate-500">${v.inDate}</td>
+                                                ${viewMode === 'archive' ? `<td class="px-6 py-4 font-mono text-xs text-green-600 dark:text-green-400 font-bold">${v.solveDate || '-'}</td>` : ''}
+                                                <td class="px-6 py-4">
                                                     <div class="font-bold text-slate-800 dark:text-white font-mono uppercase">${v.customerCode || v.customer_code || 'N/A'}</div>
                                                 </td>
-                                                <td class="px-3 py-2.5">
+                                                <td class="px-6 py-4">
                                                     <span class="px-2 py-1 rounded text-[10px] font-bold uppercase shrink-0 ${this.getOffroadBadgeColor(v.reason)}">
                                                         <i class="fa-solid ${this.getOffroadIcon(v.reason)} mr-1"></i> ${v.reason}
                                                     </span>
                                                 </td>
-                                                <td class="px-3 py-2.5 text-xs">${v.location || 'N/A'}</td>
-                                                <td class="px-3 py-2.5 text-xs italic text-slate-500">"${v.remarks}"</td>
+                                                <td class="px-6 py-4 text-xs">${v.location || 'N/A'}</td>
+                                                <td class="px-6 py-4 text-xs italic text-slate-500">"${v.remarks}"</td>
                                                 ${viewMode === 'active' ? `
-                                                <td class="px-3 py-2.5 text-center">
+                                                <td class="px-6 py-4 text-center">
                                                     <button onclick="UI.resolveOffroad('${v.id}')" class="px-3 py-1.5 bg-green-50 text-green-600 hover:bg-green-600 hover:text-white rounded-md text-xs font-bold transition-all border border-green-200">
                                                         <i class="fa-solid fa-check mr-1"></i> Release
                                                     </button>
@@ -4528,8 +5357,8 @@ window.UI = {
 
                 document.getElementById('views-container').innerHTML = `
             <div class="animate-entry max-w-xl mx-auto mt-10" >
-                <div class="glass-panel p-8 rounded-xl shadow-xl dark:bg-dark-card border-t-4 ${isLate ? 'border-red-500' : 'border-brand-500'}">
-                    <div class="flex items-center mb-4">
+                <div class="glass-panel p-8 rounded-2xl shadow-xl dark:bg-dark-card border-t-4 ${isLate ? 'border-red-500' : 'border-brand-500'}">
+                    <div class="flex items-center mb-6">
                         <div class="w-10 h-10 rounded-full ${isLate ? 'bg-red-100 text-red-600' : 'bg-brand-100 text-brand-600'} flex items-center justify-center text-lg mr-3">
                             <i class="fa-regular fa-clock"></i>
                         </div>
@@ -4574,7 +5403,7 @@ window.UI = {
 
                                     ${!isLate ? `
                                         <div class="pt-4">
-                                            <button type="submit" class="w-full bg-gradient-to-r from-brand-600 to-emerald-600 hover:from-brand-700 hover:to-emerald-700 text-white font-bold py-4 rounded-xl shadow-md border border-brand-500/20 transition transform active:scale-[0.98] flex items-center justify-center gap-2 group">
+                                            <button type="submit" class="w-full bg-gradient-to-r from-brand-600 to-emerald-600 hover:from-brand-700 hover:to-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg border border-brand-500/20 transition transform active:scale-[0.98] flex items-center justify-center gap-2 group">
                                                 <i class="fa-solid fa-paper-plane group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform"></i>
                                                 ${existing ? 'Update Today\'s Projection' : 'Submit Morning Projection'}
                                             </button>
@@ -4588,14 +5417,9 @@ window.UI = {
             },
 
             renderCollectionForm() {
-                const isCustomerCardEntry = !!(UI.activeCustomerPreFill && UI.activeCustomerPreFill.singleOnly);
-                if (UI.activeCustomerPreFill && UI.activeCustomerPreFill.returnTo) {
-                    UI.collectionReturnTo = UI.activeCustomerPreFill.returnTo;
-                }
-
                 document.getElementById('views-container').innerHTML = `
-            <div class="animate-entry max-w-xl mx-auto mt-4 w-full px-4 sm:px-0" >
-                <div class="glass-panel p-3.5 sm:p-8 rounded-xl shadow-xl dark:bg-dark-card relative overflow-hidden">
+            <div class="animate-entry max-w-xl mx-auto mt-6 w-full px-4 sm:px-0" >
+                <div class="glass-panel p-5 sm:p-8 rounded-2xl shadow-xl dark:bg-dark-card relative overflow-hidden">
                     <!-- Decorative bg element -->
                     <div class="absolute -top-12 -right-12 w-40 h-40 bg-brand-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -4603,18 +5427,17 @@ window.UI = {
                         <div>
                             <h2 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                                 <span class="w-1 h-5 bg-brand-500 rounded-full"></span>
-                                ${isCustomerCardEntry ? 'Single Collection Entry' : 'New Collection'}
+                                New Collection
                             </h2>
-                            <p class="text-[10px] text-slate-500 dark:text-slate-400 ml-3 mt-0.5">${isCustomerCardEntry ? `Individual entry for Customer Code: <strong class="text-brand-600 dark:text-brand-400 font-mono">${UI.activeCustomerPreFill.customerId}</strong>` : 'Enter daily collection details'}</p>
+                            <p class="text-[10px] text-slate-500 dark:text-slate-400 ml-3 mt-0.5">Enter daily collection details</p>
                         </div>
-                        <button onclick="UI.closeCollectionForm()" title="Close and return" class="group w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-700/50 hover:bg-rose-50 dark:hover:bg-rose-900/20 border border-slate-100 dark:border-slate-600 flex items-center justify-center transition-all duration-300 hover:rotate-90 hover:shadow-sm">
+                        <button onclick="Router.navigate('officer-dashboard')" class="group w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-700/50 hover:bg-rose-50 dark:hover:bg-rose-900/20 border border-slate-100 dark:border-slate-600 flex items-center justify-center transition-all duration-300 hover:rotate-90 hover:shadow-sm">
                             <i class="fa-solid fa-xmark text-slate-400 group-hover:text-rose-500 text-sm transition-colors"></i>
                         </button>
                     </div>
 
-                    <!-- Mode Switcher (Hidden when opened from individual Customer Card) -->
-                    ${!isCustomerCardEntry ? `
-                    <div class="flex p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl mb-4 border border-slate-200/50 dark:border-slate-700/50 relative z-10">
+                    <!-- Mode Switcher -->
+                    <div class="flex p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl mb-6 border border-slate-200/50 dark:border-slate-700/50 relative z-10">
                         <button type="button" id="tab-single" onclick="UI.toggleCollectionMode('single')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-white dark:bg-slate-750 text-brand-600 dark:text-brand-400 shadow-sm flex items-center justify-center gap-2">
                             <i class="fa-solid fa-file-invoice"></i> Single Entry
                         </button>
@@ -4622,7 +5445,6 @@ window.UI = {
                             <i class="fa-solid fa-list-check"></i> Batch Entry
                         </button>
                     </div>
-                    ` : ''}
 
                     <form id="collection-form" onsubmit="UI.handleCollectionSubmit(event)" class="space-y-4 relative z-10">
                         <!-- Global Shared Fields: Date & Payment Mode -->
@@ -4672,7 +5494,7 @@ window.UI = {
                                         <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500">
                                             <i class="fa-solid fa-user-tag text-xs"></i>
                                         </span>
-                                        <input type="text" id="coll-code" oninput="UI.calcOfficerCollFormTotal()" class="w-full pl-9 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-xs sm:text-sm appearance-none block m-0 font-semibold text-slate-700 dark:text-slate-200 shadow-sm" placeholder="C-1052">
+                                        <input type="text" id="coll-code" class="w-full pl-9 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-xs sm:text-sm appearance-none block m-0 font-semibold text-slate-700 dark:text-slate-200 shadow-sm" placeholder="C-1052">
                                     </div>
                                 </div>
                                 <div>
@@ -4686,34 +5508,21 @@ window.UI = {
                                 </div>
                             </div>
 
-                            
-                            <!-- AUTO CALC AMOUNT SECTION -->
-                            <div class="p-2 sm:p-3 bg-emerald-500/5 dark:bg-emerald-950/20 rounded-xl sm:rounded-2xl border border-emerald-500/20 space-y-2 mt-3 sm:mt-4">
-                                <div class="flex flex-col gap-1 pb-2 sm:pb-3 border-b border-emerald-500/20">
-                                    <label class="block text-[10px] sm:text-xs font-black text-slate-800 dark:text-slate-200 flex items-center justify-between">
-                                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-coins text-emerald-500"></i> Total Collected (৳) *</span>
-                                        <span id="officer-coll-customer-found-badge" class="text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-500 hidden">Customer Found</span>
-                                    </label>
-                                    <input type="number" step="any" id="officer-coll-input-total" oninput="UI.calcOfficerCollFormTotal()" required placeholder="0.00" class="w-full h-10 sm:h-12 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg sm:rounded-xl outline-none focus:border-emerald-500 text-right font-mono font-black text-emerald-600 dark:text-emerald-400 text-lg sm:text-xl shadow-sm">
-                                </div>
-                                <input type="hidden" id="coll-reg-amount" value="0">
-                                <input type="hidden" id="coll-adv-amount" value="0">
-                                <div class="grid grid-cols-3 gap-1.5 sm:gap-2 text-center">
-                                    <div class="bg-white/60 dark:bg-slate-900/40 p-1.5 sm:p-2 rounded sm:rounded-lg border border-slate-200/50 dark:border-slate-700/50 flex flex-col justify-center">
-                                        <p class="text-[8px] sm:text-[9px] font-black uppercase text-slate-500 leading-tight">Total Due</p>
-                                        <p class="text-[9px] sm:text-[11px] font-mono font-bold text-slate-700 dark:text-slate-300 mt-0.5 truncate" id="officer-coll-display-due">৳0</p>
-                                    </div>
-                                    <div class="bg-indigo-50/50 dark:bg-indigo-900/20 p-1.5 sm:p-2 rounded sm:rounded-lg border border-indigo-200/50 dark:border-indigo-800/50 flex flex-col justify-center">
-                                        <p class="text-[8px] sm:text-[9px] font-black uppercase text-indigo-500 leading-tight">Regular</p>
-                                        <p class="text-[9px] sm:text-[11px] font-mono font-bold text-indigo-600 mt-0.5 truncate" id="officer-coll-display-reg">৳0</p>
-                                    </div>
-                                    <div class="bg-amber-50/50 dark:bg-amber-900/20 p-1.5 sm:p-2 rounded sm:rounded-lg border border-amber-200/50 dark:border-amber-800/50 flex flex-col justify-center">
-                                        <p class="text-[8px] sm:text-[9px] font-black uppercase text-amber-500 leading-tight">Advance</p>
-                                        <p class="text-[9px] sm:text-[11px] font-mono font-bold text-amber-600 mt-0.5 truncate" id="officer-coll-display-adv">৳0</p>
+                            <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                                <div>
+                                    <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Regular Amount</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500 font-bold text-xs">৳</span>
+                                        <input type="number" id="coll-reg-amount" class="w-full pl-7 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-sm sm:text-base font-bold text-slate-700 dark:text-slate-200 appearance-none block m-0 shadow-sm" placeholder="0.00">
                                     </div>
                                 </div>
-                            </div>
-
+                                <div>
+                                    <label class="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-1">Advance Amount</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400 dark:text-slate-500 font-bold text-xs">৳</span>
+                                        <input type="number" id="coll-adv-amount" class="w-full pl-7 pr-3 py-0 h-10 rounded-lg border dark:bg-slate-800 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 text-sm sm:text-base font-bold text-slate-700 dark:text-slate-200 appearance-none block m-0 shadow-sm" placeholder="0.00">
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="flex justify-end pt-1">
@@ -4723,7 +5532,7 @@ window.UI = {
                                 </label>
                             </div>
 
-                            <button type="submit" id="coll-submit-btn" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold h-12 rounded-lg shadow-md mt-4 transition transform active:scale-95 text-sm sm:text-base flex items-center justify-center">
+                            <button type="submit" id="coll-submit-btn" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold h-12 rounded-lg shadow-lg mt-4 transition transform active:scale-95 text-sm sm:text-base flex items-center justify-center">
                                 Save Entry
                             </button>
                         </div>
@@ -4738,7 +5547,7 @@ window.UI = {
                                 <i class="fa-solid fa-plus-circle text-sm"></i> Add Another Customer
                             </button>
                             
-                            <button type="button" onclick="UI.submitBulkCustomers()" id="bulk-submit-btn" class="w-full bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-700 hover:to-emerald-600 text-white font-bold h-12 rounded-lg shadow-md mt-4 transition transform active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-2">
+                            <button type="button" onclick="UI.submitBulkCustomers()" id="bulk-submit-btn" class="w-full bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-700 hover:to-emerald-600 text-white font-bold h-12 rounded-lg shadow-lg mt-4 transition transform active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-cloud-arrow-up"></i> Submit Batch Collections
                             </button>
                         </div>
@@ -4768,13 +5577,6 @@ window.UI = {
                     { code: '', receipt: '', reg: '', adv: '', mode: 'Bank Transfer', lmnp: false }
                 ];
                 UI.collectionEntryMode = 'single';
-
-                if (UI.activeCustomerPreFill) {
-                    setTimeout(() => {
-                        document.getElementById('coll-code').value = UI.activeCustomerPreFill.customerId;
-                        UI.activeCustomerPreFill = null; // Reset after pre-filling
-                    }, 50);
-                }
             },
 
             // --- DATA ENTRY PANEL ---
@@ -4849,13 +5651,13 @@ window.UI = {
                                     <input type="file" class="hidden" accept=".csv" onchange="UI.handleCSVUpload(event)">
                                 </label>
 
-                                <button onclick="UI.saveBulkData()" class="flex items-center px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 shadow-md transition transform active:scale-95 text-sm font-bold hover-lift">
+                                <button onclick="UI.saveBulkData()" class="flex items-center px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 shadow-lg transition transform active:scale-95 text-sm font-bold hover-lift">
                                     <i class="fa-solid fa-save mr-2"></i> Save All Changes
                                 </button>
                             </div>
                         </div>
 
-                        <div class="flex-1 glass-panel rounded-xl shadow-md dark:bg-dark-card overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700">
+                        <div class="flex-1 glass-panel rounded-xl shadow-lg dark:bg-dark-card overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700">
                             <div class="overflow-auto flex-1">
                                 <table class="w-full text-sm text-left border-collapse" id="data-entry-table">
                                     <thead class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase sticky top-0 z-10 font-bold text-xs">
@@ -4940,16 +5742,13 @@ window.UI = {
                                     <i class="fa-solid fa-file-csv mr-2 text-brand-600"></i> Import Users CSV
                                     <input type="file" class="hidden" accept=".csv" onchange="UI.handleUserCSV(event)">
                                 </label>
-                                <button onclick="UI.restoreDefaultUsers()" class="flex items-center px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition text-sm font-medium hover-lift" title="Restore default territory officers">
-                                    <i class="fa-solid fa-rotate-left mr-2 text-brand-600"></i> Restore Default Officers
-                                </button>
-                                <button onclick="UI.saveUsers()" class="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 shadow-md font-bold hover-lift">
+                                <button onclick="UI.saveUsers()" class="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 shadow-lg font-bold hover-lift">
                                     <i class="fa-solid fa-save mr-2"></i> Save Users
                                 </button>
                             </div>
                         </div>
 
-                        <div class="flex-1 glass-panel rounded-xl shadow-md dark:bg-dark-card overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700">
+                        <div class="flex-1 glass-panel rounded-xl shadow-lg dark:bg-dark-card overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700">
                              <div class="overflow-auto flex-1">
                                 <table class="w-full text-sm text-left border-collapse" id="user-mgmt-table">
                                     <thead class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase sticky top-0 z-10 font-bold text-xs">
@@ -5046,7 +5845,7 @@ window.UI = {
                 if (!dock) {
                     dock = document.createElement('div');
                     dock.id = 'floating-dock';
-                    dock.className = 'floating-dock glass-panel px-3 py-2 rounded-xl shadow-2xl flex items-center gap-4 border border-slate-200 dark:border-slate-600 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl';
+                    dock.className = 'floating-dock glass-panel px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-4 border border-slate-200 dark:border-slate-600 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl';
                     document.body.appendChild(dock);
                 }
 
@@ -5138,7 +5937,7 @@ window.UI = {
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">New Collection Date</label>
                             <input type="date" name="bulkDate" value="${today}" required class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 font-semibold text-slate-750 dark:text-slate-200">
                         </div>
-                        <button type="submit" class="w-full py-3 bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-700 hover:to-emerald-600 text-white font-bold rounded-lg shadow-md hover-lift transition">
+                        <button type="submit" class="w-full py-3 bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-700 hover:to-emerald-600 text-white font-bold rounded-lg shadow-lg hover-lift transition">
                             <i class="fa-solid fa-calendar-check mr-2"></i> Update ${count} Collections
                         </button>
                     </form>
@@ -5189,13 +5988,6 @@ window.UI = {
             // --- PAGE RENDERING ---
             handleProjectionSubmit(e) {
                 e.preventDefault();
-                
-                const dbLocal = Store.get();
-                if (dbLocal?.system_settings?.find(s => s.key === 'system_hold')?.value === 'true') {
-                    alert("System is currently on hold. Submissions are paused by Admin.");
-                    return;
-                }
-                
                 UI.toggleLoader(true);
                 (async () => {
                     const amountInput = document.getElementById('proj-amount');
@@ -5485,12 +6277,6 @@ window.UI = {
             },
 
             submitBulkCustomers() {
-                const dbLocal = Store.get();
-                if (dbLocal?.system_settings?.find(s => s.key === 'system_hold')?.value === 'true') {
-                    alert("System is currently on hold. Submissions are paused by Admin.");
-                    return;
-                }
-
                 const todayStr = Utils.getLocalDate();
                 const selectedDate = document.getElementById('coll-date').value || todayStr;
                 const territoryId = this.getCurrentTerritoryId();
@@ -5610,76 +6396,8 @@ window.UI = {
                 })();
             },
 
-            
-            calcOfficerCollFormTotal() {
-                const totalColl = parseFloat(document.getElementById('officer-coll-input-total')?.value) || 0;
-                const custCode = (document.getElementById('coll-code')?.value || '').trim().toLowerCase();
-                
-                let totalDue = 0;
-                let customerFound = false;
-
-                if (custCode) {
-                    const customers = Store.cache.customers || [];
-                    const customer = customers.find(c => String(c.customerId).trim().toLowerCase() === custCode);
-                    if (customer) {
-                        customerFound = true;
-                        const overdue = parseFloat(customer.overdueTaka) || 0;
-                        const emi = parseFloat(customer.instSize) || 0;
-                        totalDue = overdue + emi;
-                    }
-                }
-
-                const badgeEl = document.getElementById('officer-coll-customer-found-badge');
-                if (badgeEl) {
-                    if (customerFound) {
-                        badgeEl.classList.remove('hidden');
-                        badgeEl.classList.add('bg-emerald-100', 'text-emerald-700', 'dark:bg-emerald-900/30', 'dark:text-emerald-400');
-                        badgeEl.classList.remove('bg-slate-200', 'text-slate-500');
-                        badgeEl.textContent = "Data Found";
-                    } else {
-                        badgeEl.classList.remove('hidden');
-                        badgeEl.classList.add('bg-slate-100', 'text-slate-500', 'dark:bg-slate-800');
-                        badgeEl.classList.remove('bg-emerald-100', 'text-emerald-700', 'dark:bg-emerald-900/30', 'dark:text-emerald-400');
-                        badgeEl.textContent = custCode ? "No Match" : "";
-                        if (!custCode) badgeEl.classList.add('hidden');
-                    }
-                }
-
-                document.getElementById('officer-coll-display-due').textContent = '৳' + totalDue.toLocaleString();
-
-                let reg = 0;
-                let adv = 0;
-                
-                if (customerFound && totalDue > 0) {
-                    if (totalColl <= totalDue) {
-                        reg = totalColl;
-                    } else {
-                        reg = totalDue;
-                        adv = totalColl - totalDue;
-                    }
-                } else {
-                    reg = totalColl;
-                }
-
-                const hiddenReg = document.getElementById('coll-reg-amount');
-                const hiddenAdv = document.getElementById('coll-adv-amount');
-                if (hiddenReg) hiddenReg.value = reg;
-                if (hiddenAdv) hiddenAdv.value = adv;
-                
-                const dispReg = document.getElementById('officer-coll-display-reg');
-                const dispAdv = document.getElementById('officer-coll-display-adv');
-                if (dispReg) dispReg.textContent = '৳' + reg.toLocaleString();
-                if (dispAdv) dispAdv.textContent = '৳' + adv.toLocaleString();
-            },
-
             handleCollectionSubmit(e) {
                 e.preventDefault();
-                
-                const dbLocal = Store.get();
-                if (dbLocal?.system_settings?.find(s => s.key === 'system_hold')?.value === 'true') {
-                    alert("System is currently on hold. Submissions are paused by Admin.");
-                    return;
-                }
                 
                 if (UI.collectionEntryMode === 'bulk') {
                     UI.submitBulkCustomers();
@@ -5752,14 +6470,7 @@ window.UI = {
                             badge.className = 'text-[9px] font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30 px-1.5 py-0.5 rounded border border-brand-200/50 dark:border-brand-800/30';
                         }
                         
-                        const targetView = UI.collectionReturnTo || 'officer-dashboard';
-                        UI.activeCustomerPreFill = null;
-                        UI.collectionReturnTo = null;
-                        if (targetView === 'officer-customers') {
-                            UI.renderOfficerCustomers();
-                        } else {
-                            UI.renderOfficerDashboard();
-                        }
+                        UI.renderOfficerDashboard();
                     } catch (err) {
                         alert("Error saving collection: " + err.message);
                     } finally {
@@ -5808,26 +6519,26 @@ window.UI = {
 
                 document.getElementById('views-container').innerHTML = `
                     <div class="animate-entry max-w-5xl mx-auto">
-                        <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                             <div>
                                 <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Settlements & Closures</h2>
                                 <p class="text-sm text-slate-500">History of early settlements and closures for your territory</p>
                             </div>
-                            <button onclick="UI.openSettlementModal()" class="px-4 py-2 bg-brand-600 text-white rounded-lg shadow-md hover:bg-brand-700 transition flex items-center font-bold text-sm">
+                            <button onclick="UI.openSettlementModal()" class="px-4 py-2 bg-brand-600 text-white rounded-lg shadow-lg hover:bg-brand-700 transition flex items-center font-bold text-sm">
                                 <i class="fa-solid fa-plus mr-2"></i> New Settlement
                             </button>
                         </div>
 
-                        <div class="glass-panel rounded-xl shadow-md dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700">
+                        <div class="glass-panel rounded-xl shadow-lg dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700">
                             <div class="overflow-x-auto">
                                 <table class="w-full text-sm text-left">
                                     <thead class="bg-slate-50 dark:bg-slate-800 text-xs text-slate-500 uppercase font-bold">
                                         <tr>
-                                            <th class="px-3 py-2.5">Date</th>
-                                            <th class="px-3 py-2.5">Customer Code</th>
-                                            <th class="px-3 py-2.5">Type</th>
-                                            <th class="px-3 py-2.5 text-right">Amount</th>
-                                            <th class="px-3 py-2.5">Remarks</th>
+                                            <th class="px-6 py-4">Date</th>
+                                            <th class="px-6 py-4">Customer Code</th>
+                                            <th class="px-6 py-4">Type</th>
+                                            <th class="px-6 py-4 text-right">Amount</th>
+                                            <th class="px-6 py-4">Remarks</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
@@ -5835,13 +6546,13 @@ window.UI = {
                     let badgeClass = s.type === 'Early Settlement' ? 'bg-purple-100 text-purple-700' : (s.type === 'Credit Note' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700');
                     return `
                                                 <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                                                    <td class="px-3 py-2.5 font-mono text-xs">${s.date}</td>
-                                                    <td class="px-3 py-2.5 font-bold text-slate-700 dark:text-slate-300">#${s.customerCode}</td>
-                                                    <td class="px-3 py-2.5">
+                                                    <td class="px-6 py-4 font-mono text-xs">${s.date}</td>
+                                                    <td class="px-6 py-4 font-bold text-slate-700 dark:text-slate-300">#${s.customerCode}</td>
+                                                    <td class="px-6 py-4">
                                                         <span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${badgeClass}">${s.type}</span>
                                                     </td>
-                                                    <td class="px-3 py-2.5 text-right font-mono font-bold">৳${Number(s.amount || 0).toLocaleString()}</td>
-                                                    <td class="px-3 py-2.5 text-xs italic text-slate-500 truncate max-w-xs">${s.remarks || '-'}</td>
+                                                    <td class="px-6 py-4 text-right font-mono font-bold">৳${Number(s.amount || 0).toLocaleString()}</td>
+                                                    <td class="px-6 py-4 text-xs italic text-slate-500 truncate max-w-xs">${s.remarks || '-'}</td>
                                                 </tr>
                                             `;
                 }).join('')}
@@ -5857,14 +6568,14 @@ window.UI = {
                 document.getElementById('views-container').innerHTML = `
             <div class="animate-entry max-w-2xl mx-auto mt-10" >
                         <div class="text-center mb-10">
-                            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-100 text-brand-600 mb-4 shadow-md hover-lift">
+                            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-100 text-brand-600 mb-4 shadow-lg hover-lift">
                                 <i class="fa-solid fa-magnifying-glass-chart text-3xl"></i>
                             </div>
                             <h2 class="text-3xl font-bold text-slate-800 dark:text-white mb-2">Vehicle Performance Analytics</h2>
                             <p class="text-slate-500">Search by Customer ID to view performance data</p>
                         </div>
 
-                        <div class="glass-panel p-2 rounded-xl shadow-xl flex items-center mb-10 border-2 border-brand-100 dark:border-brand-900/50 focus-within:border-brand-500 transition-colors">
+                        <div class="glass-panel p-2 rounded-2xl shadow-xl flex items-center mb-10 border-2 border-brand-100 dark:border-brand-900/50 focus-within:border-brand-500 transition-colors">
                             <i class="fa-solid fa-search text-slate-400 ml-4 text-xl"></i>
                             <input type="text" 
                                 placeholder="Enter Customer ID (e.g. C-1001)..." 
@@ -5930,23 +6641,23 @@ window.UI = {
                         </div>
 
                         <!--Summary Cards-->
-                        <div id="history-summary" class="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-4">
+                        <div id="history-summary" class="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
                             <!-- Injected by JS -->
                         </div>
 
                         <!--Table-->
-            <div class="glass-panel rounded-xl shadow-md dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700">
+            <div class="glass-panel rounded-xl shadow-lg dark:bg-dark-card overflow-hidden border border-slate-200 dark:border-slate-700">
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="bg-slate-50 dark:bg-slate-800 text-xs text-slate-500 uppercase font-bold">
                             <tr>
-                                <th class="px-3 py-2">Date</th>
-                                <th class="px-3 py-2">Receipt</th>
-                                <th class="px-3 py-2">Customer</th>
-                                <th class="px-3 py-2">Mode</th>
-                                <th class="px-3 py-2 text-right text-slate-400">Regular</th>
-                                <th class="px-3 py-2 text-right text-brand-500">Advance</th>
-                                <th class="px-3 py-2 text-right">Total</th>
+                                <th class="px-6 py-3">Date</th>
+                                <th class="px-6 py-3">Receipt</th>
+                                <th class="px-6 py-3">Customer</th>
+                                <th class="px-6 py-3">Mode</th>
+                                <th class="px-6 py-3 text-right text-slate-400">Regular</th>
+                                <th class="px-6 py-3 text-right text-brand-500">Advance</th>
+                                <th class="px-6 py-3 text-right">Total</th>
                             </tr>
                         </thead>
                         <tbody id="history-table-body" class="divide-y divide-slate-100 dark:divide-slate-700">
@@ -5990,7 +6701,7 @@ window.UI = {
 
                 // Update Summary
                 document.getElementById('history-summary').innerHTML = `
-            <div class="p-3 sm:p-4 rounded-xl sm:rounded-xl bg-gradient-to-br from-brand-500 to-emerald-600 text-white shadow-md relative overflow-hidden group">
+            <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-brand-500 to-emerald-600 text-white shadow-md relative overflow-hidden group">
                          <div class="absolute right-0 top-0 p-1.5 sm:p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                             <i class="fa-solid fa-sack-dollar text-2xl sm:text-5xl"></i>
                         </div>
@@ -5998,7 +6709,7 @@ window.UI = {
                         <p class="text-sm sm:text-2xl font-bold font-mono leading-none">${totalAmt.toLocaleString()}</p>
                         <p class="text-[8px] sm:text-xs opacity-75 mt-0.5 sm:mt-1">${start} to ${end}</p>
                     </div>
-                    <div class="p-3 sm:p-4 rounded-xl sm:rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+                    <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
                          <div class="absolute right-0 top-0 p-1.5 sm:p-3 opacity-5 group-hover:opacity-10 transition-opacity">
                             <i class="fa-solid fa-receipt text-2xl sm:text-5xl text-slate-400"></i>
                         </div>
@@ -6023,15 +6734,15 @@ window.UI = {
                         
                         tableHtml += `
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                            <td class="px-3 py-2 font-mono text-slate-600 dark:text-slate-400 text-xs whitespace-nowrap">${c.date}</td>
-                            <td class="px-3 py-2 font-medium text-slate-800 dark:text-white whitespace-nowrap">#${c.receipt}</td>
-                            <td class="px-3 py-2 font-bold text-brand-600 whitespace-nowrap">${c.customerCode || 'N/A'}</td>
-                            <td class="px-3 py-2">
+                            <td class="px-6 py-3 font-mono text-slate-600 dark:text-slate-400 text-xs whitespace-nowrap">${c.date}</td>
+                            <td class="px-6 py-3 font-medium text-slate-800 dark:text-white whitespace-nowrap">#${c.receipt}</td>
+                            <td class="px-6 py-3 font-bold text-brand-600 whitespace-nowrap">${c.customerCode || 'N/A'}</td>
+                            <td class="px-6 py-3">
                                 <span class="px-2 py-1 rounded text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-700 text-slate-500 border border-slate-200 dark:border-slate-600 whitespace-nowrap">${c.mode}</span>
                             </td>
-                            <td class="px-3 py-2 text-right font-mono text-slate-500 text-xs">${parseFloat(reg).toLocaleString()}</td>
-                            <td class="px-3 py-2 text-right font-mono text-brand-500 text-xs">${parseFloat(adv).toLocaleString()}</td>
-                            <td class="px-3 py-2 text-right font-mono font-bold text-slate-800 dark:text-white">${total.toLocaleString()}</td>
+                            <td class="px-6 py-3 text-right font-mono text-slate-500 text-xs">${parseFloat(reg).toLocaleString()}</td>
+                            <td class="px-6 py-3 text-right font-mono text-brand-500 text-xs">${parseFloat(adv).toLocaleString()}</td>
+                            <td class="px-6 py-3 text-right font-mono font-bold text-slate-800 dark:text-white">${total.toLocaleString()}</td>
                         </tr>
             `;
                     });
@@ -6101,1141 +6812,6 @@ window.UI = {
             },
 
             // --- EXPORTS & MODALS ---
-            
-            downloadCustomerTemplateCSV() {
-                const headers = ["Customer_ID", "Customer_Name", "Vehicle_Reg_Number", "Phone_Number", "First_Installment_Date", "Installment_Size", "Overdue_Inst_No", "Overdue_Taka", "Total_Outstanding", "Last_Payment_Date", "Last_3_Month_Payment_1", "Last_3_Month_Payment_2", "Last_3_Month_Payment_3", "Upazila_Code", "Upazila_Name", "Territory_Name"];
-                const csvContent = headers.join(',') + "\n";
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement("a");
-                const url = URL.createObjectURL(blob);
-                link.setAttribute("href", url);
-                link.setAttribute("download", "customer_upload_template.csv");
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            },
-
-            async handleCustomerCSV(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                UI.toggleLoader(true);
-                const reader = new FileReader();
-                reader.onload = async (event) => {
-                    try {
-                        const csvText = event.target.result;
-                        const lines = csvText.split('\n').filter(l => l.trim().length > 0);
-                        if (lines.length < 2) throw new Error("CSV is empty or missing data.");
-                        
-                        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
-
-                        const getVal = (row, variants, defaultIdx) => {
-                            for (const v of variants) {
-                                const idx = headers.indexOf(v.toLowerCase());
-                                if (idx !== -1 && row[idx] !== undefined) return row[idx];
-                            }
-                            return row[defaultIdx] !== undefined ? row[defaultIdx] : '';
-                        };
-                        
-                        const data = [];
-                        for (let i = 1; i < lines.length; i++) {
-                            const cleanRow = lines[i].split(',').map(val => val.trim().replace(/^"|"$/g, ''));
-                            
-                            if (cleanRow.length < 15) continue; // Skip malformed rows
-                            
-                            const customerId = getVal(cleanRow, ['customer_id', 'customer id', 'customerid'], 0);
-                            const customerName = getVal(cleanRow, ['customer_name', 'customer name', 'customername'], 1);
-                            const vehicleRegNo = getVal(cleanRow, ['vehicle_reg_number', 'vehicle reg number', 'vehicle_reg_no', 'vehicle reg no', 'vehicle reg', 'vehicleregnumber'], 2);
-                            const phone = getVal(cleanRow, ['phone_number', 'phone number', 'phone'], 3);
-                            const firstInstDate = getVal(cleanRow, ['first_installment_date', 'first installment date', 'firstinstdate'], 4);
-                            const instSize = parseFloat(getVal(cleanRow, ['installment_size', 'installment size', 'instsize'], 5)) || 0;
-                            const overdueInstNo = parseInt(getVal(cleanRow, ['overdue_inst_no', 'overdueinstno', 'overdue inst no'], 6)) || 0;
-                            const overdueTaka = parseFloat(getVal(cleanRow, ['overdue_taka', 'overduetaka', 'overdue taka'], 7)) || 0;
-                            const totalOutstanding = parseFloat(getVal(cleanRow, ['total_outstanding', 'total outstanding', 'outstanding'], 8)) || 0;
-                            const lastPaymentDate = getVal(cleanRow, ['last_payment_date', 'last payment date'], 9);
-                            const last3Month1 = parseFloat(getVal(cleanRow, ['last_3_month_payment_1', 'last 3 month payment 1', 'last_3_month_1'], 10)) || 0;
-                            const last3Month2 = parseFloat(getVal(cleanRow, ['last_3_month_payment_2', 'last 3 month payment 2', 'last_3_month_2'], 11)) || 0;
-                            const last3Month3 = parseFloat(getVal(cleanRow, ['last_3_month_payment_3', 'last 3 month payment 3', 'last_3_month_3'], 12)) || 0;
-                            const upazilaCode = getVal(cleanRow, ['upazila_code', 'upazila code'], 13);
-                            const upazilaName = getVal(cleanRow, ['upazila_name', 'upazila name'], 14);
-                            const territoryName = getVal(cleanRow, ['territory_name', 'territory name'], 15);
-                            
-                            data.push({
-                                customerId,
-                                customerName,
-                                vehicleRegNo,
-                                phone,
-                                firstInstDate,
-                                instSize,
-                                overdueInstNo,
-                                overdueTaka,
-                                totalOutstanding,
-                                lastPaymentDate,
-                                last3Month1,
-                                last3Month2,
-                                last3Month3,
-                                upazilaCode,
-                                upazilaName,
-                                territoryName
-                            });
-                        }
-
-                        const res = await fetch(`${Store.apiUrl}/sync-customers`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ data })
-                        });
-
-                        const result = await res.json();
-                        if (result.success) {
-                            UI.showNotification(`Successfully uploaded ${data.length} customers`, 'success');
-                            await Store.init(); // Refresh cache
-                            UI.renderAdminCustomers();
-                        } else {
-                            throw new Error("Backend failed to sync");
-                        }
-                    } catch (error) {
-                        console.error(error);
-                        UI.showNotification('Error processing CSV: ' + error.message, 'error');
-                    } finally {
-                        UI.toggleLoader(false);
-                    }
-                };
-                reader.readAsText(file);
-            },
-
-            renderAdminCustomers() {
-                const container = document.getElementById('views-container');
-                const customers = Store.cache.customers || [];
-                const territories = Store.cache.territories || [];
-
-                const territoryNames = [...new Set(customers.map(c => c.territoryName).filter(Boolean))].sort();
-                const territoryOptions = territoryNames.map(name => `<option value="${name}">${name}</option>`).join('');
-
-                container.innerHTML = `
-                    <!-- HEADER TOOLBAR WITH ACTION BUTTONS -->
-                    <div class="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                        <div>
-                            <h2 class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                <i class="fa-solid fa-users-gear text-brand-500"></i> Customer Management
-                            </h2>
-                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${customers.length} Active Customers loaded</p>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <button onclick="UI.openAddCustomerModal()" class="px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5">
-                                <i class="fa-solid fa-user-plus"></i> Add Customer
-                            </button>
-                            <input type="file" id="customer-csv-upload" class="hidden" accept=".csv" onchange="UI.handleCustomerCSV(event)">
-                            <button onclick="document.getElementById('customer-csv-upload').click()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5">
-                                <i class="fa-solid fa-cloud-arrow-up"></i> Upload CSV
-                            </button>
-                            <button onclick="UI.downloadCustomerTemplateCSV()" class="px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all shadow-sm flex items-center gap-1.5">
-                                <i class="fa-solid fa-download"></i> Template
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- CUSTOMER FILTER BAR -->
-                    <div class="glass-panel p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
-                            <!-- Search -->
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-slate-400">
-                                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
-                                </span>
-                                <input type="text" id="admin-customer-search" oninput="UI.filterAdminCustomers()" placeholder="Search ID, Name, Reg No, Phone..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 outline-none focus:border-brand-500">
-                            </div>
-
-                            <!-- Territory Filter -->
-                            <div>
-                                <select id="admin-customer-territory" onchange="UI.filterAdminCustomers()" class="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none cursor-pointer focus:border-brand-500">
-                                    <option value="all">All Territories</option>
-                                    ${territoryOptions}
-                                </select>
-                            </div>
-
-                            <!-- Status & Payment Filter -->
-                            <div>
-                                <select id="admin-customer-status" onchange="UI.filterAdminCustomers()" class="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none cursor-pointer focus:border-brand-500">
-                                    <option value="all">All Payment Statuses</option>
-                                    <option value="collected">Paid / Collected (MTD > 0)</option>
-                                    <option value="uncollected">Unpaid (MTD = 0)</option>
-                                    <option value="overdue">Overdue Only (Overdue > 0)</option>
-                                    <option value="clean">Up-to-Date / Clean</option>
-                                </select>
-                            </div>
-
-                            <!-- Sort Filter -->
-                            <div>
-                                <select id="admin-customer-sort" onchange="UI.filterAdminCustomers()" class="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none cursor-pointer focus:border-brand-500">
-                                    <option value="collected_desc">Sort: Collected MTD (High → Low)</option>
-                                    <option value="overdue_desc">Sort: Overdue (High → Low)</option>
-                                    <option value="outstanding_desc">Sort: Outstanding (High → Low)</option>
-                                    <option value="name_asc">Sort: Name (A to Z)</option>
-                                    <option value="id_asc">Sort: Customer ID</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- CUSTOMER TABLE (WITH COLLECTION DATE & ACTIONS) -->
-                    <div class="glass-panel rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-                        <div class="p-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center text-xs">
-                            <div id="admin-customer-count" class="font-bold text-slate-700 dark:text-slate-200">
-                                Showing customers...
-                            </div>
-                            <div class="text-slate-400 text-[11px] italic">
-                                <i class="fa-solid fa-arrows-left-right mr-1"></i> Scroll horizontally to view all columns
-                            </div>
-                        </div>
-                        
-                        <div class="overflow-x-auto max-h-[600px] overflow-y-auto relative scrollbar-thin">
-                            <table class="w-full text-left border-collapse whitespace-nowrap text-xs">
-                                <thead class="sticky top-0 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider text-[10px] z-10 border-b border-slate-200 dark:border-slate-700">
-                                    <tr>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700 sticky left-0 bg-slate-100 dark:bg-slate-800 z-20">Territory</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700">Upazila</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700 font-black text-slate-800 dark:text-white">Customer ID</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700 font-black text-slate-800 dark:text-white">Customer Name</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700">Phone</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700">Vehicle Reg No</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700">First Inst Date</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700 text-right">Inst Size</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700 text-right font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40">Collected (MTD)</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700 text-center font-bold text-indigo-600 dark:text-indigo-400">Collection Date</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700 text-center">Overdue Insts</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700 text-right font-bold text-rose-600 dark:text-rose-400">Overdue Taka</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700 text-right font-bold text-slate-800 dark:text-slate-100">Total Outstanding</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700">Last Pay Date</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700 text-right">Pay M-1</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700 text-right">Pay M-2</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700 text-right">Pay M-3</th>
-                                        <th class="px-3 py-2.5 border-r border-slate-200 dark:border-slate-700 text-center">Status</th>
-                                        <th class="px-3 py-2.5 text-center sticky right-0 bg-slate-100 dark:bg-slate-800 z-20">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="admin-customers-tbody" class="divide-y divide-slate-100 dark:divide-slate-800">
-                                </tbody>
-                            </table>
-                        </div>
-                        <div id="admin-customers-pagination" class="p-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center text-xs"></div>
-                    </div>
-                `;
-
-                this.filterAdminCustomers();
-            },
-
-            filterAdminCustomers() {
-                const customers = Store.cache.customers || [];
-                const db = Store.get();
-                const activeMonth = Utils.getActiveMonth();
-                const allCollections = db?.collections || [];
-
-                const search = (document.getElementById('admin-customer-search')?.value || '').toLowerCase().trim();
-                const territory = (document.getElementById('admin-customer-territory')?.value || 'all');
-                const status = (document.getElementById('admin-customer-status')?.value || 'all');
-                const sort = (document.getElementById('admin-customer-sort')?.value || 'collected_desc');
-
-                // Map customer collections for MTD amount & latest collection date
-                const mappedCustomers = customers.map(c => {
-                    const cleanCustomerId = String(c.customerId || '').trim().toLowerCase();
-                    const customerCollsThisMonth = allCollections.filter(coll => {
-                        const code = String(coll.customerCode || coll.customer_code || '').trim().toLowerCase();
-                        const m = coll.activeMonth || coll.active_month || (coll.date ? coll.date.slice(0, 7) : '');
-                        return code === cleanCustomerId && m === activeMonth;
-                    });
-                    const collectedMTD = customerCollsThisMonth.reduce((sum, coll) => sum + (parseFloat(coll.amount) || 0), 0);
-                    
-                    // Sort collections descending to find latest collection date
-                    const sortedColls = [...customerCollsThisMonth].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-                    const latestCollectionDate = sortedColls.length > 0 ? sortedColls[0].date : (c.lastPaymentDate || '-');
-
-                    return { ...c, collectedMTD, latestCollectionDate };
-                });
-
-                let filtered = mappedCustomers.filter(c => {
-                    if (search) {
-                        const matchesSearch = 
-                            (c.customerId || '').toLowerCase().includes(search) ||
-                            (c.customerName || '').toLowerCase().includes(search) ||
-                            (c.vehicleRegNo || '').toLowerCase().includes(search) ||
-                            (c.phone || '').toLowerCase().includes(search) ||
-                            (c.upazilaName || '').toLowerCase().includes(search);
-                        if (!matchesSearch) return false;
-                    }
-
-                    if (territory !== 'all' && (c.territoryName || '') !== territory) {
-                        return false;
-                    }
-
-                    const collAmt = c.collectedMTD || 0;
-                    const odAmt = parseFloat(c.overdueTaka) || 0;
-                    const odInst = parseInt(c.overdueInstNo) || 0;
-
-                    if (status === 'collected' && collAmt <= 0) return false;
-                    if (status === 'uncollected' && collAmt > 0) return false;
-                    if (status === 'overdue' && odAmt <= 0 && odInst <= 0) return false;
-                    if (status === 'clean' && (odAmt > 0 || odInst > 0)) return false;
-
-                    return true;
-                });
-
-                filtered.sort((a, b) => {
-                    if (sort === 'collected_desc') {
-                        return (b.collectedMTD || 0) - (a.collectedMTD || 0);
-                    } else if (sort === 'overdue_desc') {
-                        return (parseFloat(b.overdueTaka) || 0) - (parseFloat(a.overdueTaka) || 0);
-                    } else if (sort === 'outstanding_desc') {
-                        return (parseFloat(b.totalOutstanding) || 0) - (parseFloat(a.totalOutstanding) || 0);
-                    } else if (sort === 'name_asc') {
-                        return (a.customerName || '').localeCompare(b.customerName || '');
-                    } else if (sort === 'id_asc') {
-                        return (a.customerId || '').localeCompare(b.customerId || '');
-                    }
-                    return 0;
-                });
-
-                UI.adminCustomersFiltered = filtered;
-                UI.adminCustomersPage = 1;
-                UI.renderAdminCustomerPage();
-            },
-
-            renderAdminCustomerPage() {
-                const filtered = UI.adminCustomersFiltered || [];
-                const customers = Store.cache.customers || [];
-                const page = UI.adminCustomersPage || 1;
-                const pageSize = 50;
-                
-                const countEl = document.getElementById('admin-customer-count');
-                if (countEl) {
-                    const startIdx = (page - 1) * pageSize + 1;
-                    const endIdx = Math.min(page * pageSize, filtered.length);
-                    countEl.innerHTML = `Showing <span class="text-brand-600 dark:text-brand-400 font-extrabold">${filtered.length > 0 ? startIdx : 0}-${endIdx}</span> of <span class="font-bold">${filtered.length}</span> matching customers (${customers.length} total)`;
-                }
-
-                const tbodyEl = document.getElementById('admin-customers-tbody');
-                if (!tbodyEl) return;
-
-                const paginationEl = document.getElementById('admin-customers-pagination');
-                if (paginationEl) {
-                    const totalPages = Math.ceil(filtered.length / pageSize);
-                    paginationEl.innerHTML = `
-                        <div class="text-slate-600 dark:text-slate-400 font-medium">Page <span class="font-bold text-slate-800 dark:text-slate-200">${page}</span> of ${totalPages || 1}</div>
-                        <div class="flex items-center gap-2">
-                            <button onclick="if(UI.adminCustomersPage > 1) { UI.adminCustomersPage--; UI.renderAdminCustomerPage(); }" class="px-3 py-1.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 transition ${page === 1 ? 'opacity-50 cursor-not-allowed' : ''}" ${page === 1 ? 'disabled' : ''}>
-                                <i class="fa-solid fa-chevron-left mr-1"></i> Prev
-                            </button>
-                            <button onclick="if(UI.adminCustomersPage < ${totalPages}) { UI.adminCustomersPage++; UI.renderAdminCustomerPage(); }" class="px-3 py-1.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 transition ${page === totalPages || totalPages === 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${page === totalPages || totalPages === 0 ? 'disabled' : ''}>
-                                Next <i class="fa-solid fa-chevron-right ml-1"></i>
-                            </button>
-                        </div>
-                    `;
-                }
-
-                let html = '';
-                const slice = filtered.slice((page - 1) * pageSize, page * pageSize);
-
-                if (slice.length === 0) {
-                    html = `
-                        <tr>
-                            <td colspan="19" class="py-8 text-center text-slate-400 dark:text-slate-500 italic">
-                                No customers found matching your filter criteria.
-                            </td>
-                        </tr>
-                    `;
-                } else {
-                    slice.forEach(c => {
-                        const collAmt = c.collectedMTD || 0;
-                        const odAmt = parseFloat(c.overdueTaka) || 0;
-                        const odInst = parseInt(c.overdueInstNo) || 0;
-                        const instSize = parseFloat(c.instSize) || 0;
-                        const outAmt = parseFloat(c.totalOutstanding) || 0;
-                        const m1 = parseFloat(c.last3Month1) || 0;
-                        const m2 = parseFloat(c.last3Month2) || 0;
-                        const m3 = parseFloat(c.last3Month3) || 0;
-
-                        let statusBadge = '';
-                        if (collAmt >= instSize && instSize > 0) {
-                            statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">PAID</span>';
-                        } else if (collAmt > 0) {
-                            statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">PARTIAL</span>';
-                        } else if (odAmt > 0 || odInst > 0) {
-                            statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">OVERDUE</span>';
-                        } else {
-                            statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-500 border border-slate-200">UNPAID</span>';
-                        }
-
-                        const custKey = encodeURIComponent(c.customerId || c.id);
-
-                        html += `
-                            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 sticky left-0 bg-white dark:bg-slate-900 font-semibold text-slate-700 dark:text-slate-200">
-                                    <span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[11px]">${c.territoryName || '-'}</span>
-                                </td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-slate-500 text-xs">${c.upazilaName || '-'}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 font-mono font-bold text-brand-600 dark:text-brand-400 text-xs">${c.customerId}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 font-medium text-slate-900 dark:text-white text-xs">${c.customerName || '-'}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 font-mono text-slate-500 text-xs">${c.phone || '-'}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 font-mono text-slate-600 dark:text-slate-300 text-xs">${c.vehicleRegNo || '-'}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-slate-500 text-xs">${c.firstInstDate || '-'}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-right font-mono text-xs">৳${Math.round(instSize).toLocaleString()}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-right font-mono font-black bg-emerald-50/50 dark:bg-emerald-950/20 ${collAmt > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}">৳${Math.round(collAmt).toLocaleString()}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-center font-mono font-bold text-indigo-600 dark:text-indigo-400 text-xs">${c.latestCollectionDate || '-'}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-center font-mono font-bold ${odInst > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}">${odInst}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-right font-mono font-bold ${odAmt > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}">৳${Math.round(odAmt).toLocaleString()}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-right font-mono font-bold text-slate-800 dark:text-slate-100">৳${Math.round(outAmt).toLocaleString()}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-slate-500 text-xs">${c.lastPaymentDate || '-'}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-right font-mono text-slate-600 dark:text-slate-400 text-xs">৳${Math.round(m1).toLocaleString()}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-right font-mono text-slate-600 dark:text-slate-400 text-xs">৳${Math.round(m2).toLocaleString()}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-right font-mono text-slate-600 dark:text-slate-400 text-xs">৳${Math.round(m3).toLocaleString()}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-center">
-                                    ${statusBadge}
-                                </td>
-                                <td class="px-3 py-2 text-center sticky right-0 bg-white dark:bg-slate-900 z-10">
-                                    <div class="flex items-center justify-center gap-1.5">
-                                        <button onclick="UI.openEditCustomerModal('${custKey}')" class="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded transition" title="Edit Customer Info">
-                                            <i class="fa-solid fa-pen-to-square text-xs"></i>
-                                        </button>
-                                        <button onclick="UI.openCollectionModal(null, null, '${custKey}')" class="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded transition" title="Log / Edit Collection">
-                                            <i class="fa-solid fa-money-bill-wave text-xs"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-                    });
-                }
-
-                tbodyEl.innerHTML = html;
-            },
-
-            openAddCustomerModal() {
-                const territories = Store.cache.territories || [];
-                const terrOptions = territories.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
-
-                const content = `
-                    <form onsubmit="UI.saveAdminCustomer(event, false)" class="space-y-3">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Customer ID *</label>
-                                <input type="text" id="cust-modal-id" required placeholder="e.g. CUST1001" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-mono">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Customer Name *</label>
-                                <input type="text" id="cust-modal-name" required placeholder="Full Name" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
-                                <input type="text" id="cust-modal-phone" placeholder="017xxxxxxxx" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-mono">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Vehicle Reg No</label>
-                                <input type="text" id="cust-modal-veh" placeholder="e.g. DHAKA-METRO-11-2222" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-mono">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Territory</label>
-                                <select id="cust-modal-territory" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none cursor-pointer">
-                                    ${terrOptions}
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Upazila Name</label>
-                                <input type="text" id="cust-modal-upazila" placeholder="Upazila Name" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">First Inst Date</label>
-                                <input type="date" id="cust-modal-firstdate" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Installment Size (৳)</label>
-                                <input type="number" step="any" id="cust-modal-instsize" placeholder="0" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-mono">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Overdue Inst No</label>
-                                <input type="number" id="cust-modal-overdueinst" placeholder="0" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-mono">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Overdue Amount (৳)</label>
-                                <input type="number" step="any" id="cust-modal-overduetaka" placeholder="0" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-mono">
-                            </div>
-                            <div class="sm:col-span-2">
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Total Outstanding (৳)</label>
-                                <input type="number" step="any" id="cust-modal-outstanding" placeholder="0" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-mono">
-                            </div>
-                        </div>
-
-                        <div class="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
-                            <button type="button" onclick="UI.closeModal('generic-modal')" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition">Cancel</button>
-                            <button type="submit" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition shadow-sm">Save Customer</button>
-                        </div>
-                    </form>
-                `;
-
-                this.renderModal('<i class="fa-solid fa-user-plus text-brand-500 mr-2"></i> Add New Customer', content);
-            },
-
-            openEditCustomerModal(custKey) {
-                const customers = Store.cache.customers || [];
-                const keyDecoded = decodeURIComponent(custKey);
-                const c = customers.find(item => String(item.customerId || item.id) === keyDecoded);
-                if (!c) {
-                    UI.showNotification('Customer not found', 'error');
-                    return;
-                }
-
-                const territories = Store.cache.territories || [];
-                const terrOptions = territories.map(t => `<option value="${t.name}" ${(c.territoryName === t.name) ? 'selected' : ''}>${t.name}</option>`).join('');
-
-                const content = `
-                    <form onsubmit="UI.saveAdminCustomer(event, true, '${encodeURIComponent(c.id || c.customerId)}')" class="space-y-3">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Customer ID</label>
-                                <input type="text" id="cust-modal-id" value="${c.customerId}" readonly class="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-mono text-slate-500">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Customer Name *</label>
-                                <input type="text" id="cust-modal-name" value="${c.customerName || ''}" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
-                                <input type="text" id="cust-modal-phone" value="${c.phone || ''}" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-mono">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Vehicle Reg No</label>
-                                <input type="text" id="cust-modal-veh" value="${c.vehicleRegNo || ''}" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-mono">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Territory</label>
-                                <select id="cust-modal-territory" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none cursor-pointer">
-                                    ${terrOptions}
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Upazila Name</label>
-                                <input type="text" id="cust-modal-upazila" value="${c.upazilaName || ''}" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">First Inst Date</label>
-                                <input type="date" id="cust-modal-firstdate" value="${c.firstInstDate || ''}" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Installment Size (৳)</label>
-                                <input type="number" step="any" id="cust-modal-instsize" value="${c.instSize || 0}" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-mono">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Overdue Inst No</label>
-                                <input type="number" id="cust-modal-overdueinst" value="${c.overdueInstNo || 0}" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-mono">
-                            </div>
-                            <div>
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Overdue Amount (৳)</label>
-                                <input type="number" step="any" id="cust-modal-overduetaka" value="${c.overdueTaka || 0}" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-mono">
-                            </div>
-                            <div class="sm:col-span-2">
-                                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Total Outstanding (৳)</label>
-                                <input type="number" step="any" id="cust-modal-outstanding" value="${c.totalOutstanding || 0}" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-mono">
-                            </div>
-                        </div>
-
-                        <div class="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
-                            <button type="button" onclick="UI.closeModal('generic-modal')" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition">Cancel</button>
-                            <button type="submit" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition shadow-sm">Update Customer</button>
-                        </div>
-                    </form>
-                `;
-
-                this.renderModal('<i class="fa-solid fa-user-pen text-brand-500 mr-2"></i> Edit Customer Info', content);
-            },
-
-            async saveAdminCustomer(e, isEdit = false, encodedDbId = '') {
-                e.preventDefault();
-                UI.toggleLoader(true);
-
-                try {
-                    const customerId = document.getElementById('cust-modal-id').value.trim();
-                    const customerName = document.getElementById('cust-modal-name').value.trim();
-                    const phone = document.getElementById('cust-modal-phone').value.trim();
-                    const vehicleRegNo = document.getElementById('cust-modal-veh').value.trim();
-                    const territoryName = document.getElementById('cust-modal-territory').value;
-                    const upazilaName = document.getElementById('cust-modal-upazila').value.trim();
-                    const firstInstDate = document.getElementById('cust-modal-firstdate').value;
-                    const instSize = parseFloat(document.getElementById('cust-modal-instsize').value) || 0;
-                    const overdueInstNo = parseInt(document.getElementById('cust-modal-overdueinst').value) || 0;
-                    const overdueTaka = parseFloat(document.getElementById('cust-modal-overduetaka').value) || 0;
-                    const totalOutstanding = parseFloat(document.getElementById('cust-modal-outstanding').value) || 0;
-
-                    const payload = {
-                        customerId,
-                        customerName,
-                        phone,
-                        vehicleRegNo,
-                        territoryName,
-                        upazilaName,
-                        firstInstDate,
-                        instSize,
-                        overdueInstNo,
-                        overdueTaka,
-                        totalOutstanding
-                    };
-
-                    if (isEdit) {
-                        const dbId = decodeURIComponent(encodedDbId);
-                        payload.id = dbId;
-                    }
-
-                    await Store.update('customers', payload);
-                    await Store.init();
-
-                    UI.closeModal('generic-modal');
-                    UI.showNotification(isEdit ? 'Customer details updated!' : 'New customer added successfully!', 'success');
-                    UI.renderAdminCustomers();
-                } catch (err) {
-                    console.error(err);
-                    UI.showNotification('Error saving customer: ' + err.message, 'error');
-                } finally {
-                    UI.toggleLoader(false);
-                }
-            },
-
-            openAddCustomerCollectionModal(custKey) {
-                const customers = Store.cache.customers || [];
-                const keyDecoded = decodeURIComponent(custKey);
-                const c = customers.find(item => String(item.customerId || item.id) === keyDecoded);
-                if (!c) {
-                    UI.showNotification('Customer not found', 'error');
-                    return;
-                }
-
-                const todayStr = Utils.getLocalDate();
-
-                const content = `
-                    <form onsubmit="UI.saveAdminCustomerCollection(event, '${encodeURIComponent(c.customerId)}')" class="space-y-3 text-xs">
-                        <div class="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
-                            <p class="font-bold text-slate-800 dark:text-white text-sm">${c.customerName || 'Customer'}</p>
-                            <p class="text-[11px] font-mono text-slate-400">ID: ${c.customerId} • Territory: ${c.territoryName || '-'}</p>
-                        </div>
-
-                        <div>
-                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Collection Date *</label>
-                            <input type="date" id="cust-coll-date" value="${todayStr}" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none">
-                        </div>
-
-                        <div>
-                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Collection Amount (৳) *</label>
-                            <input type="number" step="any" id="cust-coll-amount" required placeholder="Amount in Taka" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-mono font-bold text-emerald-600">
-                        </div>
-
-                        <div>
-                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Payment Mode</label>
-                            <select id="cust-coll-mode" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none cursor-pointer">
-                                <option value="bKash">bKash</option>
-                                <option value="Bank Transfer">Bank Transfer</option>
-                                <option value="Cheque">Cheque</option>
-                                <option value="Cash">Cash</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Money Receipt / Remarks</label>
-                            <input type="text" id="cust-coll-remarks" placeholder="MR No or payment notes" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none">
-                        </div>
-
-                        <div class="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
-                            <button type="button" onclick="UI.closeModal('generic-modal')" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 transition">Cancel</button>
-                            <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-sm">Save Collection</button>
-                        </div>
-                    </form>
-                `;
-
-                this.renderModal('<i class="fa-solid fa-money-bill-wave text-emerald-500 mr-2"></i> Log Collection Entry', content);
-            },
-
-            async saveAdminCustomerCollection(e, encodedCustId) {
-                e.preventDefault();
-                UI.toggleLoader(true);
-
-                try {
-                    const customerCode = decodeURIComponent(encodedCustId);
-                    const customers = Store.cache.customers || [];
-                    const c = customers.find(item => item.customerId === customerCode) || {};
-
-                    const territories = Store.cache.territories || [];
-                    const terr = territories.find(t => t.name === c.territoryName) || {};
-
-                    const date = document.getElementById('cust-coll-date').value;
-                    const amount = parseFloat(document.getElementById('cust-coll-amount').value) || 0;
-                    const mode = document.getElementById('cust-coll-mode').value;
-                    const remarks = document.getElementById('cust-coll-remarks').value.trim();
-
-                    const payload = {
-                        customerCode,
-                        customerName: c.customerName || '',
-                        territoryId: terr.id || '',
-                        territory_id: terr.id || '',
-                        date,
-                        amount,
-                        mode,
-                        remarks,
-                        activeMonth: date.slice(0, 7)
-                    };
-
-                    await Store.update('collections', payload);
-                    await Store.init();
-
-                    UI.closeModal('generic-modal');
-                    UI.showNotification('Collection recorded successfully!', 'success');
-                    UI.renderAdminCustomers();
-                } catch (err) {
-                    console.error(err);
-                    UI.showNotification('Error logging collection: ' + err.message, 'error');
-                } finally {
-                    UI.toggleLoader(false);
-                }
-            },
-
-            setOfficerCustomerSort(sortType) {
-                this.officerCustomerSort = sortType;
-                this.filterOfficerCustomers();
-            },
-
-            renderOfficerCustomers() {
-                const container = document.getElementById('views-container');
-                const userTerritoryId = Auth.currentUser.territoryId;
-                const territory = Store.cache.territories?.find(t => t.id === userTerritoryId);
-                const territoryName = territory ? territory.name.toLowerCase() : '';
-                
-                // Filter customers by assigned territory name (fuzzy match)
-                this.officerCustomersList = (Store.cache.customers || []).filter(c => c.territoryName && c.territoryName.toLowerCase().includes(territoryName));
-                
-                const totalOutstanding = this.officerCustomersList.reduce((sum, c) => sum + (parseFloat(c.totalOutstanding) || 0), 0);
-                const totalOverdue = this.officerCustomersList.reduce((sum, c) => sum + (parseFloat(c.overdueTaka) || 0), 0);
-                
-                const unpaidCustomers = this.officerCustomersList.filter(c => (parseFloat(c.overdueTaka) || 0) > 0 || (parseInt(c.overdueInstNo) || 0) > 0);
-                const paidCustomers = this.officerCustomersList.filter(c => (parseFloat(c.overdueTaka) || 0) <= 0 && (parseInt(c.overdueInstNo) || 0) <= 0);
-
-                const paidCount = paidCustomers.length;
-                const unpaidCount = unpaidCustomers.length;
-
-                // Extract unique upazilas for quick filter
-                const upazilas = [...new Set(this.officerCustomersList.map(c => c.upazilaName).filter(Boolean))].sort();
-
-                this.officerCustomerFilter = this.officerCustomerFilter || 'all';
-                this.officerCustomerSort = this.officerCustomerSort || 'overdue_desc';
-
-                let upazilaOptions = '<option value="all">All Upazilas</option>';
-                upazilas.forEach(u => {
-                    upazilaOptions += `<option value="${u}">${u}</option>`;
-                });
-
-                container.innerHTML = `
-                    <div class="mb-3 flex justify-between items-center">
-                        <div>
-                            <h2 class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">My Customers</h2>
-                            <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">${territory?.name || 'Territory'} • ${this.officerCustomersList.length} Customers</p>
-                        </div>
-                    </div>
-
-                    <!-- Compact Mobile Dashboard & Filter Bar -->
-                    <div class="glass-panel p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4">
-                        <!-- Stat / Filter Tabs (3 Columns) -->
-                        <div class="grid grid-cols-3 gap-2 mb-2.5">
-                            <!-- All -->
-                            <button onclick="UI.setOfficerCustomerFilter('all')" id="oc-filter-all" class="p-2 sm:p-2.5 rounded-xl border-2 ${this.officerCustomerFilter === 'all' ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/30' : 'border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800'} text-left transition-all shadow-2xs">
-                                <div class="flex justify-between items-center text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                                    <span>TOTAL</span>
-                                    <i class="fa-solid fa-users text-brand-500 text-[10px]"></i>
-                                </div>
-                                <p class="text-base font-black text-slate-800 dark:text-white mt-0.5">${this.officerCustomersList.length}</p>
-                            </button>
-
-                            <!-- Paid -->
-                            <button onclick="UI.setOfficerCustomerFilter('paid')" id="oc-filter-paid" class="p-2 sm:p-2.5 rounded-xl border-2 ${this.officerCustomerFilter === 'paid' ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30' : 'border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800'} text-left transition-all shadow-2xs">
-                                <div class="flex justify-between items-center text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                                    <span>PAID</span>
-                                    <i class="fa-solid fa-circle-check text-emerald-500 text-[10px]"></i>
-                                </div>
-                                <p class="text-base font-black text-emerald-600 dark:text-emerald-400 mt-0.5">${paidCount}</p>
-                            </button>
-
-                            <!-- Unpaid -->
-                            <button onclick="UI.setOfficerCustomerFilter('unpaid')" id="oc-filter-unpaid" class="p-2 sm:p-2.5 rounded-xl border-2 ${this.officerCustomerFilter === 'unpaid' ? 'border-rose-500 bg-rose-50/50 dark:bg-rose-950/30' : 'border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800'} text-left transition-all shadow-2xs">
-                                <div class="flex justify-between items-center text-[10px] font-bold text-rose-600 dark:text-rose-400">
-                                    <span>UNPAID</span>
-                                    <i class="fa-solid fa-triangle-exclamation text-rose-500 text-[10px]"></i>
-                                </div>
-                                <p class="text-base font-black text-rose-600 dark:text-rose-400 mt-0.5">${unpaidCount}</p>
-                            </button>
-                        </div>
-
-                        <!-- Advanced Search, Upazila & Sort Toolbar -->
-                        <div class="space-y-2">
-                            <!-- Search Bar -->
-                            <div class="w-full flex items-center bg-slate-50 dark:bg-slate-800/80 rounded-xl px-3 py-1.5 border border-slate-200 dark:border-slate-700 focus-within:border-brand-500 transition-colors shadow-2xs">
-                                <i class="fa-solid fa-search text-slate-400 text-xs mr-2 shrink-0"></i>
-                                <input type="text" id="oc-search" onkeyup="UI.filterOfficerCustomers()" placeholder="Search Name, ID, Vehicle Reg No..." class="w-full bg-transparent border-none focus:outline-none text-xs text-slate-700 dark:text-slate-200">
-                            </div>
-
-                            <!-- Sort & Upazila Filters -->
-                            <div class="grid grid-cols-2 gap-2 text-xs">
-                                <div class="flex items-center bg-slate-50 dark:bg-slate-800/80 rounded-xl px-2 py-1 border border-slate-200 dark:border-slate-700">
-                                    <i class="fa-solid fa-sort text-slate-400 text-[10px] mr-1.5"></i>
-                                    <select id="oc-sort" onchange="UI.setOfficerCustomerSort(this.value)" class="w-full bg-transparent border-none focus:outline-none text-[11px] text-slate-700 dark:text-slate-200 font-semibold cursor-pointer">
-                                        <option value="overdue_desc">Sort: Overdue High→Low</option>
-                                        <option value="outstanding_desc">Sort: Outst. High→Low</option>
-                                        <option value="name_asc">Sort: Name (A to Z)</option>
-                                    </select>
-                                </div>
-
-                                <div class="flex items-center bg-slate-50 dark:bg-slate-800/80 rounded-xl px-2 py-1 border border-slate-200 dark:border-slate-700">
-                                    <i class="fa-solid fa-location-dot text-slate-400 text-[10px] mr-1.5"></i>
-                                    <select id="oc-upazila-filter" onchange="UI.filterOfficerCustomers()" class="w-full bg-transparent border-none focus:outline-none text-[11px] text-slate-700 dark:text-slate-200 font-semibold cursor-pointer">
-                                        ${upazilaOptions}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Customer Count Status Indicator -->
-                    <div class="flex justify-between items-center mb-2 px-1 text-[11px] font-bold text-slate-400">
-                        <span id="oc-count-info">Showing customers...</span>
-                        <span class="text-[10px] font-semibold text-slate-400"><i class="fa-solid fa-hand-pointer mr-1"></i>Tap card to expand</span>
-                    </div>
-
-                    <!-- Customer Grid / Compact List -->
-                    <div id="officer-customers-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pb-24">
-                    </div>
-                `;
-                
-                this.filterOfficerCustomers();
-            },
-
-            setOfficerCustomerFilter(filterType) {
-                this.officerCustomerFilter = filterType;
-                
-                ['all', 'paid', 'unpaid'].forEach(f => {
-                    const card = document.getElementById(`oc-filter-${f}`);
-                    if (card) {
-                        if (f === filterType) {
-                            card.className = f === 'paid' ? 'p-2 sm:p-2.5 rounded-xl border-2 border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30 text-left transition-all shadow-2xs' :
-                                             f === 'unpaid' ? 'p-2 sm:p-2.5 rounded-xl border-2 border-rose-500 bg-rose-50/50 dark:bg-rose-950/30 text-left transition-all shadow-2xs' :
-                                             'p-2 sm:p-2.5 rounded-xl border-2 border-brand-500 bg-brand-50/50 dark:bg-brand-950/30 text-left transition-all shadow-2xs';
-                        } else {
-                            card.className = 'p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800 text-left transition-all shadow-2xs';
-                        }
-                    }
-                });
-
-                this.filterOfficerCustomers();
-            },
-
-            toggleCustomerCardDetail(cardId) {
-                const el = document.getElementById(cardId);
-                const icon = document.getElementById(`chevron-icon-${cardId}`);
-                if (el) {
-                    if (el.classList.contains('hidden')) {
-                        el.classList.remove('hidden');
-                        if (icon) icon.style.transform = 'rotate(180deg)';
-                    } else {
-                        el.classList.add('hidden');
-                        if (icon) icon.style.transform = 'rotate(0deg)';
-                    }
-                }
-            },
-
-            renderOfficerCustomersGrid(list) {
-                const grid = document.getElementById('officer-customers-grid');
-                if (!grid) return;
-                
-                const countInfo = document.getElementById('oc-count-info');
-                if (countInfo) {
-                    countInfo.textContent = `Showing ${list.length} customer${list.length === 1 ? '' : 's'}`;
-                }
-
-                if (list.length === 0) {
-                    grid.innerHTML = `<div class="p-8 text-center text-slate-500 glass-panel rounded-xl text-xs font-semibold col-span-full">No customers match the active search/filters.</div>`;
-                    return;
-                }
-
-                const db = Store.get();
-                const activeMonth = Utils.getActiveMonth();
-                const allCollections = db?.collections || [];
-
-                let html = '';
-                list.slice(0, 150).forEach((c, idx) => { // Render up to 150 smoothly
-                    const cardId = `cust-detail-${idx}`;
-                    
-                    // Auto-sync collection amount for this customer ID (case-insensitive trim match)
-                    const cleanCustomerId = String(c.customerId || '').trim().toLowerCase();
-                    const customerCollsThisMonth = allCollections.filter(coll => {
-                        const code = String(coll.customerCode || coll.customer_code || '').trim().toLowerCase();
-                        const m = coll.activeMonth || coll.active_month || (coll.date ? coll.date.slice(0, 7) : '');
-                        return code === cleanCustomerId && m === activeMonth;
-                    });
-                    const collectedThisMonth = customerCollsThisMonth.reduce((sum, coll) => sum + (parseFloat(coll.amount) || 0), 0);
-                    const instSize = parseFloat(c.instSize) || 0;
-                    const isPartial = collectedThisMonth > 0 && (instSize > 0 ? collectedThisMonth < instSize : false);
-
-                    const borderAccentClass = isPartial ? 'border-l-4 border-l-amber-500 ring-1 ring-amber-500/20' :
-                                              collectedThisMonth > 0 ? 'border-l-4 border-l-emerald-500 ring-1 ring-emerald-500/20' :
-                                              (c.overdueInstNo || 0) >= 3 ? 'border-l-4 border-l-rose-500' :
-                                              (c.overdueInstNo || 0) > 0 ? 'border-l-4 border-l-amber-500' :
-                                              'border-l-4 border-l-emerald-500';
-
-                    html += `
-                        <div class="glass-panel rounded-xl border border-slate-200/90 dark:border-slate-700/80 overflow-hidden hover:shadow-md transition-all duration-200 flex flex-col ${borderAccentClass}">
-                            <!-- Main Compact Body (Click to Expand Details) -->
-                            <div onclick="UI.toggleCustomerCardDetail('${cardId}')" class="p-3 cursor-pointer select-none">
-                                <!-- Top Row: Name, Customer ID & OD Badge ONLY -->
-                                <div class="flex justify-between items-start gap-1.5 mb-1">
-                                    <div class="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
-                                        <h3 class="font-bold text-slate-800 dark:text-white text-sm sm:text-base leading-tight truncate">${c.customerName}</h3>
-                                        <span class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-300 rounded font-mono text-[10px] font-bold shrink-0 border border-slate-200/50 dark:border-slate-600/50">
-                                            ID: ${c.customerId}
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center gap-1 shrink-0">
-                                        <!-- OD Number Badge -->
-                                        <span class="px-2 py-0.5 ${c.overdueInstNo > 0 ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400 border border-rose-200/60 font-bold' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/60 font-semibold'} rounded-lg text-[10px] sm:text-[11px] shrink-0">
-                                            ${c.overdueInstNo > 0 ? `OD: ${c.overdueInstNo} Inst` : 'Paid'}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <!-- Subtitle Row: Upazila & (if Short Payment) Notice -->
-                                <div class="flex justify-between items-center mb-2 text-[10px] sm:text-[11px]">
-                                    <span class="font-medium text-slate-400 flex items-center gap-1">
-                                        <i class="fa-solid fa-location-dot text-[9px] text-slate-400"></i>
-                                        <span>${c.upazilaName || 'Upazila N/A'}</span>
-                                    </span>
-                                    ${isPartial ? `
-                                    <span class="px-2 py-0.5 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/80 rounded-md text-[10px] font-bold flex items-center gap-1 shrink-0 shadow-2xs">
-                                        <i class="fa-solid fa-triangle-exclamation text-[9px] text-amber-500"></i> Short Payment
-                                    </span>
-                                    ` : ''}
-                                </div>
-
-                                <!-- Key Info Grid: Inst. Size, Overdue Taka & Collected Taka -->
-                                <div class="grid ${collectedThisMonth > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-1.5 sm:gap-2 bg-slate-50/80 dark:bg-slate-800/60 p-2 rounded-xl border border-slate-100 dark:border-slate-700/50 text-xs">
-                                    <div>
-                                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Inst. Size</span>
-                                        <span class="font-extrabold text-slate-700 dark:text-slate-200 text-xs sm:text-sm">৳${Math.round(instSize).toLocaleString()}</span>
-                                    </div>
-                                    <div class="${collectedThisMonth > 0 ? 'text-center' : 'text-right'}">
-                                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Overdue Taka</span>
-                                        <span class="font-extrabold text-rose-600 dark:text-rose-400 text-xs sm:text-sm">৳${Math.round(parseFloat(c.overdueTaka) || 0).toLocaleString()}</span>
-                                    </div>
-                                    ${collectedThisMonth > 0 ? `
-                                    <div class="text-right">
-                                        <span class="text-[9px] ${isPartial ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'} font-bold uppercase tracking-wider block">Collected</span>
-                                        <span class="font-extrabold ${isPartial ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'} text-xs sm:text-sm">৳${Math.round(collectedThisMonth).toLocaleString()}</span>
-                                    </div>
-                                    ` : ''}
-                                </div>
-                            </div>
-
-                            ${this.renderCustomerExpandableDrawer(c, cardId, collectedThisMonth, customerCollsThisMonth, isPartial)}
-
-                            <!-- Action Bar: Collect & Call Buttons -->
-                            <div class="px-3 py-2 bg-slate-50/90 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-700 flex gap-2 items-center mt-auto">
-                                <!-- Collect Button -->
-                                <button onclick="event.stopPropagation(); UI.initiateCollectionFromCustomer('${c.customerId}', ${c.instSize})" class="flex-1 bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white py-1.5 px-3 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5">
-                                    <i class="fa-solid fa-money-bill-wave text-xs"></i>
-                                    <span>Collect</span>
-                                </button>
-
-                                <!-- Call Button -->
-                                <a href="tel:${c.phone}" onclick="event.stopPropagation()" class="px-3 py-1.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-emerald-600 dark:text-emerald-400 font-bold text-xs hover:bg-emerald-50 dark:hover:bg-slate-600 transition-all shadow-2xs flex items-center gap-1.5">
-                                    <i class="fa-solid fa-phone text-xs text-emerald-500"></i>
-                                    <span>Call</span>
-                                </a>
-
-                                <!-- Expand Arrow -->
-                                <button onclick="event.stopPropagation(); UI.toggleCustomerCardDetail('${cardId}')" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
-                                    <i class="fa-solid fa-chevron-down text-xs transition-transform duration-200" id="chevron-icon-${cardId}"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                grid.innerHTML = html;
-            },
-
-            getLast3MonthNames() {
-                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                const now = new Date();
-                
-                // Month 1 = 1 month ago (Last Month)
-                const d1 = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                // Month 2 = 2 months ago (Month Before Last)
-                const d2 = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-                // Month 3 = 3 months ago
-                const d3 = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-
-                return {
-                    m1: monthNames[d1.getMonth()] + " '" + String(d1.getFullYear()).slice(-2),
-                    m2: monthNames[d2.getMonth()] + " '" + String(d2.getFullYear()).slice(-2),
-                    m3: monthNames[d3.getMonth()] + " '" + String(d3.getFullYear()).slice(-2)
-                };
-            },
-
-            renderCustomerExpandableDrawer(c, cardId, collectedThisMonth = 0, customerCollsThisMonth = [], isPartial = false) {
-                const months = this.getLast3MonthNames();
-                const instSize = parseFloat(c.instSize) || 0;
-                const shortAmount = Math.max(0, instSize - collectedThisMonth);
-
-                return `
-                    <div id="${cardId}" class="hidden bg-slate-50/90 dark:bg-slate-900/80 border-t border-slate-200/60 dark:border-slate-700/60 p-3 space-y-2.5 text-xs animate-entry">
-                        ${collectedThisMonth > 0 ? `
-                        <!-- Current Month Auto-Synced Payment Banner -->
-                        <div class="flex justify-between items-center ${isPartial ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/60' : 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-200/60 dark:border-emerald-800/60'} p-2.5 rounded-xl border text-xs">
-                            <div class="flex items-center gap-2">
-                                <i class="${isPartial ? 'fa-solid fa-chart-pie text-amber-500' : 'fa-solid fa-circle-check text-emerald-500'} text-sm"></i>
-                                <div>
-                                    <span class="text-[10px] font-bold ${isPartial ? 'text-amber-800 dark:text-amber-300' : 'text-emerald-800 dark:text-emerald-300'} block">
-                                        ${isPartial ? 'Partial Collection This Month' : 'Collected This Month'}
-                                    </span>
-                                    <span class="text-[9px] ${isPartial ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'} font-medium">
-                                        ${customerCollsThisMonth.length} receipt${customerCollsThisMonth.length > 1 ? 's' : ''} ${isPartial ? `(৳${Math.round(shortAmount).toLocaleString()} short)` : 'auto-synced'}
-                                    </span>
-                                </div>
-                            </div>
-                            <span class="font-black ${isPartial ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'} text-sm">৳${Math.round(collectedThisMonth).toLocaleString()}</span>
-                        </div>
-                        ` : ''}
-
-                        ${c.vehicleRegNo ? `
-                        <!-- Vehicle Reg & Customer Code Card -->
-                        <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 flex justify-between items-center">
-                            <div>
-                                <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Vehicle Reg Number</span>
-                                <span class="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5 mt-0.5">
-                                    <i class="fa-solid fa-truck-front text-brand-500 text-xs"></i> ${c.vehicleRegNo}
-                                </span>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Customer Code</span>
-                                <span class="font-mono font-bold text-brand-600 dark:text-brand-400 text-xs">${c.customerId}</span>
-                            </div>
-                        </div>
-                        ` : ''}
-
-                        <!-- Installment & Dates Grid -->
-                        <div class="grid grid-cols-2 gap-2 bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
-                            <div>
-                                <span class="text-[9px] text-slate-400 font-medium uppercase block">Installment Size</span>
-                                <span class="font-bold text-slate-700 dark:text-slate-200">৳${Math.round(parseFloat(c.instSize) || 0).toLocaleString()}</span>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-[9px] text-slate-400 font-medium uppercase block">Overdue Taka</span>
-                                <span class="font-bold text-rose-600 dark:text-rose-400">৳${Math.round(parseFloat(c.overdueTaka) || 0).toLocaleString()}</span>
-                            </div>
-                            <div>
-                                <span class="text-[9px] text-slate-400 font-medium uppercase block">First Inst Date</span>
-                                <span class="font-semibold text-slate-700 dark:text-slate-200">${c.firstInstDate || '-'}</span>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-[9px] text-slate-400 font-medium uppercase block">Last Payment Date</span>
-                                <span class="font-semibold text-slate-700 dark:text-slate-200">${c.lastPaymentDate || '-'}</span>
-                            </div>
-                        </div>
-
-                        <!-- Contact & Location Info -->
-                        <div class="grid grid-cols-2 gap-2 bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
-                            <div>
-                                <span class="text-[9px] text-slate-400 font-medium uppercase block">Phone Number</span>
-                                <a href="tel:${c.phone}" onclick="event.stopPropagation()" class="font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1 mt-0.5">
-                                    <i class="fa-solid fa-phone text-[9px]"></i> ${c.phone || 'N/A'}
-                                </a>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-[9px] text-slate-400 font-medium uppercase block">Upazila & Code</span>
-                                <span class="font-semibold text-slate-700 dark:text-slate-200">${c.upazilaName || '-'} (${c.upazilaCode || '-'})</span>
-                            </div>
-                        </div>
-
-                        <!-- Last 3 Months Payment History -->
-                        <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
-                            <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider block mb-1.5"><i class="fa-solid fa-calendar-days text-[9px] mr-1 text-brand-500"></i>Last 3 Months Collections</span>
-                            <div class="grid grid-cols-3 gap-1.5 text-center">
-                                <div class="p-1.5 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700">
-                                    <span class="text-[9px] text-brand-600 dark:text-brand-400 font-bold block">${months.m1}</span>
-                                    <span class="text-[8px] text-slate-400 block mb-0.5">(Last Mo.)</span>
-                                    <span class="font-bold text-emerald-600 dark:text-emerald-400 text-xs">৳${Math.round(parseFloat(c.last3Month1) || 0).toLocaleString()}</span>
-                                </div>
-                                <div class="p-1.5 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700">
-                                    <span class="text-[9px] text-slate-600 dark:text-slate-300 font-bold block">${months.m2}</span>
-                                    <span class="text-[8px] text-slate-400 block mb-0.5">(2 Mos. Ago)</span>
-                                    <span class="font-bold text-emerald-600 dark:text-emerald-400 text-xs">৳${Math.round(parseFloat(c.last3Month2) || 0).toLocaleString()}</span>
-                                </div>
-                                <div class="p-1.5 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700">
-                                    <span class="text-[9px] text-slate-600 dark:text-slate-300 font-bold block">${months.m3}</span>
-                                    <span class="text-[8px] text-slate-400 block mb-0.5">(3 Mos. Ago)</span>
-                                    <span class="font-bold text-emerald-600 dark:text-emerald-400 text-xs">৳${Math.round(parseFloat(c.last3Month3) || 0).toLocaleString()}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            },
-
-            filterOfficerCustomers() {
-                const term = (document.getElementById('oc-search')?.value || '').toLowerCase();
-                const filter = this.officerCustomerFilter || 'all';
-                const sort = this.officerCustomerSort || 'overdue_desc';
-                const selectedUpazila = (document.getElementById('oc-upazila-filter')?.value || 'all');
-
-                let filtered = (this.officerCustomersList || []).filter(c => {
-                    const matchesTerm = !term || (
-                        (c.customerName && c.customerName.toLowerCase().includes(term)) || 
-                        (c.customerId && c.customerId.toLowerCase().includes(term)) ||
-                        (c.vehicleRegNo && c.vehicleRegNo.toLowerCase().includes(term)) ||
-                        (c.phone && c.phone.includes(term))
-                    );
-
-                    const isUnpaid = (parseFloat(c.overdueTaka) || 0) > 0 || (parseInt(c.overdueInstNo) || 0) > 0;
-                    const matchesFilter = filter === 'all' || 
-                                          (filter === 'paid' && !isUnpaid) || 
-                                          (filter === 'unpaid' && isUnpaid);
-
-                    const matchesUpazila = selectedUpazila === 'all' || c.upazilaName === selectedUpazila;
-
-                    return matchesTerm && matchesFilter && matchesUpazila;
-                });
-
-                // Apply Sorting
-                filtered.sort((a, b) => {
-                    if (sort === 'overdue_desc') {
-                        return (parseFloat(b.overdueTaka) || 0) - (parseFloat(a.overdueTaka) || 0);
-                    } else if (sort === 'outstanding_desc') {
-                        return (parseFloat(b.totalOutstanding) || 0) - (parseFloat(a.totalOutstanding) || 0);
-                    } else if (sort === 'name_asc') {
-                        return (a.customerName || '').localeCompare(b.customerName || '');
-                    }
-                    return 0;
-                });
-
-                this.renderOfficerCustomersGrid(filtered);
-            },
-
-            initiateCollectionFromCustomer(customerId, amount) {
-                this.activeCustomerPreFill = { customerId, amount, singleOnly: true, returnTo: 'officer-customers' };
-                this.collectionReturnTo = 'officer-customers';
-                Router.navigate('officer-collection');
-            },
-
-            closeCollectionForm() {
-                const target = this.collectionReturnTo || 'officer-dashboard';
-                this.activeCustomerPreFill = null;
-                this.collectionReturnTo = null;
-                if (target === 'officer-customers') {
-                    UI.renderOfficerCustomers();
-                } else {
-                    Router.navigate(target);
-                }
-            },
-
             exportCSV() {
                 const db = Store.get();
                 let csvContent = "data:text/csv;charset=utf-8,";
@@ -7263,7 +6839,7 @@ window.UI = {
 
                 const html = `
             <div class="text-left" >
-                        <div class="flex items-center mb-4">
+                        <div class="flex items-center mb-6">
                             <div class="w-10 h-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center mr-3">
                                 <i class="fa-solid fa-file-csv text-lg"></i>
                             </div>
@@ -7292,7 +6868,7 @@ window.UI = {
 
                             <div class="flex justify-end space-x-3 pt-2">
                                 <button type="button" onclick="document.getElementById('generic-modal').classList.add('hidden')" class="px-4 py-2 text-slate-500 hover:text-slate-700 font-medium transition">Cancel</button>
-                                <button type="submit" class="px-6 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-bold shadow-md transition transform active:scale-95">
+                                <button type="submit" class="px-6 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-bold shadow-lg transition transform active:scale-95">
                                     Download CSV
                                 </button>
                             </div>
@@ -7370,7 +6946,7 @@ window.UI = {
             // --- HELPER METHODS ---
             createKPICard(title, value, icon, color) {
                 const colors = { blue: 'bg-blue-100 text-blue-600', green: 'bg-emerald-100 text-emerald-600', purple: 'bg-indigo-100 text-indigo-600', orange: 'bg-orange-100 text-orange-600', red: 'bg-rose-100 text-rose-600', yellow: 'bg-yellow-100 text-yellow-600' };
-                return `<div class="glass-panel p-4 rounded-xl shadow-sm dark:bg-dark-card hover-lift" ><div class="flex justify-between mb-4"><h3 class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase">${title}</h3><div class="w-10 h-10 rounded-full ${colors[color]} flex items-center justify-center"><i class="fa-solid ${icon}"></i></div></div><div class="text-2xl font-bold dark:text-white">${value}</div></div> `;
+                return `<div class="glass-panel p-6 rounded-xl shadow-sm dark:bg-dark-card hover-lift" ><div class="flex justify-between mb-4"><h3 class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase">${title}</h3><div class="w-10 h-10 rounded-full ${colors[color]} flex items-center justify-center"><i class="fa-solid ${icon}"></i></div></div><div class="text-2xl font-bold dark:text-white">${value}</div></div> `;
             },
 
             getDailyTrendData(tId) {
@@ -7454,10 +7030,10 @@ window.UI = {
                             <i class="fa-solid fa-triangle-exclamation text-3xl text-red-500"></i>
                         </div>
                         <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-2">Delete Territory?</h3>
-                        <p class="text-slate-500 mb-4">Are you sure you want to delete <strong>${name}</strong>? This cannot be undone and permanently erases all associated targets, projections, and collections immediately.</p>
+                        <p class="text-slate-500 mb-6">Are you sure you want to delete <strong>${name}</strong>? This cannot be undone and permanently erases all associated targets, projections, and collections immediately.</p>
                         <div class="flex justify-center space-x-3">
                             <button onclick="UI.closeModal()" class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition font-medium">Cancel</button>
-                            <button id="confirm-delete-btn" class="px-5 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-medium shadow-md hover:shadow-red-500/30 transition transform active:scale-95">Delete Permanently</button>
+                            <button id="confirm-delete-btn" class="px-5 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-medium shadow-lg hover:shadow-red-500/30 transition transform active:scale-95">Delete Permanently</button>
                         </div>
                     </div>
                 `;
@@ -7560,24 +7136,6 @@ window.UI = {
                     } catch (error) {
                         console.error('Failed to save data:', error);
                         alert(`Error saving targets: ${error.message}`);
-                    } finally {
-                        UI.toggleLoader(false);
-                    }
-                })();
-            },
-
-            restoreDefaultUsers() {
-                if (!confirm("Are you sure you want to restore default officers for all territories?")) return;
-                (async () => {
-                    UI.toggleLoader(true);
-                    try {
-                        await Store.seed();
-                        await Store.init();
-                        UI.renderUserManagement();
-                        UI.showSuccess('Default officers restored!');
-                    } catch (err) {
-                        console.error(err);
-                        alert('Failed to restore officers: ' + err.message);
                     } finally {
                         UI.toggleLoader(false);
                     }
@@ -7823,7 +7381,7 @@ window.UI = {
 
                 document.getElementById('views-container').innerHTML = `
             <div class="animate-entry flex flex-col h-[calc(100vh-140px)]" >
-                        <div class="mb-4 flex justify-between items-center">
+                        <div class="mb-6 flex justify-between items-center">
                             <div>
                                 <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Vehicle Performance Data</h2>
                                 <p class="text-sm text-slate-500">Upload running data, earning estimates, and overdue info</p>
@@ -7836,13 +7394,13 @@ window.UI = {
                                     <i class="fa-solid fa-file-csv mr-2 text-brand-600"></i> Import CSV
                                     <input type="file" class="hidden" accept=".csv" onchange="UI.handleVehiclePerfCSV(event)">
                                 </label>
-                                <button onclick="UI.saveVehiclePerf()" class="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 shadow-md font-bold hover-lift">
+                                <button onclick="UI.saveVehiclePerf()" class="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 shadow-lg font-bold hover-lift">
                                     <i class="fa-solid fa-save mr-2"></i> Save Data
                                 </button>
                             </div>
                         </div>
 
-                        <div class="flex-1 glass-panel rounded-xl shadow-md dark:bg-dark-card overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700">
+                        <div class="flex-1 glass-panel rounded-xl shadow-lg dark:bg-dark-card overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700">
                              <div class="overflow-auto flex-1">
                                 <table class="w-full text-sm text-left border-collapse" id="vehicle-perf-table">
                                     <thead class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase sticky top-0 z-10 font-bold text-xs">
@@ -8022,7 +7580,7 @@ window.UI = {
                                 </div>
                                 
                                 <div class="p-6">
-                                    <div class="flex items-center justify-between mb-8 p-5 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-800/30">
+                                    <div class="flex items-center justify-between mb-8 p-5 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-800/30">
                                         <div>
                                             <p class="text-xs font-bold text-amber-600 uppercase tracking-wider mb-1">Estimated Earning</p>
                                             <h4 class="text-3xl font-black text-amber-600">Ã Â§Â³ ${parseFloat(vehicle.earning || 0).toLocaleString()}</h4>
@@ -8033,11 +7591,11 @@ window.UI = {
                                     </div>
 
                                     <div class="grid grid-cols-2 gap-4 mb-2">
-                                        <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-center border border-slate-100 dark:border-slate-700">
+                                        <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl text-center border border-slate-100 dark:border-slate-700">
                                             <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Last 2 Months Run</p>
                                             <p class="text-xl font-bold text-slate-800 dark:text-white">${totalKm.toLocaleString()} <span class="text-xs text-slate-500">KM</span></p>
                                         </div>
-                                        <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-center border border-slate-100 dark:border-slate-700">
+                                        <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl text-center border border-slate-100 dark:border-slate-700">
                                             <p class="text-[10px] text-slate-400 font-bold uppercase mb-1">Avg. Monthly</p>
                                             <p class="text-xl font-bold text-slate-800 dark:text-white">${Math.round(totalKm / 2).toLocaleString()} <span class="text-xs text-slate-500">KM</span></p>
                                         </div>
@@ -8056,7 +7614,7 @@ window.UI = {
             `;
                     } else {
                         container.innerHTML = `
-            <div class="glass-panel p-8 text-center bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30">
+            <div class="glass-panel p-8 text-center bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/30">
                                 <div class="text-red-400 text-4xl mb-3"><i class="fa-regular fa-circle-xmark"></i></div>
                                 <h3 class="text-lg font-bold text-red-600 mb-1">No Data Found</h3>
                                 <p class="text-sm text-red-500 opacity-80">Could not find vehicle data for ID: <b>${query}</b></p>
@@ -8133,7 +7691,7 @@ window.UI = {
                         </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Customer Code</label>
-                        <input type="text" id="coll-input-customer" oninput="UI.calcCollModalTotal()" name="customerCode" value="${item.customerCode || ''}" required placeholder="C-XXXX" class="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 font-mono font-bold">
+                        <input type="text" name="customerCode" value="${item.customerCode || ''}" required placeholder="C-XXXX" class="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 font-mono font-bold">
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -8153,7 +7711,7 @@ window.UI = {
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Remarks</label>
                         <textarea name="remarks" rows="2" class="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500">${item.remarks || ''}</textarea>
                     </div>
-                    <button type="submit" class="w-full py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 shadow-md hover-lift transition">
+                    <button type="submit" class="w-full py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 shadow-lg hover-lift transition">
                         <i class="fa-solid fa-save mr-2"></i> Save Settlement
                     </button>
                 </form>
@@ -8203,7 +7761,7 @@ window.UI = {
                 });
             },
 
-            openCollectionModal(id = null, prefillTId = null, prefillCustId = null) {
+            openCollectionModal(id = null, prefillTId = null) {
                 const db = Store.get();
                 const item = id ? (db.collections.find(c => String(c.id) === String(id)) || {}) : {};
                 const isOfficer = Auth.currentUser.role === 'officer';
@@ -8211,205 +7769,66 @@ window.UI = {
                 const territories = db.territories.map(t => `<option value="${t.id}" ${currentTId === t.id ? 'selected' : ''}>${t.name}</option>`).join('');
 
                 const html = `
-                    <form onsubmit="UI.saveManualCollection(event)" class="space-y-3 text-xs">
+                    <form onsubmit="UI.saveManualCollection(event)" class="space-y-4">
                         <input type="hidden" name="id" value="${id || ''}">
-                        
-                        <!-- COMPACT MOBILE HEADER CARD -->
-                        <div class="p-3 bg-gradient-to-r from-brand-600 via-indigo-600 to-blue-600 rounded-2xl text-white shadow-md flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <div class="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center font-bold text-sm">
-                                    <i class="fa-solid fa-hand-holding-dollar"></i>
-                                </div>
-                                <div>
-                                    <p class="text-[9px] font-black uppercase tracking-wider text-brand-200 leading-none">Territory</p>
-                                    <p class="text-xs font-extrabold font-mono mt-0.5">
-                                        ${isOfficer ? (db.territories.find(t => t.id === currentTId)?.name || 'N/A') : 'Manual Entry'}
-                                    </p>
-                                </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
+                                <input type="date" name="date" value="${item.date || Utils.getLocalDate()}" required class="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500">
                             </div>
-                            <div class="text-right">
-                                <span class="text-[10px] font-extrabold font-mono bg-white/25 border border-white/20 px-2.5 py-1 rounded-full shadow-2xs">${id ? 'EDIT ENTRY' : 'NEW COLLECTION'}</span>
-                            </div>
-                        </div>
-
-                        <!-- DATE & TERRITORY -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                            <div class="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
-                                <label class="block text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase mb-1 flex items-center gap-1">
-                                    <i class="fa-solid fa-calendar-day text-brand-500"></i> Collection Date *
-                                </label>
-                                <input type="date" name="date" value="${item.date || Utils.getLocalDate()}" required class="w-full h-9 px-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 font-semibold text-slate-800 dark:text-slate-100 text-xs">
-                            </div>
-
                             ${isOfficer ? `
+                            <div class="flex flex-col justify-end pb-1 text-right">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase">Territory</span>
+                                <span class="text-sm font-bold text-brand-600">${db.territories.find(t => t.id === currentTId)?.name || 'N/A'}</span>
                                 <input type="hidden" name="territoryId" value="${currentTId}">
-                            ` : `
-                                <div class="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
-                                    <label class="block text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase mb-1 flex items-center gap-1">
-                                        <i class="fa-solid fa-map-location-dot text-brand-500"></i> Territory *
-                                    </label>
-                                    <select name="territoryId" required class="w-full h-9 px-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 font-semibold cursor-pointer text-xs">
-                                        <option value="">Select Territory</option>
-                                        ${territories}
-                                    </select>
-                                </div>
-                            `}
+                            </div>` : `
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Territory</label>
+                                <select name="territoryId" required class="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500">
+                                    <option value="">Select Territory</option>
+                                    ${territories}
+                                </select>
+                            </div>`}
                         </div>
-
-                        <!-- CUSTOMER CODE & MONEY RECEIPT NO -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                            <div class="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
-                                <label class="block text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase mb-1 flex items-center gap-1">
-                                    <i class="fa-solid fa-id-card text-brand-500"></i> Customer ID *
-                                </label>
-                                <input type="text" id="coll-input-customer" oninput="UI.calcCollModalTotal()" name="customerCode" value="${item.customerCode || ''}" required placeholder="Enter Customer ID" class="w-full h-9 px-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 font-mono font-bold text-slate-800 dark:text-slate-100 text-xs uppercase">
-                            </div>
-                            <div class="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
-                                <label class="block text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase mb-1 flex items-center gap-1">
-                                    <i class="fa-solid fa-receipt text-brand-500"></i> Money Receipt No
-                                </label>
-                                <input type="text" name="receipt" value="${item.receipt || ''}" placeholder="MR Number" class="w-full h-9 px-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 font-mono font-bold text-slate-800 dark:text-slate-100 text-xs">
-                            </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Money Receipt No</label>
+                            <input type="text" name="receipt" value="${item.receipt || ''}" class="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 font-mono font-bold">
                         </div>
-
-                        <!-- COLLECTION AMOUNT & AUTO-CALCULATION -->
-                        <div class="p-3 bg-emerald-500/5 dark:bg-emerald-950/20 rounded-2xl border border-emerald-500/20 space-y-2.5">
-                            <div class="flex flex-col gap-1.5 pb-3 border-b border-emerald-500/20">
-                                <label class="block text-xs font-black text-slate-800 dark:text-slate-200 flex items-center justify-between">
-                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-coins text-emerald-500"></i> Total Collected (৳) *</span>
-                                    <span id="coll-customer-found-badge" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-500 hidden">Customer Found</span>
-                                </label>
-                                <input type="number" step="any" id="coll-input-total" oninput="UI.calcCollModalTotal()" value="${(parseFloat(item.amount) || (parseFloat(item.regularAmount || 0) + parseFloat(item.advanceAmount || 0)) || '')}" required placeholder="0.00" class="w-full h-12 px-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-emerald-500 text-right font-mono font-black text-emerald-600 dark:text-emerald-400 text-xl shadow-sm">
-                            </div>
-
-                            <input type="hidden" name="regularAmount" id="coll-hidden-regular" value="${item.regularAmount || 0}">
-                            <input type="hidden" name="advanceAmount" id="coll-hidden-advance" value="${item.advanceAmount || 0}">
-
-                            <div class="grid grid-cols-3 gap-2 text-center" id="coll-auto-calc-box">
-                                <div class="bg-white/60 dark:bg-slate-900/40 p-2 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
-                                    <p class="text-[9px] font-black uppercase text-slate-500">Total Due</p>
-                                    <p class="text-[11px] font-mono font-bold text-slate-700 dark:text-slate-300 mt-0.5" id="coll-display-due">৳0</p>
-                                </div>
-                                <div class="bg-indigo-50/50 dark:bg-indigo-900/20 p-2 rounded-lg border border-indigo-200/50 dark:border-indigo-800/50">
-                                    <p class="text-[9px] font-black uppercase text-indigo-500">Regular</p>
-                                    <p class="text-[11px] font-mono font-bold text-indigo-600 mt-0.5" id="coll-display-reg">৳${item.regularAmount || 0}</p>
-                                </div>
-                                <div class="bg-amber-50/50 dark:bg-amber-900/20 p-2 rounded-lg border border-amber-200/50 dark:border-amber-800/50">
-                                    <p class="text-[9px] font-black uppercase text-amber-500">Advance</p>
-                                    <p class="text-[11px] font-mono font-bold text-amber-600 mt-0.5" id="coll-display-adv">৳${item.advanceAmount || 0}</p>
-                                </div>
-                            </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Customer ID</label>
+                            <input type="text" name="customerCode" value="${item.customerCode || ''}" required class="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 font-mono font-bold">
                         </div>
-
-                        <!-- PAYMENT MODE SELECTOR -->
-                        <div class="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
-                            <label class="block text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase mb-1 flex items-center gap-1">
-                                <i class="fa-solid fa-credit-card text-brand-500"></i> Payment Mode *
-                            </label>
-                            <select name="mode" required class="w-full h-9 px-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 font-bold text-slate-800 dark:text-slate-100 cursor-pointer text-xs">
-                                <option value="Cash" ${item.mode === 'Cash' ? 'selected' : ''}>💵 Cash</option>
-                                <option value="Bank Transfer" ${item.mode === 'Bank Transfer' ? 'selected' : ''}>🏦 Bank Transfer</option>
-                                <option value="Cheque" ${item.mode === 'Cheque' ? 'selected' : ''}>📑 Cheque</option>
-                                <option value="Bkash/Nagad" ${item.mode === 'Bkash/Nagad' ? 'selected' : ''}>📱 Bkash / Nagad</option>
-                            </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Regular</label>
+                            <input type="number" name="regularAmount" value="${item.regularAmount || 0}" class="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 text-right font-mono">
                         </div>
-
-                        <!-- LMNP CHECKBOX CARD -->
-                        <div class="p-2.5 bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 rounded-xl flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <input type="checkbox" id="isLmNp" name="isLmNp" value="true" ${item.isLmNp || item.is_lm_np ? 'checked' : ''} class="w-4 h-4 text-brand-600 bg-white dark:bg-slate-900 border-amber-300 rounded cursor-pointer accent-amber-500">
-                                <label for="isLmNp" class="text-[11px] font-bold text-amber-800 dark:text-amber-300 cursor-pointer select-none">
-                                    Mark as Last Month Non-Pay (LMNP) Collection
-                                </label>
-                            </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Advance</label>
+                            <input type="number" name="advanceAmount" value="${item.advanceAmount || 0}" class="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 text-right font-mono">
                         </div>
-
-                        <!-- SUBMIT BUTTON -->
-                        <div class="pt-1">
-                            <button type="submit" class="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl shadow-md active:scale-98 transition flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-check-double text-sm"></i> Save Collection Entry
-                            </button>
-                        </div>
-                    </form>
-                `;
-                this.renderModal(id ? 'Edit Collection' : 'Add Collection Entry', html);
-                
-                // Auto-fill customer ID if provided (e.g. from Admin Customer List)
-                if (prefillCustId && !id) {
-                    const custInput = document.getElementById('coll-input-customer');
-                    if (custInput) {
-                        custInput.value = decodeURIComponent(prefillCustId);
-                        custInput.readOnly = true;
-                        custInput.classList.add('bg-slate-100', 'cursor-not-allowed', 'opacity-80');
-                        
-                        // Trigger calculation immediately
-                        setTimeout(() => UI.calcCollModalTotal(), 50);
-                    }
-                }
-
-                setTimeout(() => { this.calcCollModalTotal(); }, 50);
-            },
-
-            calcCollModalTotal() {
-                const totalColl = parseFloat(document.getElementById('coll-input-total')?.value) || 0;
-                const custCode = (document.getElementById('coll-input-customer')?.value || '').trim().toLowerCase();
-                
-                let totalDue = 0;
-                let customerFound = false;
-
-                if (custCode) {
-                    const customers = Store.cache.customers || [];
-                    const customer = customers.find(c => String(c.customerId).trim().toLowerCase() === custCode);
-                    if (customer) {
-                        customerFound = true;
-                        const overdue = parseFloat(customer.overdueTaka) || 0;
-                        const emi = parseFloat(customer.instSize) || 0;
-                        totalDue = overdue + emi;
-                    }
-                }
-
-                const badgeEl = document.getElementById('coll-customer-found-badge');
-                if (badgeEl) {
-                    if (customerFound) {
-                        badgeEl.classList.remove('hidden');
-                        badgeEl.classList.add('bg-emerald-100', 'text-emerald-700', 'dark:bg-emerald-900/30', 'dark:text-emerald-400');
-                        badgeEl.classList.remove('bg-slate-200', 'text-slate-500');
-                        badgeEl.textContent = "Data Found";
-                    } else {
-                        badgeEl.classList.remove('hidden');
-                        badgeEl.classList.add('bg-slate-100', 'text-slate-500', 'dark:bg-slate-800');
-                        badgeEl.classList.remove('bg-emerald-100', 'text-emerald-700', 'dark:bg-emerald-900/30', 'dark:text-emerald-400');
-                        badgeEl.textContent = custCode ? "No Match" : "";
-                        if (!custCode) badgeEl.classList.add('hidden');
-                    }
-                }
-
-                document.getElementById('coll-display-due').textContent = `৳${totalDue.toLocaleString()}`;
-
-                let reg = 0;
-                let adv = 0;
-                
-                if (customerFound && totalDue > 0) {
-                    if (totalColl <= totalDue) {
-                        reg = totalColl;
-                    } else {
-                        reg = totalDue;
-                        adv = totalColl - totalDue;
-                    }
-                } else {
-                    // If no customer matched or total due is 0, default to Regular
-                    reg = totalColl;
-                }
-
-                const hiddenReg = document.getElementById('coll-hidden-regular');
-                const hiddenAdv = document.getElementById('coll-hidden-advance');
-                if (hiddenReg) hiddenReg.value = reg;
-                if (hiddenAdv) hiddenAdv.value = adv;
-                
-                const dispReg = document.getElementById('coll-display-reg');
-                const dispAdv = document.getElementById('coll-display-adv');
-                if (dispReg) dispReg.textContent = `৳${reg.toLocaleString()}`;
-                if (dispAdv) dispAdv.textContent = `৳${adv.toLocaleString()}`;
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Payment Mode</label>
+                        <select name="mode" required class="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500">
+                            <option value="Cash" ${item.mode === 'Cash' ? 'selected' : ''}>Cash</option>
+                            <option value="Bank Transfer" ${item.mode === 'Bank Transfer' ? 'selected' : ''}>Bank Transfer</option>
+                            <option value="Cheque" ${item.mode === 'Cheque' ? 'selected' : ''}>Cheque</option>
+                            <option value="Bkash/Nagad" ${item.mode === 'Bkash/Nagad' ? 'selected' : ''}>Bkash/Nagad</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2 flex items-center pt-2 border-t border-slate-200 dark:border-slate-700 mt-2">
+                        <input type="checkbox" id="isLmNp" name="isLmNp" value="true" ${item.isLmNp || item.is_lm_np ? 'checked' : ''} class="w-4 h-4 text-brand-600 bg-slate-50 dark:bg-slate-800 border-slate-300 rounded focus:ring-brand-500 mr-2 cursor-pointer shadow-sm">
+                        <label for="isLmNp" class="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Mark as Last Month Non-Pay (LMNP) Collection</label>
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 shadow-lg hover-lift transition">
+                        <i class="fa-solid fa-save mr-2"></i> Save Collection
+                    </button>
+                </form>
+        `;
+                this.renderModal(id ? 'Edit Collection' : 'Add Manual Collection', html);
             },
 
             saveManualCollection(e) {
@@ -8532,7 +7951,7 @@ window.UI = {
                             <textarea name="remarks" class="w-full px-3 py-2 h-20 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 text-xs sm:text-sm appearance-none block resize-none m-0">${item.remarks || ''}</textarea>
                         </div>
 
-                        <button type="submit" class="w-full h-12 bg-red-600 text-white font-bold rounded-lg shadow-md hover:bg-red-700 transition transform active:scale-95 text-sm sm:text-base mt-2 flex items-center justify-center">
+                        <button type="submit" class="w-full h-12 bg-red-600 text-white font-bold rounded-lg shadow-lg hover:bg-red-700 transition transform active:scale-95 text-sm sm:text-base mt-2 flex items-center justify-center">
                             <i class="fa-solid fa-save mr-2"></i> Submit Offroad Report
                         </button>
                     </form>
@@ -8663,7 +8082,7 @@ window.UI = {
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">File Count Target</label>
                             <input type="number" name="fileCount" value="${item.fileCount || 0}" class="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 text-center font-mono">
                         </div>`}
-                    <button type="submit" class="w-full py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 shadow-md hover-lift transition">
+                    <button type="submit" class="w-full py-3 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700 shadow-lg hover-lift transition">
                         <i class="fa-solid fa-save mr-2"></i> Save Projection
                     </button>
                 </form>
@@ -8930,7 +8349,7 @@ window.UI = {
 
                 const toast = document.createElement('div');
                 toast.id = 'success-toast';
-                toast.className = 'fixed top-6 right-6 z-[100] flex items-center gap-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-l-4 border-emerald-500 shadow-2xl rounded-xl px-3 py-2.5 pr-10 min-w-[320px] transform transition-all duration-500 translate-x-full opacity-0';
+                toast.className = 'fixed top-6 right-6 z-[100] flex items-center gap-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-l-4 border-emerald-500 shadow-2xl rounded-xl px-6 py-4 pr-10 min-w-[320px] transform transition-all duration-500 translate-x-full opacity-0';
                 toast.innerHTML = `
                     <div class="bg-emerald-100 text-emerald-600 rounded-full w-10 h-10 flex items-center justify-center shrink-0">
                         <i class="fa-solid fa-check text-lg"></i>
@@ -9026,8 +8445,8 @@ window.UI = {
                 };
 
                 // Sections
-                const partACard = Array.from(dashboard.querySelectorAll('h3')).find(h => h.innerText.includes('Part A'))?.closest('.rounded-xl');
-                const partBCard = Array.from(dashboard.querySelectorAll('h3')).find(h => h.innerText.includes('Part B'))?.closest('.rounded-xl');
+                const partACard = Array.from(dashboard.querySelectorAll('h3')).find(h => h.innerText.includes('Part A'))?.closest('.rounded-2xl');
+                const partBCard = Array.from(dashboard.querySelectorAll('h3')).find(h => h.innerText.includes('Part B'))?.closest('.rounded-2xl');
 
                 const summaryPartA = {
                     rpi: partACard?.querySelector('.text-xl.font-black')?.innerText.trim() || 'N/A',
@@ -9330,3 +8749,114 @@ window.UI = {
         };
 
         // --- PARTICLE ENGINE ---
+        const ParticleEngine = {
+            canvas: null, ctx: null, width: 0, height: 0, particles: [],
+            init() {
+                this.canvas = document.createElement('canvas');
+                this.canvas.id = 'particle-canvas';
+                this.canvas.style.position = 'fixed';
+                this.canvas.style.top = '0';
+                this.canvas.style.left = '0';
+                this.canvas.style.width = '100%';
+                this.canvas.style.height = '100%';
+                this.canvas.style.zIndex = '-1';
+                this.canvas.style.pointerEvents = 'none';
+                this.canvas.style.transform = 'translateZ(0)';
+                this.canvas.style.willChange = 'transform';
+                document.body.appendChild(this.canvas);
+                this.ctx = this.canvas.getContext('2d');
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                this.createParticles();
+                this.animate();
+            },
+            resize() {
+                this.width = window.innerWidth;
+                this.height = window.innerHeight;
+                this.canvas.width = this.width;
+                this.canvas.height = this.height;
+            },
+            createParticles() {
+                for (let i = 0; i < 50; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.width,
+                        y: Math.random() * this.height,
+                        speed: Math.random() * 0.5 + 0.1,
+                        size: Math.random() * 2 + 0.5,
+                        opacity: Math.random() * 0.5 + 0.1
+                    });
+                }
+            },
+            animate() {
+                this.ctx.clearRect(0, 0, this.width, this.height);
+                this.ctx.fillStyle = '#10b981';
+                this.particles.forEach(p => {
+                    p.y -= p.speed;
+                    if (p.y < 0) p.y = this.height;
+                    this.ctx.globalAlpha = p.opacity;
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+                requestAnimationFrame(() => this.animate());
+            }
+        };
+
+        // Initialize
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const role = UI.currentLoginRole;
+            const username = role === 'officer' ? document.getElementById('officer-select').value :
+                (role === 'area_head' ? document.getElementById('area-head-select').value :
+                    document.getElementById('username').value);
+            const password = document.getElementById('password').value;
+            Auth.login(username, password, role);
+        });
+
+        (async () => {
+            const hasSession = !!localStorage.getItem('currentUser');
+            if (hasSession) {
+                // If we have a session, keep login hidden and show generic loader
+                UI.toggleLoader(true);
+            } else {
+                // No session, show login immediately
+                document.getElementById('login-view').classList.remove('hidden');
+            }
+
+            // Load data from backend
+            const dbState = await Store.init();
+            if (dbState === null) {
+                UI.toggleLoader(false);
+                const loginView = document.getElementById('login-view');
+                loginView.innerHTML = `
+                    <div class="relative z-10 w-full max-w-[450px] px-4 sm:p-6 animate-entry">
+                        <div class="bg-white dark:bg-[#202124] sm:border sm:border-slate-200 sm:dark:border-[#3c4043] rounded-2xl p-8 sm:shadow-md text-center">
+                            <div class="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-500">
+                                <i class="fas fa-exclamation-triangle text-2xl"></i>
+                            </div>
+                            <h2 class="text-xl font-bold text-slate-800 dark:text-white mb-2">Connection Failed</h2>
+                            <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Unable to connect to the server. This may happen if the database is asleep or your connection is unstable.</p>
+                            <button onclick="location.reload()" class="w-full bg-brand-600 hover:bg-brand-700 text-white rounded-xl py-3 font-medium transition-colors">
+                                Retry Connection
+                            </button>
+                        </div>
+                    </div>
+                `;
+                loginView.classList.remove('hidden');
+                loginView.classList.add('flex');
+                return;
+            }
+
+            // Validate session and init UI
+            const loggedIn = await Auth.checkSession();
+
+            if (!loggedIn) {
+                document.getElementById('login-view').classList.remove('hidden');
+                UI.setLoginTab('officer');
+            }
+
+            ParticleEngine.init();
+            UI.toggleLoader(false);
+        })();
+
+    

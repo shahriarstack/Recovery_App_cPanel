@@ -1,0 +1,560 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "username": "admin",
+      "officer_name": "System Admin",
+      "role": "admin",
+      "password": "Admin@4321",
+      "territory_id": null,
+      "requested_territories": null
+    },
+    {
+      "id": "535",
+      "username": "Barishal Area",
+      "officer_name": "Md. Habibur Rahman",
+      "role": "area_head",
+      "password": "25684",
+      "territory_id": "barishal,faridpur,gopalganj,barguna",
+      "requested_territories": null
+    },
+    {
+      "id": "536",
+      "username": "Gazipur Area",
+      "officer_name": "Md. Sakib Islam",
+      "role": "area_head",
+      "password": "31718",
+      "territory_id": "gazipur,mawna,tongi,narshingdi",
+      "requested_territories": ""
+    },
+    {
+      "id": "538",
+      "username": "Rangpur Area",
+      "officer_name": "Md. Ibrahim Hossain",
+      "role": "area_head",
+      "password": "9154",
+      "territory_id": "",
+      "requested_territories": ""
+    },
+    {
+      "id": "539",
+      "username": "Chattagram Area",
+      "officer_name": "Minarul",
+      "role": "area_head",
+      "password": "31298",
+      "territory_id": "chattogramnorth,chattogramsouth",
+      "requested_territories": null
+    },
+    {
+      "id": "540",
+      "username": "Tangail Area",
+      "officer_name": "Mahbub",
+      "role": "area_head",
+      "password": "13184",
+      "territory_id": "tangail,jamalpur",
+      "requested_territories": null
+    },
+    {
+      "id": "541",
+      "username": "Mymensingh Area",
+      "officer_name": "",
+      "role": "area_head",
+      "password": "1234",
+      "territory_id": "",
+      "requested_territories": null
+    },
+    {
+      "id": "542",
+      "username": "Sylhet Area",
+      "officer_name": "Istiak Ahammed",
+      "role": "area_head",
+      "password": "32281",
+      "territory_id": "sylhet,hobiganj,sunamganj",
+      "requested_territories": null
+    },
+    {
+      "id": "543",
+      "username": "Noakhali Area",
+      "officer_name": "Iqbal Hossain",
+      "role": "area_head",
+      "password": "26511",
+      "territory_id": "noakhali1,noakhali2",
+      "requested_territories": null
+    },
+    {
+      "id": "544",
+      "username": "Narayanganj Area",
+      "officer_name": "Sumon Mia",
+      "role": "area_head",
+      "password": "31725",
+      "territory_id": "",
+      "requested_territories": null
+    },
+    {
+      "id": "545",
+      "username": "Dhaka Area",
+      "officer_name": "Nazmul Haque",
+      "role": "area_head",
+      "password": "31192",
+      "territory_id": "",
+      "requested_territories": null
+    },
+    {
+      "id": "546",
+      "username": "Khulna Area",
+      "officer_name": "Sumon Ahmed",
+      "role": "area_head",
+      "password": "31716",
+      "territory_id": "jashore,khulna,kushtia",
+      "requested_territories": ""
+    },
+    {
+      "id": "547",
+      "username": "Savar Area",
+      "officer_name": "Md. Badiuzzaman",
+      "role": "area_head",
+      "password": "24226",
+      "territory_id": "savar,manikganj",
+      "requested_territories": null
+    },
+    {
+      "id": "548",
+      "username": "B.Baria Area",
+      "officer_name": "Md. Lokman Hossain",
+      "role": "area_head",
+      "password": "32280",
+      "territory_id": "kishoreganj,brahmanaria",
+      "requested_territories": null
+    },
+    {
+      "id": "549",
+      "username": "Rajshahi Area",
+      "officer_name": "",
+      "role": "area_head",
+      "password": "1234",
+      "territory_id": "",
+      "requested_territories": null
+    },
+    {
+      "id": "550",
+      "username": "Sirajganj Area",
+      "officer_name": "",
+      "role": "area_head",
+      "password": "1234",
+      "territory_id": "",
+      "requested_territories": null
+    },
+    {
+      "id": "551",
+      "username": "Khustia Area",
+      "officer_name": "",
+      "role": "area_head",
+      "password": "1234",
+      "territory_id": "",
+      "requested_territories": null
+    },
+    {
+      "id": "552",
+      "username": "Cumilla Area",
+      "officer_name": "Md Fazle Rabbi",
+      "role": "area_head",
+      "password": "32029",
+      "territory_id": "cumilla1,cumilla2",
+      "requested_territories": null
+    },
+    {
+      "id": "2180",
+      "username": "test",
+      "officer_name": "",
+      "role": "officer",
+      "password": "123",
+      "territory_id": "test",
+      "requested_territories": null
+    }
+  ],
+  "territories": [
+    {
+      "id": "barguna",
+      "name": "Barguna",
+      "part": "B",
+      "officer": "Barguna"
+    },
+    {
+      "id": "barishal",
+      "name": "Barishal",
+      "part": "B",
+      "officer": "Barishal"
+    },
+    {
+      "id": "bogura",
+      "name": "Bogura",
+      "part": "A",
+      "officer": "Bogura"
+    },
+    {
+      "id": "brahmanaria",
+      "name": "Brahmanaria",
+      "part": "B",
+      "officer": "Brahmanaria"
+    },
+    {
+      "id": "chandpur1",
+      "name": "Chandpur-1",
+      "part": "B",
+      "officer": "Chandpur-1"
+    },
+    {
+      "id": "chandpur2",
+      "name": "Chandpur-2",
+      "part": "B",
+      "officer": "Chandpur-2"
+    },
+    {
+      "id": "chapainawabgonj",
+      "name": "Chapainawabgonj ",
+      "part": "A",
+      "officer": "Chapainawabgonj "
+    },
+    {
+      "id": "chattogramnorth",
+      "name": "Chattogram North",
+      "part": "B",
+      "officer": "Chattogram North"
+    },
+    {
+      "id": "chattogramsouth",
+      "name": "Chattogram South",
+      "part": "B",
+      "officer": "Chattogram South"
+    },
+    {
+      "id": "coxsbazar",
+      "name": "Cox'sBazar",
+      "part": "B",
+      "officer": "Cox'sBazar"
+    },
+    {
+      "id": "cumilla1",
+      "name": "Cumilla-1",
+      "part": "B",
+      "officer": "Cumilla-1"
+    },
+    {
+      "id": "cumilla2",
+      "name": "Cumilla-2",
+      "part": "B",
+      "officer": "Cumilla-2"
+    },
+    {
+      "id": "dhaka",
+      "name": "Dhaka",
+      "part": "A",
+      "officer": "Dhaka"
+    },
+    {
+      "id": "dinajpur",
+      "name": "Dinajpur",
+      "part": "A",
+      "officer": "Dinajpur"
+    },
+    {
+      "id": "faridpur",
+      "name": "Faridpur",
+      "part": "B",
+      "officer": "Faridpur"
+    },
+    {
+      "id": "feni",
+      "name": "Feni",
+      "part": "B",
+      "officer": "Feni"
+    },
+    {
+      "id": "gaibandha",
+      "name": "Gaibandha",
+      "part": "A",
+      "officer": "Gaibandha"
+    },
+    {
+      "id": "gazipur",
+      "name": "Gazipur",
+      "part": "A",
+      "officer": "Gazipur"
+    },
+    {
+      "id": "gopalganj",
+      "name": "Gopalganj",
+      "part": "B",
+      "officer": "Gopalganj"
+    },
+    {
+      "id": "headoffice",
+      "name": "Head Office",
+      "part": "A",
+      "officer": "Head Office"
+    },
+    {
+      "id": "hobiganj",
+      "name": "Hobiganj",
+      "part": "B",
+      "officer": "Hobiganj"
+    },
+    {
+      "id": "jamalpur",
+      "name": "Jamalpur",
+      "part": "B",
+      "officer": "Jamalpur"
+    },
+    {
+      "id": "jashore",
+      "name": "Jashore",
+      "part": "A",
+      "officer": "Jashore"
+    },
+    {
+      "id": "khulna",
+      "name": "Khulna",
+      "part": "A",
+      "officer": "Khulna"
+    },
+    {
+      "id": "kishoreganj",
+      "name": "Kishoreganj",
+      "part": "B",
+      "officer": "Kishoreganj"
+    },
+    {
+      "id": "kushtia",
+      "name": "Kushtia",
+      "part": "A",
+      "officer": "Kushtia"
+    },
+    {
+      "id": "laxmipur",
+      "name": "Laxmipur",
+      "part": "B",
+      "officer": "Laxmipur"
+    },
+    {
+      "id": "manikganj",
+      "name": "Manikganj",
+      "part": "A",
+      "officer": "Manikganj"
+    },
+    {
+      "id": "mawna",
+      "name": "Mawna",
+      "part": "A",
+      "officer": "Mawna"
+    },
+    {
+      "id": "munshiganj1",
+      "name": "Munshiganj 1",
+      "part": "A",
+      "officer": "Munshiganj 1"
+    },
+    {
+      "id": "munshiganj2",
+      "name": "Munshiganj-2",
+      "part": "A",
+      "officer": "Munshiganj-2"
+    },
+    {
+      "id": "mymensingh",
+      "name": "Mymensingh",
+      "part": "B",
+      "officer": "Mymensingh"
+    },
+    {
+      "id": "narayanganj",
+      "name": "Narayanganj",
+      "part": "A",
+      "officer": "Narayanganj"
+    },
+    {
+      "id": "narshingdi",
+      "name": "Narshingdi ",
+      "part": "A",
+      "officer": "Narshingdi "
+    },
+    {
+      "id": "natore",
+      "name": "Natore",
+      "part": "A",
+      "officer": "Natore"
+    },
+    {
+      "id": "netrokona",
+      "name": "Netrokona",
+      "part": "B",
+      "officer": "Netrokona"
+    },
+    {
+      "id": "nilphamari",
+      "name": "Nilphamari",
+      "part": "A",
+      "officer": "Nilphamari"
+    },
+    {
+      "id": "noakhali1",
+      "name": "Noakhali-1",
+      "part": "B",
+      "officer": "Noakhali-1"
+    },
+    {
+      "id": "noakhali2",
+      "name": "Noakhali-2",
+      "part": "B",
+      "officer": "Noakhali-2"
+    },
+    {
+      "id": "pabna",
+      "name": "Pabna",
+      "part": "A",
+      "officer": "Pabna"
+    },
+    {
+      "id": "rajshahi",
+      "name": "Rajshahi",
+      "part": "A",
+      "officer": "Rajshahi"
+    },
+    {
+      "id": "rangpur",
+      "name": "Rangpur",
+      "part": "A",
+      "officer": "Rangpur"
+    },
+    {
+      "id": "savar",
+      "name": "Savar",
+      "part": "A",
+      "officer": "Savar"
+    },
+    {
+      "id": "sirajganj",
+      "name": "Sirajganj",
+      "part": "A",
+      "officer": "Sirajganj"
+    },
+    {
+      "id": "sunamganj",
+      "name": "Sunamganj",
+      "part": "B",
+      "officer": "Sunamganj"
+    },
+    {
+      "id": "sylhet",
+      "name": "Sylhet",
+      "part": "B",
+      "officer": "Sylhet"
+    },
+    {
+      "id": "tangail",
+      "name": "Tangail",
+      "part": "B",
+      "officer": "Tangail"
+    },
+    {
+      "id": "tmsh24sl232rms6zgeie",
+      "name": "Jhenaidah",
+      "part": "A",
+      "officer": "Jhenaidah"
+    },
+    {
+      "id": "tmsh24sl2glti2i9f3hk",
+      "name": "Hobiganj",
+      "part": "B",
+      "officer": "Hobiganj"
+    },
+    {
+      "id": "tmsh24sl2z0tva4nz91n",
+      "name": "Mowlabibazar",
+      "part": "B",
+      "officer": "Mowlabibazar"
+    },
+    {
+      "id": "tongi",
+      "name": "Tongi",
+      "part": "A",
+      "officer": "Tongi"
+    }
+  ],
+  "vehicle_performance": [],
+  "system_settings": [
+    {
+      "key": "active_month",
+      "value": "2026-08"
+    },
+    {
+      "key": "cutoff_extension_hours",
+      "value": "0"
+    },
+    {
+      "key": "holidays",
+      "value": "2026-06-01,2026-06-02,2026-06-03,2026-06-05,2026-06-12,2026-06-19,2026-06-26"
+    },
+    {
+      "key": "system_hold",
+      "value": "false"
+    }
+  ],
+  "unlocks": {
+    "barguna": "1785560060455",
+    "barishal": "1785560060455",
+    "bogura": "1785560060455",
+    "brahmanaria": "1785560060455",
+    "chandpur1": "1785560060455",
+    "chandpur2": "1785560060455",
+    "chapainawabgonj": "1785560060455",
+    "chattogramnorth": "1785560060455",
+    "chattogramsouth": "1785560060455",
+    "coxsbazar": "1785560060455",
+    "cumilla1": "1785560060455",
+    "cumilla2": "1785560060455",
+    "dhaka": "1785560060455",
+    "dinajpur": "1785560060455",
+    "faridpur": "1785560060455",
+    "feni": "1785560060455",
+    "gaibandha": "1785560060455",
+    "gazipur": "1785560060455",
+    "gopalganj": "1785560060455",
+    "headoffice": "1785560060455",
+    "hobiganj": "1785560060455",
+    "jamalpur": "1785560060455",
+    "jashore": "1785560060455",
+    "khulna": "1785560060455",
+    "kishoreganj": "1785560060455",
+    "kushtia": "1785560060455",
+    "laxmipur": "1785560060455",
+    "manikganj": "1785560060455",
+    "mawna": "1785560060455",
+    "munshiganj1": "1785560060455",
+    "munshiganj2": "1785560060455",
+    "mymensingh": "1785560060455",
+    "narayanganj": "1785560060455",
+    "narshingdi": "1785560060455",
+    "natore": "1785560060455",
+    "netrokona": "1785560060455",
+    "nilphamari": "1785560060455",
+    "noakhali1": "1785560060455",
+    "noakhali2": "1785560060455",
+    "pabna": "1785560060455",
+    "rajshahi": "1785560060455",
+    "rangpur": "1785560060455",
+    "savar": "1785560060455",
+    "sirajganj": "1785560060455",
+    "sunamganj": "1785560060455",
+    "sylhet": "1785560060455",
+    "tangail": "1785560060455",
+    "tongi": "1785560060455"
+  },
+  "targets": [],
+  "projections": [],
+  "collections": [],
+  "offroad_vehicles": [],
+  "settlements": [],
+  "customers": [],
+  "server_date": "2026-08-06",
+  "server_time": "2026-08-06 11:37:08"
+}

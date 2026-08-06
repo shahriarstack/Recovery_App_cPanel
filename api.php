@@ -50,6 +50,18 @@ try {
     // Column already exists, ignore
 }
 
+try {
+    $pdo->exec("ALTER TABLE users ADD COLUMN officer_name VARCHAR(255) AFTER username");
+} catch (Exception $e) {
+    // Column already exists, ignore
+}
+
+try {
+    $pdo->exec("ALTER TABLE users ADD COLUMN requested_territories VARCHAR(1000) AFTER territory_id");
+} catch (Exception $e) {
+    // Column already exists, ignore
+}
+
 
 // Cache management helper
 $cacheFile = __DIR__ . '/db_cache.json';
@@ -157,8 +169,8 @@ try {
 
             // Fetch customers dynamically based on query parameters to prevent massive payload hanging on mobile
             if ($role === 'admin') {
-                // Show top 100 for admin preview
-                $stmt = $pdo->query("SELECT * FROM `customers` LIMIT 100");
+                // Return all customers for admin preview
+                $stmt = $pdo->query("SELECT * FROM `customers`");
                 $result['customers'] = $stmt->fetchAll();
             } else if (!empty($territoryIdParam)) {
                 $territoryIds = array_filter(array_map('trim', explode(',', $territoryIdParam)));
