@@ -1882,221 +1882,245 @@ window.UI = {
             // --- ADMIN VIEWS ---
             
             renderAdminAnalytics() {
-                const db = Store.get();
-                const customers = db.customers || [];
-                const collections = db.collections || [];
-                const territories = db.territories || [];
+                try {
+                    const db = Store.get() || {};
+                    const customers = Store.cache?.customers || db.customers || [];
+                    const collections = Store.cache?.collections || db.collections || [];
+                    const territories = Store.cache?.territories || db.territories || [];
 
-                // Filter State
-                UI.analyticsPartFilter = UI.analyticsPartFilter || 'All';
-                UI.analyticsTerritoryFilter = UI.analyticsTerritoryFilter || 'All';
+                    // Filter State
+                    UI.analyticsPartFilter = UI.analyticsPartFilter || 'All';
+                    UI.analyticsTerritoryFilter = UI.analyticsTerritoryFilter || 'All';
 
-                const parseCleanFloat = (val) => {
-                    if (val === undefined || val === null) return 0;
-                    const cleanStr = String(val).replace(/[^0-9.-]/g, '');
-                    const num = parseFloat(cleanStr);
-                    return isNaN(num) ? 0 : num;
-                };
+                    const parseCleanFloat = (val) => {
+                        if (val === undefined || val === null) return 0;
+                        const cleanStr = String(val).replace(/[^0-9.-]/g, '');
+                        const num = parseFloat(cleanStr);
+                        return isNaN(num) ? 0 : num;
+                    };
 
-                // Aggregations based on filters
-                let filteredCustomers = customers.filter(c => {
-                    if (UI.analyticsPartFilter !== 'All') {
-                        const t = territories.find(t => t.name === c.territoryName);
-                        if (t && t.part !== UI.analyticsPartFilter) return false;
-                        if (!t) return false;
-                    }
-                    if (UI.analyticsTerritoryFilter !== 'All') {
-                        if (c.territoryName !== UI.analyticsTerritoryFilter) return false;
-                    }
-                    return true;
-                });
+                    const getTerritoryName = (c) => {
+                        let rawT = c.territoryName || c.territory_name || c.territory || '';
+                        if (rawT && /^\d+$/.test(String(rawT).trim())) {
+                            const tMatch = territories.find(t => String(t.id) === String(rawT).trim());
+                            if (tMatch) return tMatch.name;
+                        }
+                        return String(rawT);
+                    };
 
-                let totalOutstanding = 0;
-                let totalOverdue = 0;
-                let mtdCollection = 0;
+                    // Aggregations based on filters
+                    let filteredCustomers = customers.filter(c => {
+                        if (!c) return false;
+                        const tName = getTerritoryName(c);
+                        if (UI.analyticsPartFilter !== 'All') {
+                            const t = territories.find(t => String(t.name).toLowerCase() === String(tName).toLowerCase() || String(t.id) === String(tName));
+                            if (t && t.part !== UI.analyticsPartFilter) return false;
+                            if (!t) return false;
+                        }
+                        if (UI.analyticsTerritoryFilter !== 'All') {
+                            if (String(tName).toLowerCase() !== String(UI.analyticsTerritoryFilter).toLowerCase()) return false;
+                        }
+                        return true;
+                    });
 
-                filteredCustomers.forEach(c => {
-                    totalOutstanding += parseCleanFloat(c.totalOutstanding || c.total_outstanding);
-                    totalOverdue += parseCleanFloat(c.overdueTaka || c.overdue_taka);
-                });
+                    let totalOutstanding = 0;
+                    let totalOverdue = 0;
+                    let mtdCollection = 0;
 
-                const activeMonth = Utils.getActiveMonth();
-                let filteredCollections = collections.filter(c => {
-                    const cMonth = c.activeMonth || c.active_month || c.date.slice(0, 7);
-                    if (cMonth !== activeMonth) return false;
-                    
-                    if (UI.analyticsPartFilter !== 'All') {
-                        const t = territories.find(t => t.id === c.territory || t.name === c.territory);
-                        if (t && t.part !== UI.analyticsPartFilter) return false;
-                        if (!t) return false;
-                    }
-                    if (UI.analyticsTerritoryFilter !== 'All') {
-                        const t = territories.find(t => t.id === c.territory || t.name === c.territory);
-                        if (t && t.name !== UI.analyticsTerritoryFilter && t.id !== UI.analyticsTerritoryFilter) return false;
-                        if (!t && c.territory !== UI.analyticsTerritoryFilter) return false;
-                    }
-                    return true;
-                });
+                    filteredCustomers.forEach(c => {
+                        totalOutstanding += parseCleanFloat(c.totalOutstanding || c.total_outstanding);
+                        totalOverdue += parseCleanFloat(c.overdueTaka || c.overdue_taka);
+                    });
 
-                filteredCollections.forEach(c => {
-                    mtdCollection += parseCleanFloat(c.amount);
-                });
+                    const activeMonth = Utils.getActiveMonth();
+                    let filteredCollections = collections.filter(c => {
+                        if (!c) return false;
+                        const rawDate = c.date || c.collection_date || c.created_at || '';
+                        const cMonth = c.activeMonth || c.active_month || (typeof rawDate === 'string' && rawDate.length >= 7 ? rawDate.slice(0, 7) : '');
+                        if (cMonth && cMonth !== activeMonth) return false;
+                        
+                        const cTerr = c.territory || c.territoryName || c.territory_name || '';
+                        const t = territories.find(t => String(t.id) === String(cTerr) || String(t.name).toLowerCase() === String(cTerr).toLowerCase());
+                        const terrName = t ? t.name : String(cTerr);
 
-                // Top Customers by Overdue
-                const topOverdue = [...filteredCustomers].sort((a, b) => parseCleanFloat(b.overdueTaka || b.overdue_taka) - parseCleanFloat(a.overdueTaka || a.overdue_taka)).slice(0, 15);
+                        if (UI.analyticsPartFilter !== 'All') {
+                            if (t && t.part !== UI.analyticsPartFilter) return false;
+                            if (!t) return false;
+                        }
+                        if (UI.analyticsTerritoryFilter !== 'All') {
+                            if (String(terrName).toLowerCase() !== String(UI.analyticsTerritoryFilter).toLowerCase()) return false;
+                        }
+                        return true;
+                    });
 
-                const container = document.getElementById('views-container');
-                
-                // Territory Options
-                const tOpts = territories.map(t => `<option value="${t.name}" ${UI.analyticsTerritoryFilter === t.name ? 'selected' : ''}>${t.name}</option>`).join('');
+                    filteredCollections.forEach(c => {
+                        mtdCollection += parseCleanFloat(c.amount);
+                    });
 
-                container.innerHTML = `
-                    <div class="animate-entry max-w-[1600px] mx-auto pb-8">
-                        <!-- Header & Filters -->
-                        <div class="flex flex-wrap items-center justify-between gap-4 mb-4 bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-                            <div class="flex items-center gap-2">
-                                <div class="w-8 h-8 rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
-                                    <i class="fa-solid fa-chart-line text-sm"></i>
-                                </div>
-                                <div>
-                                    <h2 class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Enterprise Analytics</h2>
-                                    <p class="text-[10px] text-slate-500 font-medium tracking-wide">PORTFOLIO & PERFORMANCE INSIGHTS</p>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <select id="analytics-part" class="text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-md py-1 px-2 font-medium text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 outline-none" onchange="UI.analyticsPartFilter = this.value; UI.renderAdminAnalytics();">
-                                    <option value="All" ${UI.analyticsPartFilter === 'All' ? 'selected' : ''}>All Parts</option>
-                                    <option value="A" ${UI.analyticsPartFilter === 'A' ? 'selected' : ''}>Part A</option>
-                                    <option value="B" ${UI.analyticsPartFilter === 'B' ? 'selected' : ''}>Part B</option>
-                                </select>
-                                <select id="analytics-territory" class="text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-md py-1 px-2 font-medium text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 outline-none" onchange="UI.analyticsTerritoryFilter = this.value; UI.renderAdminAnalytics();">
-                                    <option value="All" ${UI.analyticsTerritoryFilter === 'All' ? 'selected' : ''}>All Territories</option>
-                                    ${tOpts}
-                                </select>
-                                <button onclick="UI.analyticsPartFilter='All'; UI.analyticsTerritoryFilter='All'; UI.renderAdminAnalytics();" class="text-[10px] uppercase font-bold tracking-wider text-slate-500 hover:text-indigo-600 transition px-2">Reset</button>
-                            </div>
-                        </div>
+                    // Top Customers by Overdue
+                    const topOverdue = [...filteredCustomers].sort((a, b) => parseCleanFloat(b.overdueTaka || b.overdue_taka) - parseCleanFloat(a.overdueTaka || a.overdue_taka)).slice(0, 15);
 
-                        <!-- KPI Row -->
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                            <!-- Customers -->
-                            <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
-                                <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
-                                <div class="relative z-10 flex justify-between items-start">
-                                    <div>
-                                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Total Customers</p>
-                                        <h3 class="text-xl font-black text-slate-800 dark:text-slate-100">${filteredCustomers.length.toLocaleString()}</h3>
+                    const container = document.getElementById('views-container');
+                    if (!container) return;
+
+                    // Territory Options
+                    const tOpts = territories.map(t => `<option value="${t.name}" ${UI.analyticsTerritoryFilter === t.name ? 'selected' : ''}>${t.name}</option>`).join('');
+
+                    container.innerHTML = `
+                        <div class="animate-entry max-w-[1600px] mx-auto pb-8">
+                            <!-- Header & Filters -->
+                            <div class="flex flex-wrap items-center justify-between gap-4 mb-4 bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-8 h-8 rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                                        <i class="fa-solid fa-chart-line text-sm"></i>
                                     </div>
-                                    <i class="fa-solid fa-users text-blue-500 opacity-80 text-lg"></i>
-                                </div>
-                            </div>
-                            
-                            <!-- Total Outstanding -->
-                            <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
-                                <div class="absolute -right-4 -top-4 w-16 h-16 bg-indigo-50 dark:bg-indigo-900/20 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
-                                <div class="relative z-10 flex justify-between items-start">
                                     <div>
-                                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Portfolio Size</p>
-                                        <h3 class="text-xl font-black text-slate-800 dark:text-slate-100">৳${Utils.formatCurrency(totalOutstanding)}</h3>
+                                        <h2 class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Enterprise Analytics</h2>
+                                        <p class="text-[10px] text-slate-500 font-medium tracking-wide">PORTFOLIO & PERFORMANCE INSIGHTS</p>
                                     </div>
-                                    <i class="fa-solid fa-wallet text-indigo-500 opacity-80 text-lg"></i>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <select id="analytics-part" class="text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-md py-1 px-2 font-medium text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 outline-none" onchange="UI.analyticsPartFilter = this.value; UI.renderAdminAnalytics();">
+                                        <option value="All" ${UI.analyticsPartFilter === 'All' ? 'selected' : ''}>All Parts</option>
+                                        <option value="A" ${UI.analyticsPartFilter === 'A' ? 'selected' : ''}>Part A</option>
+                                        <option value="B" ${UI.analyticsPartFilter === 'B' ? 'selected' : ''}>Part B</option>
+                                    </select>
+                                    <select id="analytics-territory" class="text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-md py-1 px-2 font-medium text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 outline-none" onchange="UI.analyticsTerritoryFilter = this.value; UI.renderAdminAnalytics();">
+                                        <option value="All" ${UI.analyticsTerritoryFilter === 'All' ? 'selected' : ''}>All Territories</option>
+                                        ${tOpts}
+                                    </select>
+                                    <button onclick="UI.analyticsPartFilter='All'; UI.analyticsTerritoryFilter='All'; UI.renderAdminAnalytics();" class="text-[10px] uppercase font-bold tracking-wider text-slate-500 hover:text-indigo-600 transition px-2">Reset</button>
                                 </div>
                             </div>
 
-                            <!-- Overdue Amount -->
-                            <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
-                                <div class="absolute -right-4 -top-4 w-16 h-16 bg-rose-50 dark:bg-rose-900/20 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
-                                <div class="relative z-10 flex justify-between items-start">
-                                    <div>
-                                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Overdue Amount</p>
-                                        <h3 class="text-xl font-black text-rose-600 dark:text-rose-400">৳${Utils.formatCurrency(totalOverdue)}</h3>
+                            <!-- KPI Row -->
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                                <!-- Customers -->
+                                <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+                                    <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
+                                    <div class="relative z-10 flex justify-between items-start">
+                                        <div>
+                                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Total Customers</p>
+                                            <h3 class="text-xl font-black text-slate-800 dark:text-slate-100">${filteredCustomers.length.toLocaleString()}</h3>
+                                        </div>
+                                        <i class="fa-solid fa-users text-blue-500 opacity-80 text-lg"></i>
                                     </div>
-                                    <i class="fa-solid fa-triangle-exclamation text-rose-500 opacity-80 text-lg"></i>
                                 </div>
-                            </div>
-
-                            <!-- MTD Collection -->
-                            <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
-                                <div class="absolute -right-4 -top-4 w-16 h-16 bg-emerald-50 dark:bg-emerald-900/20 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
-                                <div class="relative z-10 flex justify-between items-start">
-                                    <div>
-                                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">MTD Collection</p>
-                                        <h3 class="text-xl font-black text-emerald-600 dark:text-emerald-400">৳${Utils.formatCurrency(mtdCollection)}</h3>
+                                
+                                <!-- Total Outstanding -->
+                                <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+                                    <div class="absolute -right-4 -top-4 w-16 h-16 bg-indigo-50 dark:bg-indigo-900/20 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
+                                    <div class="relative z-10 flex justify-between items-start">
+                                        <div>
+                                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Portfolio Size</p>
+                                            <h3 class="text-xl font-black text-slate-800 dark:text-slate-100">৳${Utils.formatCurrency(totalOutstanding)}</h3>
+                                        </div>
+                                        <i class="fa-solid fa-wallet text-indigo-500 opacity-80 text-lg"></i>
                                     </div>
-                                    <i class="fa-solid fa-money-bill-trend-up text-emerald-500 opacity-80 text-lg"></i>
                                 </div>
-                            </div>
-                        </div>
 
-                        <!-- Charts Row -->
-                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-                            <!-- Part-wise Distribution -->
-                            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 shadow-sm h-64 flex flex-col">
-                                <h4 class="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">Part Distribution</h4>
-                                <div class="flex-1 relative">
-                                    <canvas id="analyticsPartChart"></canvas>
+                                <!-- Overdue Amount -->
+                                <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+                                    <div class="absolute -right-4 -top-4 w-16 h-16 bg-rose-50 dark:bg-rose-900/20 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
+                                    <div class="relative z-10 flex justify-between items-start">
+                                        <div>
+                                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Overdue Amount</p>
+                                            <h3 class="text-xl font-black text-rose-600 dark:text-rose-400">৳${Utils.formatCurrency(totalOverdue)}</h3>
+                                        </div>
+                                        <i class="fa-solid fa-triangle-exclamation text-rose-500 opacity-80 text-lg"></i>
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            <!-- Territory Collection Overview -->
-                            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 shadow-sm h-64 flex flex-col lg:col-span-2">
-                                <h4 class="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">Top Territories by Collection</h4>
-                                <div class="flex-1 relative">
-                                    <canvas id="analyticsTerritoryChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- Customer Table -->
-                        <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm overflow-hidden">
-                            <div class="p-2.5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-                                <h4 class="text-xs font-bold text-slate-700 dark:text-slate-200"><i class="fa-solid fa-users-viewfinder mr-1.5 text-indigo-500"></i> Critical Customers (Top 15 Overdue)</h4>
-                                <span class="text-[10px] font-bold px-2 py-0.5 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 rounded">Attention Required</span>
+                                <!-- MTD Collection -->
+                                <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+                                    <div class="absolute -right-4 -top-4 w-16 h-16 bg-emerald-50 dark:bg-emerald-950/20 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
+                                    <div class="relative z-10 flex justify-between items-start">
+                                        <div>
+                                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">MTD Collection</p>
+                                            <h3 class="text-xl font-black text-emerald-600 dark:text-emerald-400">৳${Utils.formatCurrency(mtdCollection)}</h3>
+                                        </div>
+                                        <i class="fa-solid fa-money-bill-trend-up text-emerald-500 opacity-80 text-lg"></i>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-                                            <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Customer ID</th>
-                                            <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Name</th>
-                                            <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Territory</th>
-                                            <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Inst. Size</th>
-                                            <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Overdue</th>
-                                            <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Outstanding</th>
-                                            <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Last Pay</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                                        ${topOverdue.length === 0 ? `<tr><td colspan="7" class="px-3 py-4 text-center text-xs text-slate-500 italic">No customers found.</td></tr>` : ''}
-                                        ${topOverdue.map(c => {
-                                            const od = parseCleanFloat(c.overdueTaka || c.overdue_taka);
-                                            const out = parseCleanFloat(c.totalOutstanding || c.total_outstanding);
-                                            const inst = parseCleanFloat(c.instSize || c.inst_size);
-                                            return `
-                                            <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                                                <td class="px-3 py-1.5 text-xs font-mono font-bold text-brand-600 dark:text-brand-400 border-r border-slate-100 dark:border-slate-800">${c.customerId || c.id || '-'}</td>
-                                                <td class="px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 border-r border-slate-100 dark:border-slate-800">${c.customerName || c.customer_name || '-'}</td>
-                                                <td class="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 border-r border-slate-100 dark:border-slate-800">${c.territoryName || c.territory_name || '-'}</td>
-                                                <td class="px-3 py-1.5 text-xs font-mono text-right text-slate-600 dark:text-slate-400 border-r border-slate-100 dark:border-slate-800">৳${Utils.formatCurrency(inst)}</td>
-                                                <td class="px-3 py-1.5 text-xs font-mono font-black text-rose-600 dark:text-rose-400 text-right border-r border-slate-100 dark:border-slate-800">৳${Utils.formatCurrency(od)}</td>
-                                                <td class="px-3 py-1.5 text-xs font-mono font-bold text-slate-700 dark:text-slate-300 text-right border-r border-slate-100 dark:border-slate-800">৳${Utils.formatCurrency(out)}</td>
-                                                <td class="px-3 py-1.5 text-xs font-mono text-slate-500 text-center">${c.lastPaymentDate || c.last_payment_date || '-'}</td>
+
+                            <!-- Charts Row -->
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                                <!-- Part-wise Distribution -->
+                                <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 shadow-sm h-64 flex flex-col">
+                                    <h4 class="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">Part Distribution</h4>
+                                    <div class="flex-1 relative">
+                                        <canvas id="analyticsPartChart"></canvas>
+                                    </div>
+                                </div>
+                                
+                                <!-- Territory Collection Overview -->
+                                <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 shadow-sm h-64 flex flex-col lg:col-span-2">
+                                    <h4 class="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">Top Territories by Collection</h4>
+                                    <div class="flex-1 relative">
+                                        <canvas id="analyticsTerritoryChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Customer Table -->
+                            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm overflow-hidden">
+                                <div class="p-2.5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+                                    <h4 class="text-xs font-bold text-slate-700 dark:text-slate-200"><i class="fa-solid fa-users-viewfinder mr-1.5 text-indigo-500"></i> Critical Customers (Top 15 Overdue)</h4>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 rounded">Attention Required</span>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                                                <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Customer ID</th>
+                                                <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Name</th>
+                                                <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Territory</th>
+                                                <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Inst. Size</th>
+                                                <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Overdue</th>
+                                                <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Outstanding</th>
+                                                <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Last Pay</th>
                                             </tr>
-                                            `;
-                                        }).join('')}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                            ${topOverdue.length === 0 ? `<tr><td colspan="7" class="px-3 py-4 text-center text-xs text-slate-500 italic">No customers found.</td></tr>` : ''}
+                                            ${topOverdue.map(c => {
+                                                const od = parseCleanFloat(c.overdueTaka || c.overdue_taka);
+                                                const out = parseCleanFloat(c.totalOutstanding || c.total_outstanding);
+                                                const inst = parseCleanFloat(c.instSize || c.inst_size);
+                                                const terr = getTerritoryName(c);
+                                                return `
+                                                <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                                    <td class="px-3 py-1.5 text-xs font-mono font-bold text-brand-600 dark:text-brand-400 border-r border-slate-100 dark:border-slate-800">${c.customerId || c.customer_id || c.id || '-'}</td>
+                                                    <td class="px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 border-r border-slate-100 dark:border-slate-800">${c.customerName || c.customer_name || '-'}</td>
+                                                    <td class="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 border-r border-slate-100 dark:border-slate-800">${terr || '-'}</td>
+                                                    <td class="px-3 py-1.5 text-xs font-mono text-right text-slate-600 dark:text-slate-400 border-r border-slate-100 dark:border-slate-800">৳${Utils.formatCurrency(inst)}</td>
+                                                    <td class="px-3 py-1.5 text-xs font-mono font-black text-rose-600 dark:text-rose-400 text-right border-r border-slate-100 dark:border-slate-800">৳${Utils.formatCurrency(od)}</td>
+                                                    <td class="px-3 py-1.5 text-xs font-mono font-bold text-slate-700 dark:text-slate-300 text-right border-r border-slate-100 dark:border-slate-800">৳${Utils.formatCurrency(out)}</td>
+                                                    <td class="px-3 py-1.5 text-xs font-mono text-slate-500 text-center">${c.lastPaymentDate || c.last_payment_date || '-'}</td>
+                                                </tr>
+                                                `;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                `;
+                    `;
 
-                // Render Charts
-                setTimeout(() => {
-                    UI.renderAnalyticsCharts(filteredCustomers, filteredCollections, territories);
-                }, 50);
+                    // Render Charts safely
+                    setTimeout(() => {
+                        try {
+                            UI.renderAnalyticsCharts(filteredCustomers, filteredCollections, territories);
+                        } catch (err) {
+                            console.error("Error rendering analytics charts:", err);
+                        }
+                    }, 50);
+                } catch (e) {
+                    console.error("Error in renderAdminAnalytics:", e);
+                }
             },
-            
+
             renderAnalyticsCharts(filteredCustomers, filteredCollections, territories) {
                 // Destroy old charts if exist
                 if (window.analyticsPartChartInst) window.analyticsPartChartInst.destroy();
