@@ -1899,6 +1899,14 @@ window.UI = {
                         return isNaN(num) ? 0 : num;
                     };
 
+                    const fmtCurr = (num) => {
+                        if (typeof Utils !== 'undefined' && Utils.formatCurrency) {
+                            return Utils.formatCurrency(num);
+                        }
+                        const val = parseCleanFloat(num);
+                        return Math.round(val).toLocaleString();
+                    };
+
                     const getTerritoryName = (c) => {
                         let rawT = c.territoryName || c.territory_name || c.territory || '';
                         if (rawT && /^\d+$/.test(String(rawT).trim())) {
@@ -1932,12 +1940,12 @@ window.UI = {
                         totalOverdue += parseCleanFloat(c.overdueTaka || c.overdue_taka);
                     });
 
-                    const activeMonth = Utils.getActiveMonth();
+                    const activeMonth = Utils.getActiveMonth ? Utils.getActiveMonth() : '';
                     let filteredCollections = collections.filter(c => {
                         if (!c) return false;
                         const rawDate = c.date || c.collection_date || c.created_at || '';
                         const cMonth = c.activeMonth || c.active_month || (typeof rawDate === 'string' && rawDate.length >= 7 ? rawDate.slice(0, 7) : '');
-                        if (cMonth && cMonth !== activeMonth) return false;
+                        if (activeMonth && cMonth && cMonth !== activeMonth) return false;
                         
                         const cTerr = c.territory || c.territoryName || c.territory_name || '';
                         const t = territories.find(t => String(t.id) === String(cTerr) || String(t.name).toLowerCase() === String(cTerr).toLowerCase());
@@ -2013,7 +2021,7 @@ window.UI = {
                                     <div class="relative z-10 flex justify-between items-start">
                                         <div>
                                             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Portfolio Size</p>
-                                            <h3 class="text-xl font-black text-slate-800 dark:text-slate-100">৳${Utils.formatCurrency(totalOutstanding)}</h3>
+                                            <h3 class="text-xl font-black text-slate-800 dark:text-slate-100">৳${fmtCurr(totalOutstanding)}</h3>
                                         </div>
                                         <i class="fa-solid fa-wallet text-indigo-500 opacity-80 text-lg"></i>
                                     </div>
@@ -2025,7 +2033,7 @@ window.UI = {
                                     <div class="relative z-10 flex justify-between items-start">
                                         <div>
                                             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Overdue Amount</p>
-                                            <h3 class="text-xl font-black text-rose-600 dark:text-rose-400">৳${Utils.formatCurrency(totalOverdue)}</h3>
+                                            <h3 class="text-xl font-black text-rose-600 dark:text-rose-400">৳${fmtCurr(totalOverdue)}</h3>
                                         </div>
                                         <i class="fa-solid fa-triangle-exclamation text-rose-500 opacity-80 text-lg"></i>
                                     </div>
@@ -2037,7 +2045,7 @@ window.UI = {
                                     <div class="relative z-10 flex justify-between items-start">
                                         <div>
                                             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">MTD Collection</p>
-                                            <h3 class="text-xl font-black text-emerald-600 dark:text-emerald-400">৳${Utils.formatCurrency(mtdCollection)}</h3>
+                                            <h3 class="text-xl font-black text-emerald-600 dark:text-emerald-400">৳${fmtCurr(mtdCollection)}</h3>
                                         </div>
                                         <i class="fa-solid fa-money-bill-trend-up text-emerald-500 opacity-80 text-lg"></i>
                                     </div>
@@ -2094,9 +2102,9 @@ window.UI = {
                                                     <td class="px-3 py-1.5 text-xs font-mono font-bold text-brand-600 dark:text-brand-400 border-r border-slate-100 dark:border-slate-800">${c.customerId || c.customer_id || c.id || '-'}</td>
                                                     <td class="px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 border-r border-slate-100 dark:border-slate-800">${c.customerName || c.customer_name || '-'}</td>
                                                     <td class="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 border-r border-slate-100 dark:border-slate-800">${terr || '-'}</td>
-                                                    <td class="px-3 py-1.5 text-xs font-mono text-right text-slate-600 dark:text-slate-400 border-r border-slate-100 dark:border-slate-800">৳${Utils.formatCurrency(inst)}</td>
-                                                    <td class="px-3 py-1.5 text-xs font-mono font-black text-rose-600 dark:text-rose-400 text-right border-r border-slate-100 dark:border-slate-800">৳${Utils.formatCurrency(od)}</td>
-                                                    <td class="px-3 py-1.5 text-xs font-mono font-bold text-slate-700 dark:text-slate-300 text-right border-r border-slate-100 dark:border-slate-800">৳${Utils.formatCurrency(out)}</td>
+                                                    <td class="px-3 py-1.5 text-xs font-mono text-right text-slate-600 dark:text-slate-400 border-r border-slate-100 dark:border-slate-800">৳${fmtCurr(inst)}</td>
+                                                    <td class="px-3 py-1.5 text-xs font-mono font-black text-rose-600 dark:text-rose-400 text-right border-r border-slate-100 dark:border-slate-800">৳${fmtCurr(od)}</td>
+                                                    <td class="px-3 py-1.5 text-xs font-mono font-bold text-slate-700 dark:text-slate-300 text-right border-r border-slate-100 dark:border-slate-800">৳${fmtCurr(out)}</td>
                                                     <td class="px-3 py-1.5 text-xs font-mono text-slate-500 text-center">${c.lastPaymentDate || c.last_payment_date || '-'}</td>
                                                 </tr>
                                                 `;
@@ -2120,129 +2128,141 @@ window.UI = {
                     console.error("Error in renderAdminAnalytics:", e);
                 }
             },
-
+            
             renderAnalyticsCharts(filteredCustomers, filteredCollections, territories) {
-                // Destroy old charts if exist
-                if (window.analyticsPartChartInst) window.analyticsPartChartInst.destroy();
-                if (window.analyticsTerritoryChartInst) window.analyticsTerritoryChartInst.destroy();
+                try {
+                    if (typeof Chart === 'undefined') return;
+                    if (window.analyticsPartChartInst) window.analyticsPartChartInst.destroy();
+                    if (window.analyticsTerritoryChartInst) window.analyticsTerritoryChartInst.destroy();
 
-                const parseCleanFloat = (val) => {
-                    if (val === undefined || val === null) return 0;
-                    const cleanStr = String(val).replace(/[^0-9.-]/g, '');
-                    const num = parseFloat(cleanStr);
-                    return isNaN(num) ? 0 : num;
-                };
+                    const parseCleanFloat = (val) => {
+                        if (val === undefined || val === null) return 0;
+                        const cleanStr = String(val).replace(/[^0-9.-]/g, '');
+                        const num = parseFloat(cleanStr);
+                        return isNaN(num) ? 0 : num;
+                    };
 
-                // Prepare Part Data
-                let partAOut = 0, partBOut = 0;
-                filteredCustomers.forEach(c => {
-                    const t = territories.find(t => t.name === c.territoryName);
-                    if (t) {
-                        const out = parseCleanFloat(c.totalOutstanding || c.total_outstanding);
-                        if (t.part === 'A') partAOut += out;
-                        if (t.part === 'B') partBOut += out;
-                    }
-                });
+                    const fmtCurr = (num) => {
+                        if (typeof Utils !== 'undefined' && Utils.formatCurrency) {
+                            return Utils.formatCurrency(num);
+                        }
+                        const val = parseCleanFloat(num);
+                        return Math.round(val).toLocaleString();
+                    };
 
-                if (partAOut > 0 || partBOut > 0) {
-                    const ctxPart = document.getElementById('analyticsPartChart');
-                    if (ctxPart) {
-                        window.analyticsPartChartInst = new Chart(ctxPart, {
-                            type: 'doughnut',
-                            data: {
-                                labels: ['Part A', 'Part B'],
-                                datasets: [{
-                                    data: [partAOut, partBOut],
-                                    backgroundColor: ['#4f46e5', '#0ea5e9'],
-                                    borderWidth: 0,
-                                    hoverOffset: 4
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                cutout: '70%',
-                                plugins: {
-                                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } },
-                                    tooltip: {
-                                        callbacks: {
-                                            label: function(context) {
-                                                return ' ৳' + Utils.formatCurrency(context.raw);
-                                            }
-                                        }
-                                    },
-                                    datalabels: { display: false }
-                                }
-                            }
-                        });
-                    }
-                }
+                    let partAOut = 0, partBOut = 0;
+                    filteredCustomers.forEach(c => {
+                        const terr = c.territoryName || c.territory_name || c.territory || '';
+                        const t = territories.find(t => String(t.name).toLowerCase() === String(terr).toLowerCase() || String(t.id) === String(terr));
+                        if (t) {
+                            const out = parseCleanFloat(c.totalOutstanding || c.total_outstanding);
+                            if (t.part === 'A') partAOut += out;
+                            if (t.part === 'B') partBOut += out;
+                        }
+                    });
 
-                // Prepare Territory Data (Top 5 Collections)
-                const terrColl = {};
-                filteredCollections.forEach(c => {
-                    const t = territories.find(t => t.id === c.territory || t.name === c.territory);
-                    const tName = t ? t.name : c.territory;
-                    if (!terrColl[tName]) terrColl[tName] = 0;
-                    terrColl[tName] += parseCleanFloat(c.amount);
-                });
-
-                const sortedTerritories = Object.entries(terrColl)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 10); // Top 10
-
-                if (sortedTerritories.length > 0) {
-                    const ctxTerr = document.getElementById('analyticsTerritoryChart');
-                    if (ctxTerr) {
-                        window.analyticsTerritoryChartInst = new Chart(ctxTerr, {
-                            type: 'bar',
-                            data: {
-                                labels: sortedTerritories.map(st => st[0].substring(0, 12) + (st[0].length>12?'...':'')),
-                                datasets: [{
-                                    label: 'MTD Collection (৳)',
-                                    data: sortedTerritories.map(st => st[1]),
-                                    backgroundColor: '#10b981',
-                                    borderRadius: 4,
-                                    barThickness: 16
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: {
-                                    y: {
-                                        beginAtZero: true,
-                                        ticks: {
-                                            font: { size: 9 },
-                                            callback: function(value) {
-                                                return value >= 1000000 ? (value/1000000).toFixed(1) + 'M' : value >= 1000 ? (value/1000).toFixed(1) + 'K' : value;
+                    if (partAOut > 0 || partBOut > 0) {
+                        const ctxPart = document.getElementById('analyticsPartChart');
+                        if (ctxPart) {
+                            window.analyticsPartChartInst = new Chart(ctxPart, {
+                                type: 'doughnut',
+                                data: {
+                                    labels: ['Part A', 'Part B'],
+                                    datasets: [{
+                                        data: [partAOut, partBOut],
+                                        backgroundColor: ['#4f46e5', '#0ea5e9'],
+                                        borderWidth: 0,
+                                        hoverOffset: 4
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    cutout: '70%',
+                                    plugins: {
+                                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } },
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function(context) {
+                                                    return ' ৳' + fmtCurr(context.raw);
+                                                }
                                             }
                                         },
-                                        grid: { color: 'rgba(0,0,0,0.05)' }
-                                    },
-                                    x: {
-                                        ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 45 },
-                                        grid: { display: false }
+                                        datalabels: { display: false }
                                     }
+                                }
+                            });
+                        }
+                    }
+
+                    const terrColl = {};
+                    filteredCollections.forEach(c => {
+                        const cTerr = c.territory || c.territoryName || c.territory_name || '';
+                        const t = territories.find(t => String(t.id) === String(cTerr) || String(t.name).toLowerCase() === String(cTerr).toLowerCase());
+                        const tName = t ? t.name : String(cTerr);
+                        if (!terrColl[tName]) terrColl[tName] = 0;
+                        terrColl[tName] += parseCleanFloat(c.amount);
+                    });
+
+                    const sortedTerritories = Object.entries(terrColl)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 10);
+
+                    if (sortedTerritories.length > 0) {
+                        const ctxTerr = document.getElementById('analyticsTerritoryChart');
+                        if (ctxTerr) {
+                            window.analyticsTerritoryChartInst = new Chart(ctxTerr, {
+                                type: 'bar',
+                                data: {
+                                    labels: sortedTerritories.map(st => st[0].substring(0, 12) + (st[0].length>12?'...':'')),
+                                    datasets: [{
+                                        label: 'MTD Collection (৳)',
+                                        data: sortedTerritories.map(st => st[1]),
+                                        backgroundColor: '#10b981',
+                                        borderRadius: 4,
+                                        barThickness: 16
+                                    }]
                                 },
-                                plugins: {
-                                    legend: { display: false },
-                                    tooltip: {
-                                        callbacks: {
-                                            label: function(context) {
-                                                return ' ৳' + Utils.formatCurrency(context.raw);
-                                            }
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true,
+                                            ticks: {
+                                                font: { size: 9 },
+                                                callback: function(value) {
+                                                    return value >= 1000000 ? (value/1000000).toFixed(1) + 'M' : value >= 1000 ? (value/1000).toFixed(1) + 'K' : value;
+                                                }
+                                            },
+                                            grid: { color: 'rgba(0,0,0,0.05)' }
+                                        },
+                                        x: {
+                                            ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 45 },
+                                            grid: { display: false }
                                         }
                                     },
-                                    datalabels: { display: false }
+                                    plugins: {
+                                        legend: { display: false },
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function(context) {
+                                                    return ' ৳' + fmtCurr(context.raw);
+                                                }
+                                            }
+                                        },
+                                        datalabels: { display: false }
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        }
                     }
+                } catch (err) {
+                    console.error("Error in renderAnalyticsCharts:", err);
                 }
             },
 
-renderAdminDashboard(tableMode = 'compact') {
+            renderAdminDashboard(tableMode = 'compact') {
                 const metrics = Calc.getMetrics();
                 const db = Store.get();
                 const cutoffSetting = db.system_settings?.find(s => s.key === 'cutoff_extension_hours');

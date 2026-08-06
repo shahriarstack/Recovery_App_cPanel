@@ -60,8 +60,7 @@ window.Router = {
                 else if (viewId === 'admin-history') UI.renderAdminHistory();
                 else if (viewId === 'admin-vehicle-perf') UI.renderAdminVehiclePerf();
                 else if (viewId === 'admin-projections') UI.renderAdminProjections();
-                else if (viewId === 'admin-performance') UI.renderAdminPerformance();
-                else if (viewId === 'admin-analytics') UI.renderAdminAnalytics();
+                else if (viewId === 'admin-performance' || viewId === 'admin-analytics') UI.renderAdminAnalytics();
                 else if (viewId === 'officer-dashboard') UI.renderOfficerDashboard();
                 else if (viewId === 'officer-projection') UI.renderProjectionForm();
                 else if (viewId === 'officer-collection') UI.renderCollectionForm();

@@ -52,6 +52,10 @@ window.Utils = {
                 const end = realTodayStr > lastDayStr && realTodayStr.startsWith(activeMonth.slice(0, 4)) ? realTodayStr : lastDayStr;
                 
                 return { startOfMonth: `${activeMonth}-01`, endOfMonth: end };
+            },
+            formatCurrency(num) {
+                const val = parseFloat(num) || 0;
+                return Math.round(val).toLocaleString();
             }
         };
 
