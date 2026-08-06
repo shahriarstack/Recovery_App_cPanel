@@ -6124,46 +6124,71 @@ window.UI = {
                 reader.onload = async (event) => {
                     try {
                         const csvText = event.target.result;
-                        const lines = csvText.split('\n').filter(l => l.trim().length > 0);
+                        const lines = csvText.split(/\r?\n/).filter(l => l.trim().length > 0);
                         if (lines.length < 2) throw new Error("CSV is empty or missing data.");
                         
-                        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+                        const parseCSVLine = (text) => {
+                            const result = [];
+                            let cell = '';
+                            let inQuotes = false;
+                            for (let i = 0; i < text.length; i++) {
+                                const c = text[i];
+                                if (c === '"') {
+                                    inQuotes = !inQuotes;
+                                } else if (c === ',' && !inQuotes) {
+                                    result.push(cell.trim().replace(/^"|"$/g, ''));
+                                    cell = '';
+                                } else {
+                                    cell += c;
+                                }
+                            }
+                            result.push(cell.trim().replace(/^"|"$/g, ''));
+                            return result;
+                        };
+
+                        const rawHeaders = parseCSVLine(lines[0]);
+                        const headers = rawHeaders.map(h => h.trim().toLowerCase().replace(/["']/g, ''));
 
                         const getVal = (row, variants, defaultIdx) => {
                             for (const v of variants) {
                                 const idx = headers.indexOf(v.toLowerCase());
-                                if (idx !== -1 && row[idx] !== undefined) return row[idx];
+                                if (idx !== -1 && row[idx] !== undefined && row[idx] !== '') return row[idx];
                             }
                             return row[defaultIdx] !== undefined ? row[defaultIdx] : '';
                         };
                         
+                        const territories = Store.cache.territories || [];
                         const data = [];
+
                         for (let i = 1; i < lines.length; i++) {
-                            const cleanRow = lines[i].split(',').map(val => val.trim().replace(/^"|"$/g, ''));
+                            const cleanRow = parseCSVLine(lines[i]);
+                            if (cleanRow.length < 2) continue; // Skip empty rows
                             
-                            if (cleanRow.length < 15) continue; // Skip malformed rows
+                            const customerId = getVal(cleanRow, ['customer_id', 'customer id', 'customerid', 'customer_code', 'customer code', 'customercode', 'code', 'id', 'cust_id', 'cust id'], 0);
+                            const customerName = getVal(cleanRow, ['customer_name', 'customer name', 'customername', 'name', 'cust_name', 'cust name', 'client_name', 'client name'], 1);
+                            const vehicleRegNo = getVal(cleanRow, ['vehicle_reg_number', 'vehicle reg number', 'vehicle_reg_no', 'vehicle reg no', 'vehicle reg', 'vehicleregnumber', 'reg_no', 'reg no', 'registration', 'registration_no', 'registration no', 'regno', 'vehicle_no', 'vehicle no'], 2);
+                            const phone = getVal(cleanRow, ['phone_number', 'phone number', 'phone', 'mobile', 'mobile_number', 'mobile number', 'contact', 'contact_no', 'contact no', 'phone_no', 'phone no', 'mobile_no', 'mobile no'], 3);
+                            const firstInstDate = getVal(cleanRow, ['first_installment_date', 'first installment date', 'firstinstdate', 'first_inst_date', 'first inst date', 'start_date', 'start date', 'issue_date', 'issue date'], 4);
+                            const instSize = parseFloat(getVal(cleanRow, ['installment_size', 'installment size', 'instsize', 'inst_size', 'inst size', 'emi', 'emi_amount', 'emi amount', 'installment_amount', 'installment amount'], 5)) || 0;
+                            const overdueInstNo = parseInt(getVal(cleanRow, ['overdue_inst_no', 'overdueinstno', 'overdue inst no', 'overdue_inst', 'overdue inst', 'overdue_nos', 'od_inst_no', 'od inst no', 'od_inst', 'od inst'], 6)) || 0;
+                            const overdueTaka = parseFloat(getVal(cleanRow, ['overdue_taka', 'overduetaka', 'overdue taka', 'overdue_amount', 'overdue amount', 'od_taka', 'od taka', 'od_amount', 'od amount', 'overdue'], 7)) || 0;
+                            const totalOutstanding = parseFloat(getVal(cleanRow, ['total_outstanding', 'total outstanding', 'outstanding', 'total_out', 'total out', 'out_standing', 'out standing', 'balance', 'total_balance', 'total balance'], 8)) || 0;
+                            const lastPaymentDate = getVal(cleanRow, ['last_payment_date', 'last payment date', 'last_pay_date', 'last pay date', 'last_payment', 'last payment', 'last_pay_dt'], 9);
+                            const last3Month1 = parseFloat(getVal(cleanRow, ['last_3_month_payment_1', 'last 3 month payment 1', 'last_3_month_1', 'last 3 month 1', 'pay_m1', 'pay m1', 'm1', 'm-1', 'pay m-1'], 10)) || 0;
+                            const last3Month2 = parseFloat(getVal(cleanRow, ['last_3_month_payment_2', 'last 3 month payment 2', 'last_3_month_2', 'last 3 month 2', 'pay_m2', 'pay m2', 'm2', 'm-2', 'pay m-2'], 11)) || 0;
+                            const last3Month3 = parseFloat(getVal(cleanRow, ['last_3_month_payment_3', 'last 3 month payment 3', 'last_3_month_3', 'last 3 month 3', 'pay_m3', 'pay m3', 'm3', 'm-3', 'pay m-3'], 12)) || 0;
+                            const upazilaCode = getVal(cleanRow, ['upazila_code', 'upazila code', 'upazilacode', 'thana_code', 'thana code'], 13);
+                            const upazilaName = getVal(cleanRow, ['upazila_name', 'upazila name', 'upazila', 'upazilaname', 'thana_name', 'thana name', 'thana'], 14);
+                            let territoryName = getVal(cleanRow, ['territory_name', 'territory name', 'territory', 'territory_id', 'territory id', 'territoryname', 'territoryid', 'zone', 'region', 'area'], 15);
                             
-                            const customerId = getVal(cleanRow, ['customer_id', 'customer id', 'customerid'], 0);
-                            const customerName = getVal(cleanRow, ['customer_name', 'customer name', 'customername'], 1);
-                            const vehicleRegNo = getVal(cleanRow, ['vehicle_reg_number', 'vehicle reg number', 'vehicle_reg_no', 'vehicle reg no', 'vehicle reg', 'vehicleregnumber'], 2);
-                            const phone = getVal(cleanRow, ['phone_number', 'phone number', 'phone'], 3);
-                            const firstInstDate = getVal(cleanRow, ['first_installment_date', 'first installment date', 'firstinstdate'], 4);
-                            const instSize = parseFloat(getVal(cleanRow, ['installment_size', 'installment size', 'instsize'], 5)) || 0;
-                            const overdueInstNo = parseInt(getVal(cleanRow, ['overdue_inst_no', 'overdueinstno', 'overdue inst no'], 6)) || 0;
-                            const overdueTaka = parseFloat(getVal(cleanRow, ['overdue_taka', 'overduetaka', 'overdue taka'], 7)) || 0;
-                            const totalOutstanding = parseFloat(getVal(cleanRow, ['total_outstanding', 'total outstanding', 'outstanding'], 8)) || 0;
-                            const lastPaymentDate = getVal(cleanRow, ['last_payment_date', 'last payment date'], 9);
-                            const last3Month1 = parseFloat(getVal(cleanRow, ['last_3_month_payment_1', 'last 3 month payment 1', 'last_3_month_1'], 10)) || 0;
-                            const last3Month2 = parseFloat(getVal(cleanRow, ['last_3_month_payment_2', 'last 3 month payment 2', 'last_3_month_2'], 11)) || 0;
-                            const last3Month3 = parseFloat(getVal(cleanRow, ['last_3_month_payment_3', 'last 3 month payment 3', 'last_3_month_3'], 12)) || 0;
-                            const upazilaCode = getVal(cleanRow, ['upazila_code', 'upazila code'], 13);
-                            const upazilaName = getVal(cleanRow, ['upazila_name', 'upazila name'], 14);
-                            let territoryName = getVal(cleanRow, ['territory_name', 'territory name'], 15);
-                            if (territoryName && /^\d+$/.test(territoryName.trim())) {
-                                const tMatch = (Store.cache.territories || []).find(t => String(t.id) === territoryName.trim());
+                            if (territoryName) {
+                                territoryName = territoryName.trim();
+                                const tMatch = territories.find(t => String(t.id) === String(territoryName) || String(t.name).toLowerCase() === String(territoryName).toLowerCase());
                                 if (tMatch) territoryName = tMatch.name;
                             }
-                            
+
+                            if (!customerId && !customerName) continue; // Skip empty rows
+
                             data.push({
                                 customerId,
                                 customerName,
@@ -6460,13 +6485,23 @@ window.UI = {
                 } else {
                     slice.forEach(c => {
                         const collAmt = c.collectedMTD || 0;
-                        const odAmt = parseFloat(c.overdueTaka) || 0;
-                        const odInst = parseInt(c.overdueInstNo) || 0;
-                        const instSize = parseFloat(c.instSize) || 0;
-                        const outAmt = parseFloat(c.totalOutstanding) || 0;
-                        const m1 = parseFloat(c.last3Month1) || 0;
-                        const m2 = parseFloat(c.last3Month2) || 0;
-                        const m3 = parseFloat(c.last3Month3) || 0;
+                        const odAmt = parseFloat(c.overdueTaka || c.overdue_taka) || 0;
+                        const odInst = parseInt(c.overdueInstNo || c.overdue_inst_no) || 0;
+                        const instSize = parseFloat(c.instSize || c.inst_size) || 0;
+                        const outAmt = parseFloat(c.totalOutstanding || c.total_outstanding) || 0;
+                        const m1 = parseFloat(c.last3Month1 || c.last_3_month_1 || c.last3Month1) || 0;
+                        const m2 = parseFloat(c.last3Month2 || c.last_3_month_2 || c.last3Month2) || 0;
+                        const m3 = parseFloat(c.last3Month3 || c.last_3_month_3 || c.last3Month3) || 0;
+
+                        let displayTerritory = c.territoryName || c.territory_name || '-';
+                        if (displayTerritory && /^\d+$/.test(String(displayTerritory).trim())) {
+                            const tMatch = (Store.cache.territories || []).find(t => String(t.id) === String(displayTerritory).trim());
+                            if (tMatch) displayTerritory = tMatch.name;
+                        }
+
+                        const upazilaText = c.upazilaName || c.upazila_name || '';
+                        const upazilaCodeText = c.upazilaCode || c.upazila_code || '';
+                        const displayUpazila = upazilaText ? (upazilaCodeText ? `${upazilaText} (${upazilaCodeText})` : upazilaText) : (upazilaCodeText || '-');
 
                         let statusBadge = '';
                         if (collAmt >= instSize && instSize > 0) {
@@ -6479,19 +6514,19 @@ window.UI = {
                             statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-500 border border-slate-200">UNPAID</span>';
                         }
 
-                        const custKey = encodeURIComponent(c.customerId || c.id);
+                        const custKey = encodeURIComponent(c.customerId || c.id || '');
 
                         html += `
                             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 sticky left-0 bg-white dark:bg-slate-900 font-semibold text-slate-700 dark:text-slate-200">
-                                    <span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[11px]">${c.territoryName || '-'}</span>
+                                    <span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[11px]">${displayTerritory}</span>
                                 </td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-slate-500 text-xs">${c.upazilaName || '-'}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 font-mono font-bold text-brand-600 dark:text-brand-400 text-xs">${c.customerId}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 font-medium text-slate-900 dark:text-white text-xs">${c.customerName || '-'}</td>
+                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-slate-500 text-xs">${displayUpazila}</td>
+                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 font-mono font-bold text-brand-600 dark:text-brand-400 text-xs">${c.customerId || c.customer_id || '-'}</td>
+                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 font-medium text-slate-900 dark:text-white text-xs">${c.customerName || c.customer_name || '-'}</td>
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 font-mono text-slate-500 text-xs">${c.phone || '-'}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 font-mono text-slate-600 dark:text-slate-300 text-xs">${c.vehicleRegNo || '-'}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-slate-500 text-xs">${c.firstInstDate || '-'}</td>
+                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 font-mono text-slate-600 dark:text-slate-300 text-xs">${c.vehicleRegNo || c.vehicle_reg_no || '-'}</td>
+                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-slate-500 text-xs">${c.firstInstDate || c.first_inst_date || '-'}</td>
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-right font-mono text-xs">৳${Math.round(instSize).toLocaleString()}</td>
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-right font-mono font-black bg-emerald-50/50 dark:bg-emerald-950/20 ${collAmt > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}">৳${Math.round(collAmt).toLocaleString()}</td>
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-center font-mono font-bold text-indigo-600 dark:text-indigo-400 text-xs">${c.latestCollectionDate || '-'}</td>

@@ -14,7 +14,7 @@ window.Store = {
                             item[key] = (item[key] === true || item[key] === 1 || item[key] === '1' || item[key] === 'true');
                         }
                         if (key.includes('_')) {
-                            const camel = key.replace(/_([a-z])/g, g => g[1].toUpperCase());
+                            const camel = key.replace(/_([a-z0-9])/g, g => g[1].toUpperCase());
                             if (item[camel] === undefined) {
                                 item[camel] = item[key];
                             }
