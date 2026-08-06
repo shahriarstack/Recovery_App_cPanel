@@ -1999,27 +1999,26 @@ window.UI = {
                     const bPct = ((partBOut / totalPartsOut) * 100).toFixed(1);
 
                     partHtml = `
-                    <div class="bg-white/70 dark:bg-slate-800/60 backdrop-blur-md rounded-xl p-3.5 border border-slate-200/60 dark:border-slate-700/60 shadow-sm mb-3.5">
-                        <h3 class="text-[10px] font-black uppercase text-slate-500 mb-2 tracking-wider">Part-wise Portfolio Exposure (Outstanding)</h3>
-                        <div class="flex items-center gap-3">
-                            <div class="w-14 text-right">
-                                <div class="text-xs font-black text-emerald-600 dark:text-emerald-400">PART A</div>
-                                <div class="text-[9px] font-bold text-slate-500">৳${(partAOut / 1000000).toFixed(2)}M</div>
-                            </div>
-                            <div class="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-900 flex overflow-hidden shadow-inner">
-                                <div class="bg-gradient-to-r from-emerald-500 to-emerald-400 h-full transition-all duration-1000" style="width: ${aPct}%"></div>
-                            </div>
-                            <div class="w-8 text-[11px] font-black text-emerald-700 dark:text-emerald-300">${aPct}%</div>
+                    <div class="xl:col-span-3 bg-white/70 dark:bg-slate-800/60 backdrop-blur-md rounded-xl p-2.5 border border-slate-200/60 dark:border-slate-700/60 shadow-sm flex flex-col justify-center">
+                        <div class="flex justify-between items-center mb-1">
+                            <h3 class="text-[9px] font-black uppercase text-slate-500 tracking-wider">Part Exposure</h3>
+                            <span class="text-[9px] font-bold text-slate-400">Outstanding</span>
                         </div>
-                        <div class="flex items-center gap-3 mt-2">
-                            <div class="w-14 text-right">
-                                <div class="text-xs font-black text-indigo-600 dark:text-indigo-400">PART B</div>
-                                <div class="text-[9px] font-bold text-slate-500">৳${(partBOut / 1000000).toFixed(2)}M</div>
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-[9px] font-black text-emerald-600 dark:text-emerald-400 w-9">PART A</span>
+                                <div class="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-900 overflow-hidden">
+                                    <div class="bg-emerald-500 h-full transition-all duration-700" style="width: ${aPct}%"></div>
+                                </div>
+                                <span class="text-[9px] font-mono font-bold text-slate-500 w-8 text-right">${aPct}%</span>
                             </div>
-                            <div class="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-900 flex overflow-hidden shadow-inner">
-                                <div class="bg-gradient-to-r from-indigo-500 to-indigo-400 h-full transition-all duration-1000" style="width: ${bPct}%"></div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[9px] font-black text-indigo-600 dark:text-indigo-400 w-9">PART B</span>
+                                <div class="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-900 overflow-hidden">
+                                    <div class="bg-indigo-500 h-full transition-all duration-700" style="width: ${bPct}%"></div>
+                                </div>
+                                <span class="text-[9px] font-mono font-bold text-slate-500 w-8 text-right">${bPct}%</span>
                             </div>
-                            <div class="w-8 text-[11px] font-black text-indigo-700 dark:text-indigo-300">${bPct}%</div>
                         </div>
                     </div>
                     `;
@@ -2063,97 +2062,95 @@ window.UI = {
                 // Build HTML
                 const container = document.getElementById('views-container');
                 container.innerHTML = `
-                    <div class="animate-entry space-y-3.5 pb-8">
-                        <!-- Header -->
-                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                            <div>
-                                <h1 class="text-xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
-                                    <i class="fa-solid fa-chart-network text-indigo-500 text-base"></i> In-depth Analytics
+                    <div class="animate-entry space-y-3 pb-8">
+                        <!-- Header & Filters Bar (Combined Compact Row) -->
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-2 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
+                            <div class="flex items-center gap-2">
+                                <h1 class="text-base font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-1.5">
+                                    <i class="fa-solid fa-chart-network text-indigo-500 text-sm"></i> In-depth Analytics
                                 </h1>
-                                <p class="text-[11px] text-slate-500 font-medium mt-0.5">Deep-dive customer risk and portfolio analysis.</p>
                             </div>
-                            <div class="flex gap-2">
-                                <button onclick="Router.navigate('admin-dashboard')" class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition-all shadow-sm">
-                                    <i class="fa-solid fa-arrow-left mr-1.5"></i> Back to Dashboard
+                            
+                            <div class="flex flex-wrap items-center gap-2">
+                                <div class="flex items-center gap-1">
+                                    <i class="fa-solid fa-filter text-slate-400 text-[10px]"></i>
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Filters:</span>
+                                </div>
+                                <select id="analytics-filter-part" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-semibold rounded-md px-2 py-0.5 outline-none">
+                                    <option value="All" ${filterPart === 'All' ? 'selected' : ''}>All Parts</option>
+                                    <option value="A" ${filterPart === 'A' ? 'selected' : ''}>Part A</option>
+                                    <option value="B" ${filterPart === 'B' ? 'selected' : ''}>Part B</option>
+                                </select>
+                                
+                                <select id="analytics-filter-territory" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-semibold rounded-md px-2 py-0.5 outline-none max-w-[130px]">
+                                    <option value="All" ${filterTerritory === 'All' ? 'selected' : ''}>All Territories</option>
+                                    ${Array.from(new Set(analyticsData.map(c => c.territoryName))).filter(t => t && t !== 'Unknown').sort().map(t => `<option value="${t}" ${filterTerritory === t ? 'selected' : ''}>${t}</option>`).join('')}
+                                </select>
+
+                                <select id="analytics-filter-risk" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-semibold rounded-md px-2 py-0.5 outline-none">
+                                    <option value="All" ${filterRisk === 'All' ? 'selected' : ''}>All Risk Levels</option>
+                                    <option value="Safe" ${filterRisk === 'Safe' ? 'selected' : ''}>Safe (0 OD)</option>
+                                    <option value="At-Risk" ${filterRisk === 'At-Risk' ? 'selected' : ''}>At-Risk (1-2 OD)</option>
+                                    <option value="Critical" ${filterRisk === 'Critical' ? 'selected' : ''}>Critical (3+ OD)</option>
+                                </select>
+                                
+                                ${(filterPart !== 'All' || filterTerritory !== 'All' || filterRisk !== 'All') ? 
+                                    `<button onclick="document.getElementById('analytics-filter-part').value='All'; document.getElementById('analytics-filter-territory').value='All'; document.getElementById('analytics-filter-risk').value='All'; UI.renderAdminInDepthAnalytics();" class="text-[9px] font-bold text-rose-500 hover:text-rose-600 uppercase tracking-widest px-1">Clear</button>` 
+                                : ''}
+
+                                <button onclick="Router.navigate('admin-dashboard')" class="ml-2 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-md text-[10px] font-bold transition-all shadow-sm">
+                                    <i class="fa-solid fa-arrow-left mr-1"></i> Dashboard
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Top Stat Cards (Compact) -->
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                            <div class="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-800/50 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm relative overflow-hidden group hover:-translate-y-0.5 transition-transform">
-                                <div class="absolute -right-2 -top-2 text-slate-100 dark:text-slate-700/30 text-5xl transform rotate-12 transition-transform group-hover:scale-110 pointer-events-none"><i class="fa-solid fa-users"></i></div>
-                                <h3 class="text-[9px] font-black uppercase text-slate-400 tracking-wider relative z-10">Total Customers</h3>
-                                <div class="text-xl font-black text-slate-800 dark:text-white mt-0.5 relative z-10">${totalCust.toLocaleString()}</div>
+                        <!-- Combined Single-Row Analytics Header (Stat Cards + Progress Bars in 1 Line) -->
+                        <div class="grid grid-cols-1 xl:grid-cols-12 gap-2.5 items-stretch">
+                            <!-- Stat Cards Grid (6 cols) -->
+                            <div class="xl:col-span-6 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                <div class="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-800/50 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm relative overflow-hidden flex flex-col justify-center">
+                                    <h3 class="text-[9px] font-black uppercase text-slate-400 tracking-wider">Total Customers</h3>
+                                    <div class="text-base font-black text-slate-800 dark:text-white mt-0.5">${totalCust.toLocaleString()}</div>
+                                </div>
+                                <div class="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-800/50 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm relative overflow-hidden flex flex-col justify-center">
+                                    <h3 class="text-[9px] font-black uppercase text-slate-400 tracking-wider">Outstanding</h3>
+                                    <div class="text-base font-black text-indigo-600 dark:text-indigo-400 mt-0.5">৳${(totalOut / 1000000).toFixed(2)}M</div>
+                                </div>
+                                <div class="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-800/50 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm relative overflow-hidden flex flex-col justify-center">
+                                    <h3 class="text-[9px] font-black uppercase text-slate-400 tracking-wider">Total Overdue</h3>
+                                    <div class="text-base font-black text-rose-600 dark:text-rose-400 mt-0.5">৳${(totalOD / 1000000).toFixed(2)}M</div>
+                                </div>
+                                <div class="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-800/50 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm relative overflow-hidden flex flex-col justify-center">
+                                    <h3 class="text-[9px] font-black uppercase text-slate-400 tracking-wider">Critical Risk</h3>
+                                    <div class="text-base font-black text-amber-500 mt-0.5">${criticalCount} <span class="text-[10px] text-slate-400 font-normal">accts</span></div>
+                                </div>
                             </div>
-                            <div class="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-800/50 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm relative overflow-hidden group hover:-translate-y-0.5 transition-transform">
-                                <div class="absolute -right-2 -top-2 text-indigo-50 dark:text-indigo-900/20 text-5xl transform rotate-12 transition-transform group-hover:scale-110 pointer-events-none"><i class="fa-solid fa-money-bill-wave"></i></div>
-                                <h3 class="text-[9px] font-black uppercase text-slate-400 tracking-wider relative z-10">Total Outstanding</h3>
-                                <div class="text-lg font-black text-indigo-600 dark:text-indigo-400 mt-0.5 relative z-10">৳${(totalOut / 1000000).toFixed(2)}M</div>
-                            </div>
-                            <div class="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-800/50 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm relative overflow-hidden group hover:-translate-y-0.5 transition-transform">
-                                <div class="absolute -right-2 -top-2 text-rose-50 dark:text-rose-900/20 text-5xl transform rotate-12 transition-transform group-hover:scale-110 pointer-events-none"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                                <h3 class="text-[9px] font-black uppercase text-slate-400 tracking-wider relative z-10">Total Overdue</h3>
-                                <div class="text-lg font-black text-rose-600 dark:text-rose-400 mt-0.5 relative z-10">৳${(totalOD / 1000000).toFixed(2)}M</div>
-                            </div>
-                            <div class="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-800/50 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm relative overflow-hidden group hover:-translate-y-0.5 transition-transform">
-                                <div class="absolute -right-2 -top-2 text-amber-50 dark:text-amber-900/20 text-5xl transform rotate-12 transition-transform group-hover:scale-110 pointer-events-none"><i class="fa-solid fa-shield-cat"></i></div>
-                                <h3 class="text-[9px] font-black uppercase text-slate-400 tracking-wider relative z-10">Risk (Critical)</h3>
-                                <div class="text-xl font-black text-amber-500 mt-0.5 relative z-10">${criticalCount} <span class="text-[11px] text-slate-400 font-normal">accts</span></div>
-                            </div>
-                        </div>
 
-                        <!-- Filters Row (Compact) -->
-                        <div class="flex flex-wrap items-center gap-2 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-2 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
-                            <div class="flex items-center gap-1.5">
-                                <i class="fa-solid fa-filter text-slate-400 text-xs pl-1"></i>
-                                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Filters:</span>
-                            </div>
-                            <select id="analytics-filter-part" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-semibold rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500/50">
-                                <option value="All" ${filterPart === 'All' ? 'selected' : ''}>All Parts</option>
-                                <option value="A" ${filterPart === 'A' ? 'selected' : ''}>Part A</option>
-                                <option value="B" ${filterPart === 'B' ? 'selected' : ''}>Part B</option>
-                            </select>
-                            
-                            <select id="analytics-filter-territory" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-semibold rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500/50 max-w-[140px]">
-                                <option value="All" ${filterTerritory === 'All' ? 'selected' : ''}>All Territories</option>
-                                ${Array.from(new Set(analyticsData.map(c => c.territoryName))).filter(t => t && t !== 'Unknown').sort().map(t => `<option value="${t}" ${filterTerritory === t ? 'selected' : ''}>${t}</option>`).join('')}
-                            </select>
+                            <!-- Part Exposure Progress Bars (3 cols) -->
+                            ${partHtml}
 
-                            <select id="analytics-filter-risk" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-semibold rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500/50">
-                                <option value="All" ${filterRisk === 'All' ? 'selected' : ''}>All Risk Levels</option>
-                                <option value="Safe" ${filterRisk === 'Safe' ? 'selected' : ''}>Safe (0 Overdue)</option>
-                                <option value="At-Risk" ${filterRisk === 'At-Risk' ? 'selected' : ''}>At-Risk (1-2 Overdue)</option>
-                                <option value="Critical" ${filterRisk === 'Critical' ? 'selected' : ''}>Critical (3+ Overdue)</option>
-                            </select>
-                            
-                            ${(filterPart !== 'All' || filterTerritory !== 'All' || filterRisk !== 'All') ? 
-                                `<button onclick="document.getElementById('analytics-filter-part').value='All'; document.getElementById('analytics-filter-territory').value='All'; document.getElementById('analytics-filter-risk').value='All'; UI.renderAdminInDepthAnalytics();" class="text-[9px] font-bold text-rose-500 hover:text-rose-600 uppercase tracking-widest px-1.5">Clear</button>` 
-                            : ''}
-                        </div>
-
-                        ${partHtml}
-
-                        <!-- Risk Breakdown Bar (Compact) -->
-                        <div class="bg-white/70 dark:bg-slate-800/60 backdrop-blur-md rounded-xl p-3.5 border border-slate-200/60 dark:border-slate-700/60 shadow-sm">
-                            <h3 class="text-[10px] font-black uppercase text-slate-500 mb-2 tracking-wider">Customer Risk Profile</h3>
-                            
-                            <div class="w-full h-3 rounded-md flex overflow-hidden shadow-inner mb-2">
-                                <div class="bg-emerald-500 h-full flex items-center justify-center text-[9px] font-black text-white" style="width: ${safePct}%" title="Safe: ${safeCount}">${safePct > 8 ? safePct + '%' : ''}</div>
-                                <div class="bg-amber-400 h-full flex items-center justify-center text-[9px] font-black text-amber-900" style="width: ${riskPct}%" title="At-Risk: ${riskCount}">${riskPct > 8 ? riskPct + '%' : ''}</div>
-                                <div class="bg-rose-500 h-full flex items-center justify-center text-[9px] font-black text-white" style="width: ${criticalPct}%" title="Critical: ${criticalCount}">${criticalPct > 8 ? criticalPct + '%' : ''}</div>
-                            </div>
-                            
-                            <div class="flex justify-between items-center text-[11px] font-bold">
-                                <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-emerald-500"></span> <span class="text-emerald-700 dark:text-emerald-400">Safe (${safeCount})</span></div>
-                                <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-amber-400"></span> <span class="text-amber-700 dark:text-amber-400">At-Risk (${riskCount})</span></div>
-                                <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-rose-500"></span> <span class="text-rose-600 dark:text-rose-400">Critical (${criticalCount})</span></div>
+                            <!-- Risk Breakdown Progress Bar (3 cols or 6 cols) -->
+                            <div class="${filterPart === 'All' ? 'xl:col-span-3' : 'xl:col-span-6'} bg-white/70 dark:bg-slate-800/60 backdrop-blur-md rounded-xl p-2.5 border border-slate-200/60 dark:border-slate-700/60 shadow-sm flex flex-col justify-center">
+                                <div class="flex justify-between items-center mb-1">
+                                    <h3 class="text-[9px] font-black uppercase text-slate-500 tracking-wider">Risk Profile</h3>
+                                    <span class="text-[9px] font-bold text-slate-400">Accounts</span>
+                                </div>
+                                <div class="w-full h-2 rounded flex overflow-hidden shadow-inner mb-1.5">
+                                    <div class="bg-emerald-500 h-full" style="width: ${safePct}%" title="Safe: ${safeCount} (${safePct}%)"></div>
+                                    <div class="bg-amber-400 h-full" style="width: ${riskPct}%" title="At-Risk: ${riskCount} (${riskPct}%)"></div>
+                                    <div class="bg-rose-500 h-full" style="width: ${criticalPct}%" title="Critical: ${criticalCount} (${criticalPct}%)"></div>
+                                </div>
+                                <div class="flex justify-between items-center text-[9px] font-extrabold text-slate-600 dark:text-slate-300">
+                                    <span class="text-emerald-600 dark:text-emerald-400">Safe ${safePct}%</span>
+                                    <span class="text-amber-600 dark:text-amber-400">Risk ${riskPct}%</span>
+                                    <span class="text-rose-600 dark:text-rose-400">Crit ${criticalPct}%</span>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Customer Data Table -->
                         <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
-                            <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                            <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
                                 <h2 class="text-xs font-black text-slate-800 dark:text-slate-100 tracking-tight">Customer Analytics List</h2>
                                 <span class="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded text-[10px] font-black border border-indigo-100 dark:border-indigo-800/50">${filteredData.length} Matches</span>
                             </div>
