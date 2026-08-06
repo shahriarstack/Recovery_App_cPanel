@@ -6194,10 +6194,40 @@ window.UI = {
                             territoryName: 15
                         };
 
+                        const parseCleanFloat = (val) => {
+                            if (val === undefined || val === null) return 0;
+                            const cleanStr = String(val).replace(/[^0-9.-]/g, '');
+                            const num = parseFloat(cleanStr);
+                            return isNaN(num) ? 0 : num;
+                        };
+
+                        const parseCleanDate = (val) => {
+                            if (!val || val === '-') return '-';
+                            let str = String(val).trim();
+                            if (!str || str === '-') return '-';
+                            if (/^\d{5}$/.test(str)) {
+                                const excelNum = parseInt(str);
+                                const dateObj = new Date((excelNum - (25567 + 2)) * 86400 * 1000);
+                                if (!isNaN(dateObj.getTime())) {
+                                    return dateObj.toISOString().split('T')[0];
+                                }
+                            }
+                            if (str.includes('T')) str = str.split('T')[0];
+                            if (str.includes(' ')) str = str.split(' ')[0];
+                            if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(str)) {
+                                const parts = str.split(/[\/\-]/);
+                                return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                            }
+                            return str;
+                        };
+
                         const getVal = (row, variants, defaultIdx) => {
                             for (const v of variants) {
                                 const normV = v.toLowerCase().replace(/[^a-z0-9]/g, '');
-                                const idx = normalizedHeaders.indexOf(normV);
+                                let idx = normalizedHeaders.indexOf(normV);
+                                if (idx !== -1 && row[idx] !== undefined && row[idx] !== '') return row[idx];
+                                
+                                idx = normalizedHeaders.findIndex(h => h && (h.includes(normV) || normV.includes(h)));
                                 if (idx !== -1 && row[idx] !== undefined && row[idx] !== '') return row[idx];
                             }
                             return row[defaultIdx] !== undefined ? row[defaultIdx] : '';
@@ -6214,15 +6244,15 @@ window.UI = {
                             const customerName = getVal(cleanRow, ['customer_name', 'customer name', 'customername', 'name', 'cust_name', 'cust name', 'client_name', 'client name'], defaults.customerName);
                             const vehicleRegNo = getVal(cleanRow, ['vehicle_reg_number', 'vehicle reg number', 'vehicle_reg_no', 'vehicle reg no', 'vehicle reg', 'vehicleregnumber', 'reg_no', 'reg no', 'registration', 'registration_no', 'registration no', 'regno', 'vehicle_no', 'vehicle no'], defaults.vehicleRegNo);
                             const phone = getVal(cleanRow, ['phone_number', 'phone number', 'phone', 'mobile', 'mobile_number', 'mobile number', 'contact', 'contact_no', 'contact no', 'phone_no', 'phone no', 'mobile_no', 'mobile no'], defaults.phone);
-                            const firstInstDate = getVal(cleanRow, ['first_installment_date', 'first installment date', 'firstinstdate', 'first_inst_date', 'first inst date', 'start_date', 'start date', 'issue_date', 'issue date'], defaults.firstInstDate);
-                            const instSize = parseFloat(getVal(cleanRow, ['installment_size', 'installment size', 'instsize', 'inst_size', 'inst size', 'emi', 'emi_amount', 'emi amount', 'installment_amount', 'installment amount'], defaults.instSize)) || 0;
-                            const overdueInstNo = parseInt(getVal(cleanRow, ['overdue_inst_no', 'overdueinstno', 'overdue inst no', 'overdue_inst', 'overdue inst', 'overdue_nos', 'od_inst_no', 'od inst no', 'od_inst', 'od inst'], defaults.overdueInstNo)) || 0;
-                            const overdueTaka = parseFloat(getVal(cleanRow, ['overdue_taka', 'overduetaka', 'overdue taka', 'overdue_amount', 'overdue amount', 'od_taka', 'od taka', 'od_amount', 'od amount', 'overdue'], defaults.overdueTaka)) || 0;
-                            const totalOutstanding = parseFloat(getVal(cleanRow, ['total_outstanding', 'total outstanding', 'outstanding', 'total_out', 'total out', 'out_standing', 'out standing', 'balance', 'total_balance', 'total balance'], defaults.totalOutstanding)) || 0;
-                            const lastPaymentDate = getVal(cleanRow, ['last_payment_date', 'last payment date', 'last_pay_date', 'last pay date', 'last_payment', 'last payment', 'last_pay_dt'], defaults.lastPaymentDate);
-                            const last3Month1 = parseFloat(getVal(cleanRow, ['last_3_month_payment_1', 'last 3 month payment 1', 'last_3_month_1', 'last 3 month 1', 'pay_m1', 'pay m1', 'm1', 'm-1', 'pay m-1'], defaults.last3Month1)) || 0;
-                            const last3Month2 = parseFloat(getVal(cleanRow, ['last_3_month_payment_2', 'last 3 month payment 2', 'last_3_month_2', 'last 3 month 2', 'pay_m2', 'pay m2', 'm2', 'm-2', 'pay m-2'], defaults.last3Month2)) || 0;
-                            const last3Month3 = parseFloat(getVal(cleanRow, ['last_3_month_payment_3', 'last 3 month payment 3', 'last_3_month_3', 'last 3 month 3', 'pay_m3', 'pay m3', 'm3', 'm-3', 'pay m-3'], defaults.last3Month3)) || 0;
+                            const firstInstDate = parseCleanDate(getVal(cleanRow, ['first_installment_date', 'first installment date', 'firstinstdate', 'first_inst_date', 'first inst date', 'start_date', 'start date', 'issue_date', 'issue date'], defaults.firstInstDate));
+                            const instSize = parseCleanFloat(getVal(cleanRow, ['installment_size', 'installment size', 'instsize', 'inst_size', 'inst size', 'emi', 'emi_amount', 'emi amount', 'installment_amount', 'installment amount'], defaults.instSize));
+                            const overdueInstNo = parseInt(parseCleanFloat(getVal(cleanRow, ['overdue_inst_no', 'overdueinstno', 'overdue inst no', 'overdue_inst', 'overdue inst', 'overdue_nos', 'od_inst_no', 'od inst no', 'od_inst', 'od inst'], defaults.overdueInstNo))) || 0;
+                            const overdueTaka = parseCleanFloat(getVal(cleanRow, ['overdue_taka', 'overduetaka', 'overdue taka', 'overdue_amount', 'overdue amount', 'od_taka', 'od taka', 'od_amount', 'od amount', 'overdue'], defaults.overdueTaka));
+                            const totalOutstanding = parseCleanFloat(getVal(cleanRow, ['total_outstanding', 'total outstanding', 'outstanding', 'total_out', 'total out', 'out_standing', 'out standing', 'balance', 'total_balance', 'total balance'], defaults.totalOutstanding));
+                            const lastPaymentDate = parseCleanDate(getVal(cleanRow, ['last_payment_date', 'last payment date', 'last_pay_date', 'last pay date', 'last_payment', 'last payment', 'last_pay_dt', 'last pay dt', 'last_payment_dt', 'last_collection_date', 'last collection date', 'payment_date', 'payment date', 'last_date', 'last date', 'lastpaydate', 'lastpaymentdate'], defaults.lastPaymentDate));
+                            const last3Month1 = parseCleanFloat(getVal(cleanRow, ['last_3_month_payment_1', 'last 3 month payment 1', 'last 3 months payment 1', 'last_3_months_payment_1', 'last_3_month_1', 'last 3 month 1', 'last_3_months_1', 'last 3 months 1', 'pay_m1', 'pay m1', 'pay-m1', 'pay_m_1', 'pay m 1', 'pay-m-1', 'm1', 'm-1', 'pay m-1', 'payment_m1', 'payment m1', '3_month_1', '3 month 1', '3 months 1', 'paym1'], defaults.last3Month1));
+                            const last3Month2 = parseCleanFloat(getVal(cleanRow, ['last_3_month_payment_2', 'last 3 month payment 2', 'last 3 months payment 2', 'last_3_months_payment_2', 'last_3_month_2', 'last 3 month 2', 'last_3_months_2', 'last 3 months 2', 'pay_m2', 'pay m2', 'pay-m2', 'pay_m_2', 'pay m 2', 'pay-m-2', 'm2', 'm-2', 'pay m-2', 'payment_m2', 'payment m2', '3_month_2', '3 month 2', '3 months 2', 'paym2'], defaults.last3Month2));
+                            const last3Month3 = parseCleanFloat(getVal(cleanRow, ['last_3_month_payment_3', 'last 3 month payment 3', 'last 3 months payment 3', 'last_3_months_payment_3', 'last_3_month_3', 'last 3 month 3', 'last_3_months_3', 'last 3 months 3', 'pay_m3', 'pay m3', 'pay-m3', 'pay_m_3', 'pay m 3', 'pay-m-3', 'm3', 'm-3', 'pay m-3', 'payment_m3', 'payment m3', '3_month_3', '3 month 3', '3 months 3', 'paym3'], defaults.last3Month3));
                             const upazilaCode = getVal(cleanRow, ['upazila_code', 'upazila code', 'upazilacode', 'thana_code', 'thana code'], defaults.upazilaCode);
                             const upazilaName = getVal(cleanRow, ['upazila_name', 'upazila name', 'upazila', 'upazilaname', 'thana_name', 'thana name', 'thana'], defaults.upazilaName);
                             let territoryName = getVal(cleanRow, ['territory_name', 'territory name', 'territory', 'territory_id', 'territory id', 'territoryname', 'territoryid', 'zone', 'region', 'area'], defaults.territoryName);
@@ -6530,14 +6560,42 @@ window.UI = {
                     `;
                 } else {
                     slice.forEach(c => {
+                        const parseCleanFloat = (val) => {
+                            if (val === undefined || val === null) return 0;
+                            const cleanStr = String(val).replace(/[^0-9.-]/g, '');
+                            const num = parseFloat(cleanStr);
+                            return isNaN(num) ? 0 : num;
+                        };
+
+                        const parseCleanDate = (val) => {
+                            if (!val || val === '-') return '-';
+                            let str = String(val).trim();
+                            if (!str || str === '-') return '-';
+                            if (/^\d{5}$/.test(str)) {
+                                const excelNum = parseInt(str);
+                                const dateObj = new Date((excelNum - (25567 + 2)) * 86400 * 1000);
+                                if (!isNaN(dateObj.getTime())) {
+                                    return dateObj.toISOString().split('T')[0];
+                                }
+                            }
+                            if (str.includes('T')) str = str.split('T')[0];
+                            if (str.includes(' ')) str = str.split(' ')[0];
+                            if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(str)) {
+                                const parts = str.split(/[\/\-]/);
+                                return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                            }
+                            return str;
+                        };
+
                         const collAmt = c.collectedMTD || 0;
-                        const odAmt = parseFloat(c.overdueTaka || c.overdue_taka) || 0;
-                        const odInst = parseInt(c.overdueInstNo || c.overdue_inst_no) || 0;
-                        const instSize = parseFloat(c.instSize || c.inst_size) || 0;
-                        const outAmt = parseFloat(c.totalOutstanding || c.total_outstanding) || 0;
-                        const m1 = parseFloat(c.last3Month1 || c.last_3_month_1 || c.last3Month1) || 0;
-                        const m2 = parseFloat(c.last3Month2 || c.last_3_month_2 || c.last3Month2) || 0;
-                        const m3 = parseFloat(c.last3Month3 || c.last_3_month_3 || c.last3Month3) || 0;
+                        const odAmt = parseCleanFloat(c.overdueTaka || c.overdue_taka);
+                        const odInst = parseInt(parseCleanFloat(c.overdueInstNo || c.overdue_inst_no)) || 0;
+                        const instSize = parseCleanFloat(c.instSize || c.inst_size);
+                        const outAmt = parseCleanFloat(c.totalOutstanding || c.total_outstanding);
+                        const m1 = parseCleanFloat(c.last3Month1 || c.last_3_month_1 || c.last3Month1 || c.pay_m1 || c.payM1);
+                        const m2 = parseCleanFloat(c.last3Month2 || c.last_3_month_2 || c.last3Month2 || c.pay_m2 || c.payM2);
+                        const m3 = parseCleanFloat(c.last3Month3 || c.last_3_month_3 || c.last3Month3 || c.pay_m3 || c.payM3);
+                        const displayLastPayDate = parseCleanDate(c.lastPaymentDate || c.last_payment_date || c.lastPayDate || c.last_pay_date);
 
                         let displayTerritory = c.territoryName || c.territory_name || '-';
                         if (displayTerritory && /^\d+$/.test(String(displayTerritory).trim())) {
@@ -6572,14 +6630,14 @@ window.UI = {
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 font-medium text-slate-900 dark:text-white text-xs">${c.customerName || c.customer_name || '-'}</td>
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 font-mono text-slate-500 text-xs">${c.phone || '-'}</td>
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 font-mono text-slate-600 dark:text-slate-300 text-xs">${c.vehicleRegNo || c.vehicle_reg_no || '-'}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-slate-500 text-xs">${c.firstInstDate || c.first_inst_date || '-'}</td>
+                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-slate-500 text-xs">${parseCleanDate(c.firstInstDate || c.first_inst_date)}</td>
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-right font-mono text-xs">৳${Math.round(instSize).toLocaleString()}</td>
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-right font-mono font-black bg-emerald-50/50 dark:bg-emerald-950/20 ${collAmt > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}">৳${Math.round(collAmt).toLocaleString()}</td>
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-center font-mono font-bold text-indigo-600 dark:text-indigo-400 text-xs">${c.latestCollectionDate || '-'}</td>
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-center font-mono font-bold ${odInst > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}">${odInst}</td>
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-right font-mono font-bold ${odAmt > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}">৳${Math.round(odAmt).toLocaleString()}</td>
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-right font-mono font-bold text-slate-800 dark:text-slate-100">৳${Math.round(outAmt).toLocaleString()}</td>
-                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-slate-500 text-xs">${c.lastPaymentDate || '-'}</td>
+                                <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-slate-500 text-xs">${displayLastPayDate}</td>
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-right font-mono text-slate-600 dark:text-slate-400 text-xs">৳${Math.round(m1).toLocaleString()}</td>
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-right font-mono text-slate-600 dark:text-slate-400 text-xs">৳${Math.round(m2).toLocaleString()}</td>
                                 <td class="px-3 py-2 border-r border-slate-100 dark:border-slate-800 text-right font-mono text-slate-600 dark:text-slate-400 text-xs">৳${Math.round(m3).toLocaleString()}</td>
