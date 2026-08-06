@@ -21,8 +21,7 @@ window.Router = {
                     'admin-vehicle-perf': { title: 'Vehicle Performance', subtitle: 'Recovery Status by Customer' },
                     'admin-projections': { title: 'Projection Monitor', subtitle: 'Missing & Submitted Projections' },
                     'admin-performance': { title: 'Strategic Analytics', subtitle: 'Collection Momentum & Performance' },
-                    'admin-analytics': { title: 'In-Depth Analytics', subtitle: 'Enterprise Portfolio & Insights' },
-                    
+                    'admin-in-depth-analytics': { title: 'In-Depth Analytics', subtitle: 'Portfolio & Risk Assessment' },
                     'officer-dashboard': { title: 'Dashboard', subtitle: '' },
                     'officer-projection': { title: 'Projections', subtitle: 'Submit Daily Recovery Estimate' },
                     'officer-collection': { title: 'Collection Entry', subtitle: 'Post Recovery Receipts' },
@@ -60,7 +59,8 @@ window.Router = {
                 else if (viewId === 'admin-history') UI.renderAdminHistory();
                 else if (viewId === 'admin-vehicle-perf') UI.renderAdminVehiclePerf();
                 else if (viewId === 'admin-projections') UI.renderAdminProjections();
-                else if (viewId === 'admin-performance' || viewId === 'admin-analytics') UI.renderAdminAnalytics();
+                else if (viewId === 'admin-performance') UI.renderAdminPerformance();
+                else if (viewId === 'admin-in-depth-analytics') UI.renderAdminInDepthAnalytics();
                 else if (viewId === 'officer-dashboard') UI.renderOfficerDashboard();
                 else if (viewId === 'officer-projection') UI.renderProjectionForm();
                 else if (viewId === 'officer-collection') UI.renderCollectionForm();

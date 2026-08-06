@@ -1879,389 +1879,264 @@ window.UI = {
                 UI.showSuccess('Summary Report Downloaded!');
             },
 
-            // --- ADMIN VIEWS ---
-            
-            renderAdminAnalytics() {
-                try {
-                    const db = Store.get() || {};
-                    const customers = Store.cache?.customers || db.customers || [];
-                    const collections = Store.cache?.collections || db.collections || [];
-                    const territories = Store.cache?.territories || db.territories || [];
+            // --- IN-DEPTH ANALYTICS ---
+            renderAdminInDepthAnalytics() {
+                const db = Store.get();
+                const customers = db.customers || [];
+                const territories = db.territories || [];
 
-                    // Filter State
-                    UI.analyticsPartFilter = UI.analyticsPartFilter || 'All';
-                    UI.analyticsTerritoryFilter = UI.analyticsTerritoryFilter || 'All';
+                // Filter States
+                const filterPart = document.getElementById('analytics-filter-part')?.value || 'All';
+                const filterTerritory = document.getElementById('analytics-filter-territory')?.value || 'All';
+                const filterRisk = document.getElementById('analytics-filter-risk')?.value || 'All';
 
+                // We want to calculate analytics on customers.
+                let analyticsData = customers.map(c => {
                     const parseCleanFloat = (val) => {
                         if (val === undefined || val === null) return 0;
                         const cleanStr = String(val).replace(/[^0-9.-]/g, '');
                         const num = parseFloat(cleanStr);
                         return isNaN(num) ? 0 : num;
                     };
-
-                    const fmtCurr = (num) => {
-                        if (typeof Utils !== 'undefined' && Utils.formatCurrency) {
-                            return Utils.formatCurrency(num);
+                    
+                    const overdueAmt = parseCleanFloat(c.overdueTaka || c.overdue_taka);
+                    const overdueInst = parseInt(parseCleanFloat(c.overdueInstNo || c.overdue_inst_no)) || 0;
+                    const outstanding = parseCleanFloat(c.totalOutstanding || c.total_outstanding);
+                    const instSize = parseCleanFloat(c.instSize || c.inst_size);
+                    const collectedMTD = parseCleanFloat(c.collectedMTD || c.collected_mtd);
+                    
+                    // Risk category
+                    let riskCategory = 'Safe';
+                    if (overdueInst > 2) riskCategory = 'Critical';
+                    else if (overdueInst > 0 || overdueAmt > 0) riskCategory = 'At-Risk';
+                    
+                    // territory Name and Part
+                    let tName = c.territoryName || c.territory_name || 'Unknown';
+                    let tPart = 'Unknown';
+                    
+                    if (tName && /^\d+$/.test(String(tName).trim())) {
+                        const tMatch = territories.find(t => String(t.id) === String(tName).trim());
+                        if (tMatch) {
+                            tName = tMatch.name;
+                            tPart = tMatch.part || 'Unknown';
                         }
-                        const val = parseCleanFloat(num);
-                        return Math.round(val).toLocaleString();
+                    } else {
+                        const tMatch = territories.find(t => String(t.name).toLowerCase() === String(tName).toLowerCase().trim());
+                        if (tMatch) {
+                            tPart = tMatch.part || 'Unknown';
+                        }
+                    }
+
+                    return {
+                        ...c,
+                        overdueAmt, overdueInst, outstanding, instSize, collectedMTD,
+                        riskCategory,
+                        territoryName: tName,
+                        part: tPart
                     };
+                });
 
-                    const getTerritoryName = (c) => {
-                        let rawT = c.territoryName || c.territory_name || c.territory || '';
-                        if (rawT && /^\d+$/.test(String(rawT).trim())) {
-                            const tMatch = territories.find(t => String(t.id) === String(rawT).trim());
-                            if (tMatch) return tMatch.name;
-                        }
-                        return String(rawT);
-                    };
+                // Apply Filters
+                let filteredData = analyticsData;
+                if (filterPart !== 'All') filteredData = filteredData.filter(c => c.part === filterPart);
+                if (filterTerritory !== 'All') filteredData = filteredData.filter(c => c.territoryName === filterTerritory);
+                if (filterRisk !== 'All') filteredData = filteredData.filter(c => c.riskCategory === filterRisk);
 
-                    // Aggregations based on filters
-                    let filteredCustomers = customers.filter(c => {
-                        if (!c) return false;
-                        const tName = getTerritoryName(c);
-                        if (UI.analyticsPartFilter !== 'All') {
-                            const t = territories.find(t => String(t.name).toLowerCase() === String(tName).toLowerCase() || String(t.id) === String(tName));
-                            if (t && t.part !== UI.analyticsPartFilter) return false;
-                            if (!t) return false;
-                        }
-                        if (UI.analyticsTerritoryFilter !== 'All') {
-                            if (String(tName).toLowerCase() !== String(UI.analyticsTerritoryFilter).toLowerCase()) return false;
-                        }
-                        return true;
-                    });
+                // Compute Metrics on Filtered Data
+                const totalCust = filteredData.length;
+                const totalOut = filteredData.reduce((s, c) => s + c.outstanding, 0);
+                const totalOD = filteredData.reduce((s, c) => s + c.overdueAmt, 0);
+                
+                const safeCount = filteredData.filter(c => c.riskCategory === 'Safe').length;
+                const riskCount = filteredData.filter(c => c.riskCategory === 'At-Risk').length;
+                const criticalCount = filteredData.filter(c => c.riskCategory === 'Critical').length;
 
-                    let totalOutstanding = 0;
-                    let totalOverdue = 0;
-                    let mtdCollection = 0;
+                const safePct = totalCust > 0 ? ((safeCount / totalCust) * 100).toFixed(1) : 0;
+                const riskPct = totalCust > 0 ? ((riskCount / totalCust) * 100).toFixed(1) : 0;
+                const criticalPct = totalCust > 0 ? ((criticalCount / totalCust) * 100).toFixed(1) : 0;
 
-                    filteredCustomers.forEach(c => {
-                        totalOutstanding += parseCleanFloat(c.totalOutstanding || c.total_outstanding);
-                        totalOverdue += parseCleanFloat(c.overdueTaka || c.overdue_taka);
-                    });
+                // Build Part A / B metrics (only if filterPart is All)
+                let partHtml = '';
+                if (filterPart === 'All') {
+                    const partACust = analyticsData.filter(c => c.part === 'A');
+                    const partBCust = analyticsData.filter(c => c.part === 'B');
+                    
+                    const partAOut = partACust.reduce((s, c) => s + c.outstanding, 0);
+                    const partBOut = partBCust.reduce((s, c) => s + c.outstanding, 0);
+                    const totalPartsOut = partAOut + partBOut || 1;
 
-                    const activeMonth = Utils.getActiveMonth ? Utils.getActiveMonth() : '';
-                    let filteredCollections = collections.filter(c => {
-                        if (!c) return false;
-                        const rawDate = c.date || c.collection_date || c.created_at || '';
-                        const cMonth = c.activeMonth || c.active_month || (typeof rawDate === 'string' && rawDate.length >= 7 ? rawDate.slice(0, 7) : '');
-                        if (activeMonth && cMonth && cMonth !== activeMonth) return false;
-                        
-                        const cTerr = c.territory || c.territoryName || c.territory_name || '';
-                        const t = territories.find(t => String(t.id) === String(cTerr) || String(t.name).toLowerCase() === String(cTerr).toLowerCase());
-                        const terrName = t ? t.name : String(cTerr);
+                    const aPct = ((partAOut / totalPartsOut) * 100).toFixed(1);
+                    const bPct = ((partBOut / totalPartsOut) * 100).toFixed(1);
 
-                        if (UI.analyticsPartFilter !== 'All') {
-                            if (t && t.part !== UI.analyticsPartFilter) return false;
-                            if (!t) return false;
-                        }
-                        if (UI.analyticsTerritoryFilter !== 'All') {
-                            if (String(terrName).toLowerCase() !== String(UI.analyticsTerritoryFilter).toLowerCase()) return false;
-                        }
-                        return true;
-                    });
-
-                    filteredCollections.forEach(c => {
-                        mtdCollection += parseCleanFloat(c.amount);
-                    });
-
-                    // Top Customers by Overdue
-                    const topOverdue = [...filteredCustomers].sort((a, b) => parseCleanFloat(b.overdueTaka || b.overdue_taka) - parseCleanFloat(a.overdueTaka || a.overdue_taka)).slice(0, 15);
-
-                    const container = document.getElementById('views-container');
-                    if (!container) return;
-
-                    // Territory Options
-                    const tOpts = territories.map(t => `<option value="${t.name}" ${UI.analyticsTerritoryFilter === t.name ? 'selected' : ''}>${t.name}</option>`).join('');
-
-                    container.innerHTML = `
-                        <div class="animate-entry max-w-[1600px] mx-auto pb-8">
-                            <!-- Header & Filters -->
-                            <div class="flex flex-wrap items-center justify-between gap-4 mb-4 bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-8 h-8 rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
-                                        <i class="fa-solid fa-chart-line text-sm"></i>
-                                    </div>
-                                    <div>
-                                        <h2 class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">Enterprise Analytics</h2>
-                                        <p class="text-[10px] text-slate-500 font-medium tracking-wide">PORTFOLIO & PERFORMANCE INSIGHTS</p>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-3">
-                                    <select id="analytics-part" class="text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-md py-1 px-2 font-medium text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 outline-none" onchange="UI.analyticsPartFilter = this.value; UI.renderAdminAnalytics();">
-                                        <option value="All" ${UI.analyticsPartFilter === 'All' ? 'selected' : ''}>All Parts</option>
-                                        <option value="A" ${UI.analyticsPartFilter === 'A' ? 'selected' : ''}>Part A</option>
-                                        <option value="B" ${UI.analyticsPartFilter === 'B' ? 'selected' : ''}>Part B</option>
-                                    </select>
-                                    <select id="analytics-territory" class="text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-md py-1 px-2 font-medium text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 outline-none" onchange="UI.analyticsTerritoryFilter = this.value; UI.renderAdminAnalytics();">
-                                        <option value="All" ${UI.analyticsTerritoryFilter === 'All' ? 'selected' : ''}>All Territories</option>
-                                        ${tOpts}
-                                    </select>
-                                    <button onclick="UI.analyticsPartFilter='All'; UI.analyticsTerritoryFilter='All'; UI.renderAdminAnalytics();" class="text-[10px] uppercase font-bold tracking-wider text-slate-500 hover:text-indigo-600 transition px-2">Reset</button>
-                                </div>
+                    partHtml = `
+                    <div class="bg-white/70 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 dark:border-slate-700/60 shadow-lg mb-6">
+                        <h3 class="text-xs font-black uppercase text-slate-500 mb-4 tracking-wider">Part-wise Portfolio Exposure (Outstanding)</h3>
+                        <div class="flex items-center gap-4">
+                            <div class="w-16 text-right">
+                                <div class="text-sm font-black text-emerald-600 dark:text-emerald-400">PART A</div>
+                                <div class="text-[10px] font-bold text-slate-500">৳${(partAOut / 1000000).toFixed(2)}M</div>
                             </div>
-
-                            <!-- KPI Row -->
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                                <!-- Customers -->
-                                <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
-                                    <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
-                                    <div class="relative z-10 flex justify-between items-start">
-                                        <div>
-                                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Total Customers</p>
-                                            <h3 class="text-xl font-black text-slate-800 dark:text-slate-100">${filteredCustomers.length.toLocaleString()}</h3>
-                                        </div>
-                                        <i class="fa-solid fa-users text-blue-500 opacity-80 text-lg"></i>
-                                    </div>
-                                </div>
-                                
-                                <!-- Total Outstanding -->
-                                <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
-                                    <div class="absolute -right-4 -top-4 w-16 h-16 bg-indigo-50 dark:bg-indigo-900/20 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
-                                    <div class="relative z-10 flex justify-between items-start">
-                                        <div>
-                                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Portfolio Size</p>
-                                            <h3 class="text-xl font-black text-slate-800 dark:text-slate-100">৳${fmtCurr(totalOutstanding)}</h3>
-                                        </div>
-                                        <i class="fa-solid fa-wallet text-indigo-500 opacity-80 text-lg"></i>
-                                    </div>
-                                </div>
-
-                                <!-- Overdue Amount -->
-                                <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
-                                    <div class="absolute -right-4 -top-4 w-16 h-16 bg-rose-50 dark:bg-rose-900/20 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
-                                    <div class="relative z-10 flex justify-between items-start">
-                                        <div>
-                                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Overdue Amount</p>
-                                            <h3 class="text-xl font-black text-rose-600 dark:text-rose-400">৳${fmtCurr(totalOverdue)}</h3>
-                                        </div>
-                                        <i class="fa-solid fa-triangle-exclamation text-rose-500 opacity-80 text-lg"></i>
-                                    </div>
-                                </div>
-
-                                <!-- MTD Collection -->
-                                <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
-                                    <div class="absolute -right-4 -top-4 w-16 h-16 bg-emerald-50 dark:bg-emerald-950/20 rounded-full group-hover:scale-150 transition-transform duration-500"></div>
-                                    <div class="relative z-10 flex justify-between items-start">
-                                        <div>
-                                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">MTD Collection</p>
-                                            <h3 class="text-xl font-black text-emerald-600 dark:text-emerald-400">৳${fmtCurr(mtdCollection)}</h3>
-                                        </div>
-                                        <i class="fa-solid fa-money-bill-trend-up text-emerald-500 opacity-80 text-lg"></i>
-                                    </div>
-                                </div>
+                            <div class="flex-1 h-3 rounded-full bg-slate-100 dark:bg-slate-900 flex overflow-hidden shadow-inner">
+                                <div class="bg-gradient-to-r from-emerald-500 to-emerald-400 h-full transition-all duration-1000" style="width: ${aPct}%"></div>
                             </div>
-
-                            <!-- Charts Row -->
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-                                <!-- Part-wise Distribution -->
-                                <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 shadow-sm h-64 flex flex-col">
-                                    <h4 class="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">Part Distribution</h4>
-                                    <div class="flex-1 relative">
-                                        <canvas id="analyticsPartChart"></canvas>
-                                    </div>
-                                </div>
-                                
-                                <!-- Territory Collection Overview -->
-                                <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 shadow-sm h-64 flex flex-col lg:col-span-2">
-                                    <h4 class="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">Top Territories by Collection</h4>
-                                    <div class="flex-1 relative">
-                                        <canvas id="analyticsTerritoryChart"></canvas>
-                                    </div>
-                                </div>
+                            <div class="w-10 text-xs font-black text-emerald-700 dark:text-emerald-300">${aPct}%</div>
+                        </div>
+                        <div class="flex items-center gap-4 mt-3">
+                            <div class="w-16 text-right">
+                                <div class="text-sm font-black text-indigo-600 dark:text-indigo-400">PART B</div>
+                                <div class="text-[10px] font-bold text-slate-500">৳${(partBOut / 1000000).toFixed(2)}M</div>
                             </div>
+                            <div class="flex-1 h-3 rounded-full bg-slate-100 dark:bg-slate-900 flex overflow-hidden shadow-inner">
+                                <div class="bg-gradient-to-r from-indigo-500 to-indigo-400 h-full transition-all duration-1000" style="width: ${bPct}%"></div>
+                            </div>
+                            <div class="w-10 text-xs font-black text-indigo-700 dark:text-indigo-300">${bPct}%</div>
+                        </div>
+                    </div>
+                    `;
+                }
 
-                            <!-- Customer Table -->
-                            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm overflow-hidden">
-                                <div class="p-2.5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-                                    <h4 class="text-xs font-bold text-slate-700 dark:text-slate-200"><i class="fa-solid fa-users-viewfinder mr-1.5 text-indigo-500"></i> Critical Customers (Top 15 Overdue)</h4>
-                                    <span class="text-[10px] font-bold px-2 py-0.5 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 rounded">Attention Required</span>
-                                </div>
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-                                                <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Customer ID</th>
-                                                <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Name</th>
-                                                <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Territory</th>
-                                                <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Inst. Size</th>
-                                                <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Overdue</th>
-                                                <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Outstanding</th>
-                                                <th class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Last Pay</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                                            ${topOverdue.length === 0 ? `<tr><td colspan="7" class="px-3 py-4 text-center text-xs text-slate-500 italic">No customers found.</td></tr>` : ''}
-                                            ${topOverdue.map(c => {
-                                                const od = parseCleanFloat(c.overdueTaka || c.overdue_taka);
-                                                const out = parseCleanFloat(c.totalOutstanding || c.total_outstanding);
-                                                const inst = parseCleanFloat(c.instSize || c.inst_size);
-                                                const terr = getTerritoryName(c);
-                                                return `
-                                                <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                                                    <td class="px-3 py-1.5 text-xs font-mono font-bold text-brand-600 dark:text-brand-400 border-r border-slate-100 dark:border-slate-800">${c.customerId || c.customer_id || c.id || '-'}</td>
-                                                    <td class="px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 border-r border-slate-100 dark:border-slate-800">${c.customerName || c.customer_name || '-'}</td>
-                                                    <td class="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 border-r border-slate-100 dark:border-slate-800">${terr || '-'}</td>
-                                                    <td class="px-3 py-1.5 text-xs font-mono text-right text-slate-600 dark:text-slate-400 border-r border-slate-100 dark:border-slate-800">৳${fmtCurr(inst)}</td>
-                                                    <td class="px-3 py-1.5 text-xs font-mono font-black text-rose-600 dark:text-rose-400 text-right border-r border-slate-100 dark:border-slate-800">৳${fmtCurr(od)}</td>
-                                                    <td class="px-3 py-1.5 text-xs font-mono font-bold text-slate-700 dark:text-slate-300 text-right border-r border-slate-100 dark:border-slate-800">৳${fmtCurr(out)}</td>
-                                                    <td class="px-3 py-1.5 text-xs font-mono text-slate-500 text-center">${c.lastPaymentDate || c.last_payment_date || '-'}</td>
-                                                </tr>
-                                                `;
-                                            }).join('')}
-                                        </tbody>
-                                    </table>
-                                </div>
+                // Render Table rows
+                const rowsHtml = filteredData.slice(0, 100).map(c => {
+                    let riskBadge = '';
+                    if (c.riskCategory === 'Critical') riskBadge = '<span class="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-600 border border-rose-500/20 font-black text-[10px]">CRITICAL</span>';
+                    else if (c.riskCategory === 'At-Risk') riskBadge = '<span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 border border-amber-500/20 font-black text-[10px]">AT-RISK</span>';
+                    else riskBadge = '<span class="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-black text-[10px]">SAFE</span>';
+
+                    return `
+                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-0">
+                            <td class="px-3 py-2.5 font-mono font-bold text-brand-600 dark:text-brand-400 text-xs">${c.customerId || c.customer_id || '-'}</td>
+                            <td class="px-3 py-2.5 font-semibold text-slate-800 dark:text-slate-200 text-xs">${c.customerName || '-'}</td>
+                            <td class="px-3 py-2.5 text-slate-500 text-xs font-medium">${c.territoryName} <span class="text-[9px] px-1 bg-slate-100 dark:bg-slate-800 rounded ml-1">${c.part}</span></td>
+                            <td class="px-3 py-2.5 text-right font-mono font-bold text-slate-700 dark:text-slate-300 text-xs">৳${Math.round(c.outstanding).toLocaleString()}</td>
+                            <td class="px-3 py-2.5 text-right font-mono font-bold ${c.overdueAmt > 0 ? 'text-rose-500' : 'text-slate-400'} text-xs">৳${Math.round(c.overdueAmt).toLocaleString()}</td>
+                            <td class="px-3 py-2.5 text-center font-mono font-bold ${c.overdueInst > 2 ? 'text-rose-600' : (c.overdueInst > 0 ? 'text-amber-500' : 'text-slate-400')} text-xs">${c.overdueInst}</td>
+                            <td class="px-3 py-2.5 text-center">${riskBadge}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                const tableNote = filteredData.length > 100 ? `<div class="p-3 text-center text-xs font-medium text-slate-500 bg-slate-50 dark:bg-slate-800/30">Showing top 100 rows out of ${filteredData.length.toLocaleString()} matches. Apply filters to narrow down.</div>` : '';
+
+                // Build HTML
+                const container = document.getElementById('views-container');
+                container.innerHTML = `
+                    <div class="animate-entry space-y-6 pb-12">
+                        <!-- Header -->
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <h1 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
+                                    <i class="fa-solid fa-chart-network text-indigo-500"></i> In-depth Analytics
+                                </h1>
+                                <p class="text-xs text-slate-500 font-medium mt-1">Deep-dive customer risk and portfolio analysis.</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="Router.navigate('admin-dashboard')" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-bold transition-all shadow-sm">
+                                    <i class="fa-solid fa-arrow-left mr-1.5"></i> Back to Dashboard
+                                </button>
                             </div>
                         </div>
-                    `;
 
-                    // Render Charts safely
-                    setTimeout(() => {
-                        try {
-                            UI.renderAnalyticsCharts(filteredCustomers, filteredCollections, territories);
-                        } catch (err) {
-                            console.error("Error rendering analytics charts:", err);
-                        }
-                    }, 50);
-                } catch (e) {
-                    console.error("Error in renderAdminAnalytics:", e);
-                }
-            },
-            
-            renderAnalyticsCharts(filteredCustomers, filteredCollections, territories) {
-                try {
-                    if (typeof Chart === 'undefined') return;
-                    if (window.analyticsPartChartInst) window.analyticsPartChartInst.destroy();
-                    if (window.analyticsTerritoryChartInst) window.analyticsTerritoryChartInst.destroy();
+                        <!-- Top Stat Cards -->
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div class="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-800/50 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm relative overflow-hidden group hover:-translate-y-1 transition-transform">
+                                <div class="absolute -right-4 -top-4 text-slate-100 dark:text-slate-700/30 text-7xl transform rotate-12 transition-transform group-hover:scale-110"><i class="fa-solid fa-users"></i></div>
+                                <h3 class="text-[10px] font-black uppercase text-slate-400 tracking-wider relative z-10">Total Customers</h3>
+                                <div class="text-3xl font-black text-slate-800 dark:text-white mt-1 relative z-10">${totalCust.toLocaleString()}</div>
+                            </div>
+                            <div class="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-800/50 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm relative overflow-hidden group hover:-translate-y-1 transition-transform">
+                                <div class="absolute -right-4 -top-4 text-indigo-50 dark:text-indigo-900/20 text-7xl transform rotate-12 transition-transform group-hover:scale-110"><i class="fa-solid fa-money-bill-wave"></i></div>
+                                <h3 class="text-[10px] font-black uppercase text-slate-400 tracking-wider relative z-10">Total Outstanding</h3>
+                                <div class="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-2 relative z-10">৳${(totalOut / 1000000).toFixed(2)}M</div>
+                            </div>
+                            <div class="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-800/50 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm relative overflow-hidden group hover:-translate-y-1 transition-transform">
+                                <div class="absolute -right-4 -top-4 text-rose-50 dark:text-rose-900/20 text-7xl transform rotate-12 transition-transform group-hover:scale-110"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                                <h3 class="text-[10px] font-black uppercase text-slate-400 tracking-wider relative z-10">Total Overdue</h3>
+                                <div class="text-2xl font-black text-rose-600 dark:text-rose-400 mt-2 relative z-10">৳${(totalOD / 1000000).toFixed(2)}M</div>
+                            </div>
+                            <div class="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-800/50 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm relative overflow-hidden group hover:-translate-y-1 transition-transform">
+                                <div class="absolute -right-4 -top-4 text-amber-50 dark:text-amber-900/20 text-7xl transform rotate-12 transition-transform group-hover:scale-110"><i class="fa-solid fa-shield-cat"></i></div>
+                                <h3 class="text-[10px] font-black uppercase text-slate-400 tracking-wider relative z-10">Risk Exposure (Critical)</h3>
+                                <div class="text-3xl font-black text-amber-500 mt-1 relative z-10">${criticalCount} <span class="text-sm text-slate-400">accounts</span></div>
+                            </div>
+                        </div>
 
-                    const parseCleanFloat = (val) => {
-                        if (val === undefined || val === null) return 0;
-                        const cleanStr = String(val).replace(/[^0-9.-]/g, '');
-                        const num = parseFloat(cleanStr);
-                        return isNaN(num) ? 0 : num;
-                    };
+                        <!-- Filters Row -->
+                        <div class="flex flex-wrap items-center gap-3 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-3 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-filter text-slate-400 text-sm pl-2"></i>
+                                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Filters:</span>
+                            </div>
+                            <select id="analytics-filter-part" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500/50">
+                                <option value="All" ${filterPart === 'All' ? 'selected' : ''}>All Parts</option>
+                                <option value="A" ${filterPart === 'A' ? 'selected' : ''}>Part A</option>
+                                <option value="B" ${filterPart === 'B' ? 'selected' : ''}>Part B</option>
+                            </select>
+                            
+                            <select id="analytics-filter-territory" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500/50 max-w-[150px]">
+                                <option value="All" ${filterTerritory === 'All' ? 'selected' : ''}>All Territories</option>
+                                ${Array.from(new Set(analyticsData.map(c => c.territoryName))).filter(t => t && t !== 'Unknown').sort().map(t => `<option value="${t}" ${filterTerritory === t ? 'selected' : ''}>${t}</option>`).join('')}
+                            </select>
 
-                    const fmtCurr = (num) => {
-                        if (typeof Utils !== 'undefined' && Utils.formatCurrency) {
-                            return Utils.formatCurrency(num);
-                        }
-                        const val = parseCleanFloat(num);
-                        return Math.round(val).toLocaleString();
-                    };
+                            <select id="analytics-filter-risk" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500/50">
+                                <option value="All" ${filterRisk === 'All' ? 'selected' : ''}>All Risk Levels</option>
+                                <option value="Safe" ${filterRisk === 'Safe' ? 'selected' : ''}>Safe (0 Overdue)</option>
+                                <option value="At-Risk" ${filterRisk === 'At-Risk' ? 'selected' : ''}>At-Risk (1-2 Overdue)</option>
+                                <option value="Critical" ${filterRisk === 'Critical' ? 'selected' : ''}>Critical (3+ Overdue)</option>
+                            </select>
+                            
+                            ${(filterPart !== 'All' || filterTerritory !== 'All' || filterRisk !== 'All') ? 
+                                `<button onclick="document.getElementById('analytics-filter-part').value='All'; document.getElementById('analytics-filter-territory').value='All'; document.getElementById('analytics-filter-risk').value='All'; UI.renderAdminInDepthAnalytics();" class="text-[10px] font-bold text-rose-500 hover:text-rose-600 uppercase tracking-widest px-2">Clear</button>` 
+                            : ''}
+                        </div>
 
-                    let partAOut = 0, partBOut = 0;
-                    filteredCustomers.forEach(c => {
-                        const terr = c.territoryName || c.territory_name || c.territory || '';
-                        const t = territories.find(t => String(t.name).toLowerCase() === String(terr).toLowerCase() || String(t.id) === String(terr));
-                        if (t) {
-                            const out = parseCleanFloat(c.totalOutstanding || c.total_outstanding);
-                            if (t.part === 'A') partAOut += out;
-                            if (t.part === 'B') partBOut += out;
-                        }
-                    });
+                        <!-- Risk Breakdown Bar -->
+                        <div class="bg-white/70 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 dark:border-slate-700/60 shadow-lg">
+                            <h3 class="text-xs font-black uppercase text-slate-500 mb-4 tracking-wider">Customer Risk Profile</h3>
+                            
+                            <div class="w-full h-6 rounded-full flex overflow-hidden shadow-inner mb-3">
+                                <div class="bg-emerald-500 h-full flex items-center justify-center text-[10px] font-black text-white" style="width: ${safePct}%" title="Safe: ${safeCount}">${safePct > 5 ? safePct + '%' : ''}</div>
+                                <div class="bg-amber-400 h-full flex items-center justify-center text-[10px] font-black text-amber-900" style="width: ${riskPct}%" title="At-Risk: ${riskCount}">${riskPct > 5 ? riskPct + '%' : ''}</div>
+                                <div class="bg-rose-500 h-full flex items-center justify-center text-[10px] font-black text-white" style="width: ${criticalPct}%" title="Critical: ${criticalCount}">${criticalPct > 5 ? criticalPct + '%' : ''}</div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center text-xs font-bold">
+                                <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-500"></span> <span class="text-emerald-700 dark:text-emerald-400">Safe (${safeCount})</span></div>
+                                <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-400"></span> <span class="text-amber-700 dark:text-amber-400">At-Risk (${riskCount})</span></div>
+                                <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-rose-500"></span> <span class="text-rose-600 dark:text-rose-400">Critical (${criticalCount})</span></div>
+                            </div>
+                        </div>
 
-                    if (partAOut > 0 || partBOut > 0) {
-                        const ctxPart = document.getElementById('analyticsPartChart');
-                        if (ctxPart) {
-                            window.analyticsPartChartInst = new Chart(ctxPart, {
-                                type: 'doughnut',
-                                data: {
-                                    labels: ['Part A', 'Part B'],
-                                    datasets: [{
-                                        data: [partAOut, partBOut],
-                                        backgroundColor: ['#4f46e5', '#0ea5e9'],
-                                        borderWidth: 0,
-                                        hoverOffset: 4
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    cutout: '70%',
-                                    plugins: {
-                                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } },
-                                        tooltip: {
-                                            callbacks: {
-                                                label: function(context) {
-                                                    return ' ৳' + fmtCurr(context.raw);
-                                                }
-                                            }
-                                        },
-                                        datalabels: { display: false }
-                                    }
-                                }
-                            });
-                        }
-                    }
-
-                    const terrColl = {};
-                    filteredCollections.forEach(c => {
-                        const cTerr = c.territory || c.territoryName || c.territory_name || '';
-                        const t = territories.find(t => String(t.id) === String(cTerr) || String(t.name).toLowerCase() === String(cTerr).toLowerCase());
-                        const tName = t ? t.name : String(cTerr);
-                        if (!terrColl[tName]) terrColl[tName] = 0;
-                        terrColl[tName] += parseCleanFloat(c.amount);
-                    });
-
-                    const sortedTerritories = Object.entries(terrColl)
-                        .sort((a, b) => b[1] - a[1])
-                        .slice(0, 10);
-
-                    if (sortedTerritories.length > 0) {
-                        const ctxTerr = document.getElementById('analyticsTerritoryChart');
-                        if (ctxTerr) {
-                            window.analyticsTerritoryChartInst = new Chart(ctxTerr, {
-                                type: 'bar',
-                                data: {
-                                    labels: sortedTerritories.map(st => st[0].substring(0, 12) + (st[0].length>12?'...':'')),
-                                    datasets: [{
-                                        label: 'MTD Collection (৳)',
-                                        data: sortedTerritories.map(st => st[1]),
-                                        backgroundColor: '#10b981',
-                                        borderRadius: 4,
-                                        barThickness: 16
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    scales: {
-                                        y: {
-                                            beginAtZero: true,
-                                            ticks: {
-                                                font: { size: 9 },
-                                                callback: function(value) {
-                                                    return value >= 1000000 ? (value/1000000).toFixed(1) + 'M' : value >= 1000 ? (value/1000).toFixed(1) + 'K' : value;
-                                                }
-                                            },
-                                            grid: { color: 'rgba(0,0,0,0.05)' }
-                                        },
-                                        x: {
-                                            ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 45 },
-                                            grid: { display: false }
-                                        }
-                                    },
-                                    plugins: {
-                                        legend: { display: false },
-                                        tooltip: {
-                                            callbacks: {
-                                                label: function(context) {
-                                                    return ' ৳' + fmtCurr(context.raw);
-                                                }
-                                            }
-                                        },
-                                        datalabels: { display: false }
-                                    }
-                                }
-                            });
-                        }
-                    }
-                } catch (err) {
-                    console.error("Error in renderAnalyticsCharts:", err);
-                }
+                        <!-- Customer Data Table -->
+                        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+                            <div class="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                                <h2 class="text-sm font-black text-slate-800 dark:text-slate-100 tracking-tight">Customer Analytics List</h2>
+                                <span class="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-black border border-indigo-100 dark:border-indigo-800/50">${filteredData.length} Matches</span>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left whitespace-nowrap">
+                                    <thead>
+                                        <tr class="bg-slate-50 dark:bg-slate-800/50 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
+                                            <th class="px-3 py-2.5">Cust ID</th>
+                                            <th class="px-3 py-2.5">Name</th>
+                                            <th class="px-3 py-2.5">Territory</th>
+                                            <th class="px-3 py-2.5 text-right">Outstanding</th>
+                                            <th class="px-3 py-2.5 text-right">Overdue Amt</th>
+                                            <th class="px-3 py-2.5 text-center">OD Inst</th>
+                                            <th class="px-3 py-2.5 text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                        ${rowsHtml || '<tr><td colspan="7" class="py-12 text-center text-sm font-medium text-slate-400">No customers match the current filters.</td></tr>'}
+                                    </tbody>
+                                </table>
+                            </div>
+                            ${tableNote}
+                        </div>
+                    </div>
+                `;
             },
 
+            // --- ADMIN VIEWS ---
             renderAdminDashboard(tableMode = 'compact') {
                 const metrics = Calc.getMetrics();
                 const db = Store.get();
@@ -2427,9 +2302,6 @@ window.UI = {
                                     </div>
                             </div>
                             <div class="flex items-center gap-2.5">
-                                <button onclick="Router.navigate('admin-analytics')" class="flex items-center h-8 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all font-semibold text-xs shadow-sm hover-lift">
-                                    <i class="fa-solid fa-chart-line mr-1.5 opacity-90"></i> In-depth Analytics
-                                </button>
                                 <button onclick="UI.openSystemSettingsModal()" class="flex items-center h-8 px-3 bg-white/45 dark:bg-slate-900/30 backdrop-blur-sm border border-white/10 dark:border-slate-700/30 text-brand-600 dark:text-brand-400 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all font-semibold text-xs shadow-sm hover-lift">
                                     <i class="fa-solid fa-gear mr-1.5 opacity-80"></i> Settings
                                 </button>
@@ -2439,6 +2311,9 @@ window.UI = {
                                 <button onclick="UI.downloadAdminSummaryCSV()" class="flex items-center h-8 px-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg hover:from-emerald-600 hover:to-teal-700 transition-all font-semibold text-xs shadow-sm hover-lift relative overflow-hidden group">
                                     <div class="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                                     <i class="fa-solid fa-cloud-arrow-down mr-1.5 relative z-10 opacity-90"></i> <span class="relative z-10">Summary Data</span>
+                                </button>
+                                <button onclick="Router.navigate('admin-in-depth-analytics')" class="flex items-center h-8 px-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all font-semibold text-xs shadow-sm hover-lift relative overflow-hidden group hidden md:flex">
+                                    <i class="fa-solid fa-chart-network mr-1.5 relative z-10 opacity-90"></i> <span class="relative z-10">In-depth Analytics</span>
                                 </button>
                                 <button onclick="Router.navigate('admin-performance')" class="flex items-center h-8 px-3 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-all font-semibold text-xs shadow-sm hover-lift">
                                     <i class="fa-solid fa-chart-line mr-1.5 opacity-90"></i> Performance Analytics
