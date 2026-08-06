@@ -6158,7 +6158,11 @@ window.UI = {
                             const last3Month3 = parseFloat(getVal(cleanRow, ['last_3_month_payment_3', 'last 3 month payment 3', 'last_3_month_3'], 12)) || 0;
                             const upazilaCode = getVal(cleanRow, ['upazila_code', 'upazila code'], 13);
                             const upazilaName = getVal(cleanRow, ['upazila_name', 'upazila name'], 14);
-                            const territoryName = getVal(cleanRow, ['territory_name', 'territory name'], 15);
+                            let territoryName = getVal(cleanRow, ['territory_name', 'territory name'], 15);
+                            if (territoryName && /^\d+$/.test(territoryName.trim())) {
+                                const tMatch = (Store.cache.territories || []).find(t => String(t.id) === territoryName.trim());
+                                if (tMatch) territoryName = tMatch.name;
+                            }
                             
                             data.push({
                                 customerId,
@@ -6206,8 +6210,18 @@ window.UI = {
 
             renderAdminCustomers() {
                 const container = document.getElementById('views-container');
-                const customers = Store.cache.customers || [];
                 const territories = Store.cache.territories || [];
+
+                // Sanitize customer territory names in memory if they are numeric IDs
+                if (Store.cache.customers) {
+                    Store.cache.customers.forEach(c => {
+                        if (c.territoryName && /^\d+$/.test(String(c.territoryName).trim())) {
+                            const tMatch = territories.find(t => String(t.id) === String(c.territoryName).trim());
+                            if (tMatch) c.territoryName = tMatch.name;
+                        }
+                    });
+                }
+                const customers = Store.cache.customers || [];
 
                 const territoryNames = [...new Set(customers.map(c => c.territoryName).filter(Boolean))].sort();
                 const territoryOptions = territoryNames.map(name => `<option value="${name}">${name}</option>`).join('');
