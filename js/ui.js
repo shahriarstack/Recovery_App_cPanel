@@ -6103,7 +6103,7 @@ window.UI = {
             // --- EXPORTS & MODALS ---
             
             downloadCustomerTemplateCSV() {
-                const headers = ["Customer_ID", "Customer_Name", "Vehicle_Reg_Number", "Phone_Number", "First_Installment_Date", "Installment_Size", "Overdue_Inst_No", "Overdue_Taka", "Total_Outstanding", "Last_Payment_Date", "Last_3_Month_Payment_1", "Last_3_Month_Payment_2", "Last_3_Month_Payment_3", "Upazila_Code", "Upazila_Name", "Territory_Name"];
+                const headers = ["Territory_Name", "Upazila_Name", "Upazila_Code", "Customer_ID", "Customer_Name", "Phone_Number", "Vehicle_Reg_Number", "First_Installment_Date", "Installment_Size", "Overdue_Inst_No", "Overdue_Taka", "Total_Outstanding", "Last_Payment_Date", "Last_3_Month_Payment_1", "Last_3_Month_Payment_2", "Last_3_Month_Payment_3"];
                 const csvContent = headers.join(',') + "\n";
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement("a");
@@ -6123,7 +6123,10 @@ window.UI = {
                 const reader = new FileReader();
                 reader.onload = async (event) => {
                     try {
-                        const csvText = event.target.result;
+                        let csvText = event.target.result || '';
+                        // Strip UTF-8 BOM if present
+                        csvText = csvText.replace(/^\ufeff/, '');
+                        
                         const lines = csvText.split(/\r?\n/).filter(l => l.trim().length > 0);
                         if (lines.length < 2) throw new Error("CSV is empty or missing data.");
                         
@@ -6147,11 +6150,54 @@ window.UI = {
                         };
 
                         const rawHeaders = parseCSVLine(lines[0]);
-                        const headers = rawHeaders.map(h => h.trim().toLowerCase().replace(/["']/g, ''));
+                        // Normalize headers: strip quotes, spaces, symbols to pure lowercase alphanumeric
+                        const normalizedHeaders = rawHeaders.map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+
+                        // Determine default index mapping layout if headers fail to match
+                        // Check if row 1 at index 0 looks like a Customer ID (contains digits/code)
+                        const sampleRow = parseCSVLine(lines[1]);
+                        const isTableOrderLayout = !(sampleRow[0] && /^cust/i.test(sampleRow[0]));
+
+                        const defaults = isTableOrderLayout ? {
+                            territoryName: 0,
+                            upazilaName: 1,
+                            upazilaCode: 2,
+                            customerId: 3,
+                            customerName: 4,
+                            phone: 5,
+                            vehicleRegNo: 6,
+                            firstInstDate: 7,
+                            instSize: 8,
+                            overdueInstNo: 9,
+                            overdueTaka: 10,
+                            totalOutstanding: 11,
+                            lastPaymentDate: 12,
+                            last3Month1: 13,
+                            last3Month2: 14,
+                            last3Month3: 15
+                        } : {
+                            customerId: 0,
+                            customerName: 1,
+                            vehicleRegNo: 2,
+                            phone: 3,
+                            firstInstDate: 4,
+                            instSize: 5,
+                            overdueInstNo: 6,
+                            overdueTaka: 7,
+                            totalOutstanding: 8,
+                            lastPaymentDate: 9,
+                            last3Month1: 10,
+                            last3Month2: 11,
+                            last3Month3: 12,
+                            upazilaCode: 13,
+                            upazilaName: 14,
+                            territoryName: 15
+                        };
 
                         const getVal = (row, variants, defaultIdx) => {
                             for (const v of variants) {
-                                const idx = headers.indexOf(v.toLowerCase());
+                                const normV = v.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                const idx = normalizedHeaders.indexOf(normV);
                                 if (idx !== -1 && row[idx] !== undefined && row[idx] !== '') return row[idx];
                             }
                             return row[defaultIdx] !== undefined ? row[defaultIdx] : '';
@@ -6164,22 +6210,22 @@ window.UI = {
                             const cleanRow = parseCSVLine(lines[i]);
                             if (cleanRow.length < 2) continue; // Skip empty rows
                             
-                            const customerId = getVal(cleanRow, ['customer_id', 'customer id', 'customerid', 'customer_code', 'customer code', 'customercode', 'code', 'id', 'cust_id', 'cust id'], 0);
-                            const customerName = getVal(cleanRow, ['customer_name', 'customer name', 'customername', 'name', 'cust_name', 'cust name', 'client_name', 'client name'], 1);
-                            const vehicleRegNo = getVal(cleanRow, ['vehicle_reg_number', 'vehicle reg number', 'vehicle_reg_no', 'vehicle reg no', 'vehicle reg', 'vehicleregnumber', 'reg_no', 'reg no', 'registration', 'registration_no', 'registration no', 'regno', 'vehicle_no', 'vehicle no'], 2);
-                            const phone = getVal(cleanRow, ['phone_number', 'phone number', 'phone', 'mobile', 'mobile_number', 'mobile number', 'contact', 'contact_no', 'contact no', 'phone_no', 'phone no', 'mobile_no', 'mobile no'], 3);
-                            const firstInstDate = getVal(cleanRow, ['first_installment_date', 'first installment date', 'firstinstdate', 'first_inst_date', 'first inst date', 'start_date', 'start date', 'issue_date', 'issue date'], 4);
-                            const instSize = parseFloat(getVal(cleanRow, ['installment_size', 'installment size', 'instsize', 'inst_size', 'inst size', 'emi', 'emi_amount', 'emi amount', 'installment_amount', 'installment amount'], 5)) || 0;
-                            const overdueInstNo = parseInt(getVal(cleanRow, ['overdue_inst_no', 'overdueinstno', 'overdue inst no', 'overdue_inst', 'overdue inst', 'overdue_nos', 'od_inst_no', 'od inst no', 'od_inst', 'od inst'], 6)) || 0;
-                            const overdueTaka = parseFloat(getVal(cleanRow, ['overdue_taka', 'overduetaka', 'overdue taka', 'overdue_amount', 'overdue amount', 'od_taka', 'od taka', 'od_amount', 'od amount', 'overdue'], 7)) || 0;
-                            const totalOutstanding = parseFloat(getVal(cleanRow, ['total_outstanding', 'total outstanding', 'outstanding', 'total_out', 'total out', 'out_standing', 'out standing', 'balance', 'total_balance', 'total balance'], 8)) || 0;
-                            const lastPaymentDate = getVal(cleanRow, ['last_payment_date', 'last payment date', 'last_pay_date', 'last pay date', 'last_payment', 'last payment', 'last_pay_dt'], 9);
-                            const last3Month1 = parseFloat(getVal(cleanRow, ['last_3_month_payment_1', 'last 3 month payment 1', 'last_3_month_1', 'last 3 month 1', 'pay_m1', 'pay m1', 'm1', 'm-1', 'pay m-1'], 10)) || 0;
-                            const last3Month2 = parseFloat(getVal(cleanRow, ['last_3_month_payment_2', 'last 3 month payment 2', 'last_3_month_2', 'last 3 month 2', 'pay_m2', 'pay m2', 'm2', 'm-2', 'pay m-2'], 11)) || 0;
-                            const last3Month3 = parseFloat(getVal(cleanRow, ['last_3_month_payment_3', 'last 3 month payment 3', 'last_3_month_3', 'last 3 month 3', 'pay_m3', 'pay m3', 'm3', 'm-3', 'pay m-3'], 12)) || 0;
-                            const upazilaCode = getVal(cleanRow, ['upazila_code', 'upazila code', 'upazilacode', 'thana_code', 'thana code'], 13);
-                            const upazilaName = getVal(cleanRow, ['upazila_name', 'upazila name', 'upazila', 'upazilaname', 'thana_name', 'thana name', 'thana'], 14);
-                            let territoryName = getVal(cleanRow, ['territory_name', 'territory name', 'territory', 'territory_id', 'territory id', 'territoryname', 'territoryid', 'zone', 'region', 'area'], 15);
+                            const customerId = getVal(cleanRow, ['customer_id', 'customer id', 'customerid', 'customer_code', 'customer code', 'customercode', 'code', 'id', 'cust_id', 'cust id'], defaults.customerId);
+                            const customerName = getVal(cleanRow, ['customer_name', 'customer name', 'customername', 'name', 'cust_name', 'cust name', 'client_name', 'client name'], defaults.customerName);
+                            const vehicleRegNo = getVal(cleanRow, ['vehicle_reg_number', 'vehicle reg number', 'vehicle_reg_no', 'vehicle reg no', 'vehicle reg', 'vehicleregnumber', 'reg_no', 'reg no', 'registration', 'registration_no', 'registration no', 'regno', 'vehicle_no', 'vehicle no'], defaults.vehicleRegNo);
+                            const phone = getVal(cleanRow, ['phone_number', 'phone number', 'phone', 'mobile', 'mobile_number', 'mobile number', 'contact', 'contact_no', 'contact no', 'phone_no', 'phone no', 'mobile_no', 'mobile no'], defaults.phone);
+                            const firstInstDate = getVal(cleanRow, ['first_installment_date', 'first installment date', 'firstinstdate', 'first_inst_date', 'first inst date', 'start_date', 'start date', 'issue_date', 'issue date'], defaults.firstInstDate);
+                            const instSize = parseFloat(getVal(cleanRow, ['installment_size', 'installment size', 'instsize', 'inst_size', 'inst size', 'emi', 'emi_amount', 'emi amount', 'installment_amount', 'installment amount'], defaults.instSize)) || 0;
+                            const overdueInstNo = parseInt(getVal(cleanRow, ['overdue_inst_no', 'overdueinstno', 'overdue inst no', 'overdue_inst', 'overdue inst', 'overdue_nos', 'od_inst_no', 'od inst no', 'od_inst', 'od inst'], defaults.overdueInstNo)) || 0;
+                            const overdueTaka = parseFloat(getVal(cleanRow, ['overdue_taka', 'overduetaka', 'overdue taka', 'overdue_amount', 'overdue amount', 'od_taka', 'od taka', 'od_amount', 'od amount', 'overdue'], defaults.overdueTaka)) || 0;
+                            const totalOutstanding = parseFloat(getVal(cleanRow, ['total_outstanding', 'total outstanding', 'outstanding', 'total_out', 'total out', 'out_standing', 'out standing', 'balance', 'total_balance', 'total balance'], defaults.totalOutstanding)) || 0;
+                            const lastPaymentDate = getVal(cleanRow, ['last_payment_date', 'last payment date', 'last_pay_date', 'last pay date', 'last_payment', 'last payment', 'last_pay_dt'], defaults.lastPaymentDate);
+                            const last3Month1 = parseFloat(getVal(cleanRow, ['last_3_month_payment_1', 'last 3 month payment 1', 'last_3_month_1', 'last 3 month 1', 'pay_m1', 'pay m1', 'm1', 'm-1', 'pay m-1'], defaults.last3Month1)) || 0;
+                            const last3Month2 = parseFloat(getVal(cleanRow, ['last_3_month_payment_2', 'last 3 month payment 2', 'last_3_month_2', 'last 3 month 2', 'pay_m2', 'pay m2', 'm2', 'm-2', 'pay m-2'], defaults.last3Month2)) || 0;
+                            const last3Month3 = parseFloat(getVal(cleanRow, ['last_3_month_payment_3', 'last 3 month payment 3', 'last_3_month_3', 'last 3 month 3', 'pay_m3', 'pay m3', 'm3', 'm-3', 'pay m-3'], defaults.last3Month3)) || 0;
+                            const upazilaCode = getVal(cleanRow, ['upazila_code', 'upazila code', 'upazilacode', 'thana_code', 'thana code'], defaults.upazilaCode);
+                            const upazilaName = getVal(cleanRow, ['upazila_name', 'upazila name', 'upazila', 'upazilaname', 'thana_name', 'thana name', 'thana'], defaults.upazilaName);
+                            let territoryName = getVal(cleanRow, ['territory_name', 'territory name', 'territory', 'territory_id', 'territory id', 'territoryname', 'territoryid', 'zone', 'region', 'area'], defaults.territoryName);
                             
                             if (territoryName) {
                                 territoryName = territoryName.trim();
