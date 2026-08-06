@@ -2491,19 +2491,10 @@ window.UI = {
                                     <div class="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                                     <i class="fa-solid fa-cloud-arrow-down mr-1.5 relative z-10 opacity-90"></i> <span class="relative z-10">Summary Data</span>
                                 </button>
-                                <button onclick="Router.navigate('admin-in-depth-analytics')" class="flex items-center h-8 px-3.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-500 hover:to-purple-600 text-white rounded-lg transition-all duration-300 font-bold text-xs shadow-md shadow-indigo-500/25 hover:shadow-indigo-500/40 hover-lift relative overflow-hidden group border border-indigo-400/30">
-                                    <!-- Shimmer Effect -->
-                                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                                    
-                                    <!-- Live Ping Indicator -->
-                                    <span class="relative flex h-2 w-2 mr-2">
-                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-                                    </span>
-
-                                    <i class="fa-solid fa-chart-network mr-1.5 text-xs text-indigo-200 group-hover:rotate-12 transition-transform duration-300 relative z-10"></i> 
-                                    <span class="relative z-10 tracking-tight">In-depth Analytics</span>
-                                    <span class="ml-1.5 px-1.5 py-0.2 bg-white/20 text-[9px] font-black uppercase rounded text-indigo-100 relative z-10">PRO</span>
+                                <button onclick="Router.navigate('admin-in-depth-analytics')" class="flex items-center h-8 px-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all font-semibold text-xs shadow-sm hover-lift relative overflow-hidden group border border-indigo-500/30">
+                                    <div class="absolute inset-0 bg-white/10 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                                    <i class="fa-solid fa-chart-network mr-1.5 relative z-10 text-indigo-100"></i>
+                                    <span class="relative z-10 font-bold">In-depth Analytics</span>
                                 </button>
                                 <button onclick="Router.navigate('admin-performance')" class="flex items-center h-8 px-3 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-all font-semibold text-xs shadow-sm hover-lift">
                                     <i class="fa-solid fa-chart-line mr-1.5 opacity-90"></i> Performance Analytics
