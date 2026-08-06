@@ -2042,16 +2042,16 @@ window.UI = {
                             <td class="px-2.5 py-2 font-mono text-slate-500 text-xs">${c.phone || '-'}</td>
                             <td class="px-2.5 py-2 font-mono text-slate-600 dark:text-slate-300 text-xs">${c.vehicleRegNo || c.vehicle_reg_no || '-'}</td>
                             <td class="px-2.5 py-2 text-slate-500 text-xs">${c.firstInstDate}</td>
-                            <td class="px-2.5 py-2 text-right font-mono text-xs">৳${Math.round(c.instSize).toLocaleString()}</td>
-                            <td class="px-2.5 py-2 text-right font-mono font-black bg-emerald-50/50 dark:bg-emerald-950/20 ${c.collectedMTD > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}">৳${Math.round(c.collectedMTD).toLocaleString()}</td>
+                            <td class="px-2.5 py-2 text-right font-mono text-xs">${Math.round(c.instSize).toLocaleString()}</td>
+                            <td class="px-2.5 py-2 text-right font-mono font-black bg-emerald-50/50 dark:bg-emerald-950/20 ${c.collectedMTD > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}">${Math.round(c.collectedMTD).toLocaleString()}</td>
                             <td class="px-2.5 py-2 text-center font-mono font-bold text-indigo-600 dark:text-indigo-400 text-xs">${c.latestCollectionDate || '-'}</td>
                             <td class="px-2.5 py-2 text-center font-mono font-bold ${c.overdueInst > 2 ? 'text-rose-600' : (c.overdueInst > 0 ? 'text-amber-500' : 'text-slate-400')} text-xs">${c.overdueInst}</td>
-                            <td class="px-2.5 py-2 text-right font-mono font-bold ${c.overdueAmt > 0 ? 'text-rose-500' : 'text-slate-400'} text-xs">৳${Math.round(c.overdueAmt).toLocaleString()}</td>
-                            <td class="px-2.5 py-2 text-right font-mono font-bold text-slate-700 dark:text-slate-300 text-xs">৳${Math.round(c.outstanding).toLocaleString()}</td>
+                            <td class="px-2.5 py-2 text-right font-mono font-bold ${c.overdueAmt > 0 ? 'text-rose-500' : 'text-slate-400'} text-xs">${Math.round(c.overdueAmt).toLocaleString()}</td>
+                            <td class="px-2.5 py-2 text-right font-mono font-bold text-slate-700 dark:text-slate-300 text-xs">${Math.round(c.outstanding).toLocaleString()}</td>
                             <td class="px-2.5 py-2 text-slate-500 text-xs">${c.lastPayDate}</td>
-                            <td class="px-2.5 py-2 text-right font-mono text-slate-600 dark:text-slate-400 text-xs">৳${Math.round(c.m1).toLocaleString()}</td>
-                            <td class="px-2.5 py-2 text-right font-mono text-slate-600 dark:text-slate-400 text-xs">৳${Math.round(c.m2).toLocaleString()}</td>
-                            <td class="px-2.5 py-2 text-right font-mono text-slate-600 dark:text-slate-400 text-xs">৳${Math.round(c.m3).toLocaleString()}</td>
+                            <td class="px-2.5 py-2 text-right font-mono text-slate-600 dark:text-slate-400 text-xs">${Math.round(c.m1).toLocaleString()}</td>
+                            <td class="px-2.5 py-2 text-right font-mono text-slate-600 dark:text-slate-400 text-xs">${Math.round(c.m2).toLocaleString()}</td>
+                            <td class="px-2.5 py-2 text-right font-mono text-slate-600 dark:text-slate-400 text-xs">${Math.round(c.m3).toLocaleString()}</td>
                             <td class="px-2.5 py-2 text-center">${riskBadge}</td>
                         </tr>
                     `;
