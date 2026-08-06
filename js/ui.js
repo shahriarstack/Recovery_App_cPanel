@@ -1898,13 +1898,42 @@ window.UI = {
                         const num = parseFloat(cleanStr);
                         return isNaN(num) ? 0 : num;
                     };
+
+                    const parseCleanDate = (val) => {
+                        if (!val || val === '-') return '-';
+                        let str = String(val).trim();
+                        if (!str || str === '-') return '-';
+                        if (/^\d{5}$/.test(str)) {
+                            const excelNum = parseInt(str);
+                            const dateObj = new Date((excelNum - (25567 + 2)) * 86400 * 1000);
+                            if (!isNaN(dateObj.getTime())) {
+                                return dateObj.toISOString().split('T')[0];
+                            }
+                        }
+                        if (str.includes('T')) str = str.split('T')[0];
+                        if (str.includes(' ')) str = str.split(' ')[0];
+                        if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(str)) {
+                            const parts = str.split(/[\/\-]/);
+                            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                        }
+                        return str;
+                    };
                     
                     const overdueAmt = parseCleanFloat(c.overdueTaka || c.overdue_taka);
                     const overdueInst = parseInt(parseCleanFloat(c.overdueInstNo || c.overdue_inst_no)) || 0;
                     const outstanding = parseCleanFloat(c.totalOutstanding || c.total_outstanding);
                     const instSize = parseCleanFloat(c.instSize || c.inst_size);
                     const collectedMTD = parseCleanFloat(c.collectedMTD || c.collected_mtd);
-                    
+                    const m1 = parseCleanFloat(c.last3Month1 || c.last_3_month_1 || c.pay_m1 || c.payM1);
+                    const m2 = parseCleanFloat(c.last3Month2 || c.last_3_month_2 || c.pay_m2 || c.payM2);
+                    const m3 = parseCleanFloat(c.last3Month3 || c.last_3_month_3 || c.pay_m3 || c.payM3);
+                    const lastPayDate = parseCleanDate(c.lastPaymentDate || c.last_payment_date || c.lastPayDate || c.last_pay_date);
+                    const firstInstDate = parseCleanDate(c.firstInstDate || c.first_inst_date);
+
+                    const upazilaText = c.upazilaName || c.upazila_name || '';
+                    const upazilaCodeText = c.upazilaCode || c.upazila_code || '';
+                    const displayUpazila = upazilaText ? (upazilaCodeText ? `${upazilaText} (${upazilaCodeText})` : upazilaText) : (upazilaCodeText || '-');
+
                     // Risk category
                     let riskCategory = 'Safe';
                     if (overdueInst > 2) riskCategory = 'Critical';
@@ -1930,6 +1959,7 @@ window.UI = {
                     return {
                         ...c,
                         overdueAmt, overdueInst, outstanding, instSize, collectedMTD,
+                        m1, m2, m3, lastPayDate, firstInstDate, displayUpazila,
                         riskCategory,
                         territoryName: tName,
                         part: tPart
@@ -2003,14 +2033,27 @@ window.UI = {
                     else riskBadge = '<span class="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-black text-[10px]">SAFE</span>';
 
                     return `
-                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-0">
-                            <td class="px-3 py-2 font-mono font-bold text-brand-600 dark:text-brand-400 text-xs">${c.customerId || c.customer_id || '-'}</td>
-                            <td class="px-3 py-2 font-semibold text-slate-800 dark:text-slate-200 text-xs">${c.customerName || '-'}</td>
-                            <td class="px-3 py-2 text-slate-500 text-xs font-medium">${c.territoryName} <span class="text-[9px] px-1 bg-slate-100 dark:bg-slate-800 rounded ml-1">${c.part}</span></td>
-                            <td class="px-3 py-2 text-right font-mono font-bold text-slate-700 dark:text-slate-300 text-xs">৳${Math.round(c.outstanding).toLocaleString()}</td>
-                            <td class="px-3 py-2 text-right font-mono font-bold ${c.overdueAmt > 0 ? 'text-rose-500' : 'text-slate-400'} text-xs">৳${Math.round(c.overdueAmt).toLocaleString()}</td>
-                            <td class="px-3 py-2 text-center font-mono font-bold ${c.overdueInst > 2 ? 'text-rose-600' : (c.overdueInst > 0 ? 'text-amber-500' : 'text-slate-400')} text-xs">${c.overdueInst}</td>
-                            <td class="px-3 py-2 text-center">${riskBadge}</td>
+                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-0 text-xs">
+                            <td class="px-2.5 py-2 font-semibold text-slate-700 dark:text-slate-200">
+                                <span class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px]">${c.territoryName} (${c.part})</span>
+                            </td>
+                            <td class="px-2.5 py-2 text-slate-500 text-xs">${c.displayUpazila}</td>
+                            <td class="px-2.5 py-2 font-mono font-bold text-brand-600 dark:text-brand-400 text-xs">${c.customerId || c.customer_id || '-'}</td>
+                            <td class="px-2.5 py-2 font-semibold text-slate-800 dark:text-slate-200 text-xs">${c.customerName || '-'}</td>
+                            <td class="px-2.5 py-2 font-mono text-slate-500 text-xs">${c.phone || '-'}</td>
+                            <td class="px-2.5 py-2 font-mono text-slate-600 dark:text-slate-300 text-xs">${c.vehicleRegNo || c.vehicle_reg_no || '-'}</td>
+                            <td class="px-2.5 py-2 text-slate-500 text-xs">${c.firstInstDate}</td>
+                            <td class="px-2.5 py-2 text-right font-mono text-xs">৳${Math.round(c.instSize).toLocaleString()}</td>
+                            <td class="px-2.5 py-2 text-right font-mono font-black bg-emerald-50/50 dark:bg-emerald-950/20 ${c.collectedMTD > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}">৳${Math.round(c.collectedMTD).toLocaleString()}</td>
+                            <td class="px-2.5 py-2 text-center font-mono font-bold text-indigo-600 dark:text-indigo-400 text-xs">${c.latestCollectionDate || '-'}</td>
+                            <td class="px-2.5 py-2 text-center font-mono font-bold ${c.overdueInst > 2 ? 'text-rose-600' : (c.overdueInst > 0 ? 'text-amber-500' : 'text-slate-400')} text-xs">${c.overdueInst}</td>
+                            <td class="px-2.5 py-2 text-right font-mono font-bold ${c.overdueAmt > 0 ? 'text-rose-500' : 'text-slate-400'} text-xs">৳${Math.round(c.overdueAmt).toLocaleString()}</td>
+                            <td class="px-2.5 py-2 text-right font-mono font-bold text-slate-700 dark:text-slate-300 text-xs">৳${Math.round(c.outstanding).toLocaleString()}</td>
+                            <td class="px-2.5 py-2 text-slate-500 text-xs">${c.lastPayDate}</td>
+                            <td class="px-2.5 py-2 text-right font-mono text-slate-600 dark:text-slate-400 text-xs">৳${Math.round(c.m1).toLocaleString()}</td>
+                            <td class="px-2.5 py-2 text-right font-mono text-slate-600 dark:text-slate-400 text-xs">৳${Math.round(c.m2).toLocaleString()}</td>
+                            <td class="px-2.5 py-2 text-right font-mono text-slate-600 dark:text-slate-400 text-xs">৳${Math.round(c.m3).toLocaleString()}</td>
+                            <td class="px-2.5 py-2 text-center">${riskBadge}</td>
                         </tr>
                     `;
                 }).join('');
@@ -2118,17 +2161,28 @@ window.UI = {
                                 <table class="w-full text-left whitespace-nowrap">
                                     <thead>
                                         <tr class="bg-slate-50 dark:bg-slate-800/50 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
-                                            <th class="px-3 py-2">Cust ID</th>
-                                            <th class="px-3 py-2">Name</th>
-                                            <th class="px-3 py-2">Territory</th>
-                                            <th class="px-3 py-2 text-right">Outstanding</th>
-                                            <th class="px-3 py-2 text-right">Overdue Amt</th>
-                                            <th class="px-3 py-2 text-center">OD Inst</th>
-                                            <th class="px-3 py-2 text-center">Status</th>
+                                            <th class="px-2.5 py-2">Territory</th>
+                                            <th class="px-2.5 py-2">Upazila</th>
+                                            <th class="px-2.5 py-2">Cust ID</th>
+                                            <th class="px-2.5 py-2">Name</th>
+                                            <th class="px-2.5 py-2">Phone</th>
+                                            <th class="px-2.5 py-2">Vehicle Reg</th>
+                                            <th class="px-2.5 py-2">First Inst</th>
+                                            <th class="px-2.5 py-2 text-right">Inst Size</th>
+                                            <th class="px-2.5 py-2 text-right">MTD Coll</th>
+                                            <th class="px-2.5 py-2 text-center">Coll Date</th>
+                                            <th class="px-2.5 py-2 text-center">OD Inst</th>
+                                            <th class="px-2.5 py-2 text-right">OD Taka</th>
+                                            <th class="px-2.5 py-2 text-right">Outstanding</th>
+                                            <th class="px-2.5 py-2">Last Pay Date</th>
+                                            <th class="px-2.5 py-2 text-right">Pay-M1</th>
+                                            <th class="px-2.5 py-2 text-right">Pay-M2</th>
+                                            <th class="px-2.5 py-2 text-right">Pay-M3</th>
+                                            <th class="px-2.5 py-2 text-center">Status</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                                        ${rowsHtml || '<tr><td colspan="7" class="py-8 text-center text-xs font-medium text-slate-400">No customers match the current filters.</td></tr>'}
+                                        ${rowsHtml || '<tr><td colspan="18" class="py-8 text-center text-xs font-medium text-slate-400">No customers match the current filters.</td></tr>'}
                                     </tbody>
                                 </table>
                             </div>
