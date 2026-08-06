@@ -1879,16 +1879,58 @@ window.UI = {
                 UI.showSuccess('Summary Report Downloaded!');
             },
 
+            // Helper to apply preset chips in Analytics
+            applyAnalyticsPreset(preset) {
+                const searchEl = document.getElementById('analytics-filter-search');
+                const partEl = document.getElementById('analytics-filter-part');
+                const terrEl = document.getElementById('analytics-filter-territory');
+                const upzEl = document.getElementById('analytics-filter-upazila');
+                const riskEl = document.getElementById('analytics-filter-risk');
+                const payEl = document.getElementById('analytics-filter-paystatus');
+                const odEl = document.getElementById('analytics-filter-odamount');
+                const sortEl = document.getElementById('analytics-filter-sort');
+
+                if (searchEl) searchEl.value = '';
+                if (partEl) partEl.value = 'All';
+                if (terrEl) terrEl.value = 'All';
+                if (upzEl) upzEl.value = 'All';
+                if (riskEl) riskEl.value = 'All';
+                if (payEl) payEl.value = 'All';
+                if (odEl) odEl.value = 'All';
+                if (sortEl) sortEl.value = 'default';
+
+                if (preset === 'critical') {
+                    if (riskEl) riskEl.value = 'Critical';
+                    if (sortEl) sortEl.value = 'odinst_desc';
+                } else if (preset === 'high_overdue') {
+                    if (odEl) odEl.value = 'gt100k';
+                    if (sortEl) sortEl.value = 'overdue_desc';
+                } else if (preset === 'zero_mtd') {
+                    if (payEl) payEl.value = 'Zero';
+                    if (sortEl) sortEl.value = 'overdue_desc';
+                } else if (preset === 'paid_mtd') {
+                    if (payEl) payEl.value = 'Paid';
+                    if (sortEl) sortEl.value = 'mtd_desc';
+                }
+
+                UI.renderAdminInDepthAnalytics();
+            },
+
             // --- IN-DEPTH ANALYTICS ---
             renderAdminInDepthAnalytics() {
                 const db = Store.get();
                 const customers = db.customers || [];
                 const territories = db.territories || [];
 
-                // Filter States
+                // Advanced Filter States
+                const filterSearch = (document.getElementById('analytics-filter-search')?.value || '').toLowerCase().trim();
                 const filterPart = document.getElementById('analytics-filter-part')?.value || 'All';
                 const filterTerritory = document.getElementById('analytics-filter-territory')?.value || 'All';
+                const filterUpazila = document.getElementById('analytics-filter-upazila')?.value || 'All';
                 const filterRisk = document.getElementById('analytics-filter-risk')?.value || 'All';
+                const filterPayStatus = document.getElementById('analytics-filter-paystatus')?.value || 'All';
+                const filterOdAmount = document.getElementById('analytics-filter-odamount')?.value || 'All';
+                const filterSort = document.getElementById('analytics-filter-sort')?.value || 'default';
 
                 // We want to calculate analytics on customers.
                 let analyticsData = customers.map(c => {
@@ -1966,11 +2008,40 @@ window.UI = {
                     };
                 });
 
-                // Apply Filters
+                // Extract all unique Upazilas for dropdown
+                const uniqueUpazilas = Array.from(new Set(analyticsData.map(c => c.displayUpazila))).filter(u => u && u !== '-').sort();
+
+                // Apply Advanced Filters
                 let filteredData = analyticsData;
+
+                if (filterSearch) {
+                    filteredData = filteredData.filter(c => 
+                        String(c.customerId || '').toLowerCase().includes(filterSearch) ||
+                        String(c.customerName || '').toLowerCase().includes(filterSearch) ||
+                        String(c.phone || '').toLowerCase().includes(filterSearch) ||
+                        String(c.vehicleRegNo || c.vehicle_reg_no || '').toLowerCase().includes(filterSearch)
+                    );
+                }
+
                 if (filterPart !== 'All') filteredData = filteredData.filter(c => c.part === filterPart);
                 if (filterTerritory !== 'All') filteredData = filteredData.filter(c => c.territoryName === filterTerritory);
+                if (filterUpazila !== 'All') filteredData = filteredData.filter(c => c.displayUpazila === filterUpazila);
                 if (filterRisk !== 'All') filteredData = filteredData.filter(c => c.riskCategory === filterRisk);
+
+                if (filterPayStatus === 'Paid') filteredData = filteredData.filter(c => c.collectedMTD >= c.instSize && c.instSize > 0);
+                else if (filterPayStatus === 'Partial') filteredData = filteredData.filter(c => c.collectedMTD > 0 && c.collectedMTD < c.instSize);
+                else if (filterPayStatus === 'Zero') filteredData = filteredData.filter(c => c.collectedMTD === 0);
+
+                if (filterOdAmount === 'gt0') filteredData = filteredData.filter(c => c.overdueAmt > 0);
+                else if (filterOdAmount === 'gt50k') filteredData = filteredData.filter(c => c.overdueAmt >= 50000);
+                else if (filterOdAmount === 'gt100k') filteredData = filteredData.filter(c => c.overdueAmt >= 100000);
+                else if (filterOdAmount === 'gt500k') filteredData = filteredData.filter(c => c.overdueAmt >= 500000);
+
+                // Advanced Sorting
+                if (filterSort === 'overdue_desc') filteredData.sort((a, b) => b.overdueAmt - a.overdueAmt);
+                else if (filterSort === 'outstanding_desc') filteredData.sort((a, b) => b.outstanding - a.outstanding);
+                else if (filterSort === 'odinst_desc') filteredData.sort((a, b) => b.overdueInst - a.overdueInst);
+                else if (filterSort === 'mtd_desc') filteredData.sort((a, b) => b.collectedMTD - a.collectedMTD);
 
                 // Compute Metrics on Filtered Data
                 const totalCust = filteredData.length;
@@ -1984,6 +2055,9 @@ window.UI = {
                 const safePct = totalCust > 0 ? ((safeCount / totalCust) * 100).toFixed(1) : 0;
                 const riskPct = totalCust > 0 ? ((riskCount / totalCust) * 100).toFixed(1) : 0;
                 const criticalPct = totalCust > 0 ? ((criticalCount / totalCust) * 100).toFixed(1) : 0;
+
+                // Active Filter Count
+                const hasActiveFilters = Boolean(filterSearch || filterPart !== 'All' || filterTerritory !== 'All' || filterUpazila !== 'All' || filterRisk !== 'All' || filterPayStatus !== 'All' || filterOdAmount !== 'All' || filterSort !== 'default');
 
                 // Build Part A / B metrics (only if filterPart is All)
                 let partHtml = '';
@@ -2063,45 +2137,97 @@ window.UI = {
                 const container = document.getElementById('views-container');
                 container.innerHTML = `
                     <div class="animate-entry space-y-3 pb-8">
-                        <!-- Header & Filters Bar (Combined Compact Row) -->
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-2 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
+                        <!-- Header & Control Bar -->
+                        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2.5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm">
                             <div class="flex items-center gap-2">
                                 <h1 class="text-base font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-1.5">
                                     <i class="fa-solid fa-chart-network text-indigo-500 text-sm"></i> In-depth Analytics
                                 </h1>
                             </div>
-                            
-                            <div class="flex flex-wrap items-center gap-2">
-                                <div class="flex items-center gap-1">
-                                    <i class="fa-solid fa-filter text-slate-400 text-[10px]"></i>
-                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Filters:</span>
-                                </div>
-                                <select id="analytics-filter-part" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-semibold rounded-md px-2 py-0.5 outline-none">
-                                    <option value="All" ${filterPart === 'All' ? 'selected' : ''}>All Parts</option>
-                                    <option value="A" ${filterPart === 'A' ? 'selected' : ''}>Part A</option>
-                                    <option value="B" ${filterPart === 'B' ? 'selected' : ''}>Part B</option>
-                                </select>
-                                
-                                <select id="analytics-filter-territory" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-semibold rounded-md px-2 py-0.5 outline-none max-w-[130px]">
-                                    <option value="All" ${filterTerritory === 'All' ? 'selected' : ''}>All Territories</option>
-                                    ${Array.from(new Set(analyticsData.map(c => c.territoryName))).filter(t => t && t !== 'Unknown').sort().map(t => `<option value="${t}" ${filterTerritory === t ? 'selected' : ''}>${t}</option>`).join('')}
-                                </select>
 
-                                <select id="analytics-filter-risk" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-semibold rounded-md px-2 py-0.5 outline-none">
-                                    <option value="All" ${filterRisk === 'All' ? 'selected' : ''}>All Risk Levels</option>
-                                    <option value="Safe" ${filterRisk === 'Safe' ? 'selected' : ''}>Safe (0 OD)</option>
-                                    <option value="At-Risk" ${filterRisk === 'At-Risk' ? 'selected' : ''}>At-Risk (1-2 OD)</option>
-                                    <option value="Critical" ${filterRisk === 'Critical' ? 'selected' : ''}>Critical (3+ OD)</option>
-                                </select>
-                                
-                                ${(filterPart !== 'All' || filterTerritory !== 'All' || filterRisk !== 'All') ? 
-                                    `<button onclick="document.getElementById('analytics-filter-part').value='All'; document.getElementById('analytics-filter-territory').value='All'; document.getElementById('analytics-filter-risk').value='All'; UI.renderAdminInDepthAnalytics();" class="text-[9px] font-bold text-rose-500 hover:text-rose-600 uppercase tracking-widest px-1">Clear</button>` 
-                                : ''}
-
-                                <button onclick="Router.navigate('admin-dashboard')" class="ml-2 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-md text-[10px] font-bold transition-all shadow-sm">
-                                    <i class="fa-solid fa-arrow-left mr-1"></i> Dashboard
-                                </button>
+                            <!-- Live Search Input -->
+                            <div class="relative flex-1 max-w-xs w-full">
+                                <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                <input id="analytics-filter-search" type="text" value="${filterSearch}" placeholder="Search ID, Name, Phone, Reg..." oninput="UI.renderAdminInDepthAnalytics()" class="w-full pl-8 pr-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-1 focus:ring-indigo-500">
                             </div>
+
+                            <!-- Quick Preset Chips -->
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider hidden xl:inline">Presets:</span>
+                                <button onclick="UI.applyAnalyticsPreset('critical')" class="px-2 py-0.5 rounded-md text-[10px] font-bold transition ${filterRisk === 'Critical' ? 'bg-rose-500 text-white shadow-sm' : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100'}">🔥 3+ OD</button>
+                                <button onclick="UI.applyAnalyticsPreset('high_overdue')" class="px-2 py-0.5 rounded-md text-[10px] font-bold transition ${filterOdAmount === 'gt100k' ? 'bg-amber-500 text-white shadow-sm' : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 hover:bg-amber-100'}">⚠️ >100k OD</button>
+                                <button onclick="UI.applyAnalyticsPreset('paid_mtd')" class="px-2 py-0.5 rounded-md text-[10px] font-bold transition ${filterPayStatus === 'Paid' ? 'bg-emerald-500 text-white shadow-sm' : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100'}">✅ Paid MTD</button>
+                                <button onclick="UI.applyAnalyticsPreset('zero_mtd')" class="px-2 py-0.5 rounded-md text-[10px] font-bold transition ${filterPayStatus === 'Zero' ? 'bg-indigo-500 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'}">❌ Zero MTD</button>
+                            </div>
+
+                            <button onclick="Router.navigate('admin-dashboard')" class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-md text-[10px] font-bold transition-all shadow-sm">
+                                <i class="fa-solid fa-arrow-left mr-1"></i> Dashboard
+                            </button>
+                        </div>
+
+                        <!-- Advanced Dropdown Filter Bar -->
+                        <div class="flex flex-wrap items-center gap-2 bg-slate-100/70 dark:bg-slate-800/50 p-2 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
+                            <div class="flex items-center gap-1 mr-1">
+                                <i class="fa-solid fa-sliders text-indigo-500 text-xs"></i>
+                                <span class="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wider">Filters:</span>
+                            </div>
+
+                            <!-- Part Filter -->
+                            <select id="analytics-filter-part" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-semibold rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500">
+                                <option value="All" ${filterPart === 'All' ? 'selected' : ''}>All Parts</option>
+                                <option value="A" ${filterPart === 'A' ? 'selected' : ''}>Part A</option>
+                                <option value="B" ${filterPart === 'B' ? 'selected' : ''}>Part B</option>
+                            </select>
+                            
+                            <!-- Territory Filter -->
+                            <select id="analytics-filter-territory" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-semibold rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500 max-w-[130px]">
+                                <option value="All" ${filterTerritory === 'All' ? 'selected' : ''}>All Territories</option>
+                                ${Array.from(new Set(analyticsData.map(c => c.territoryName))).filter(t => t && t !== 'Unknown').sort().map(t => `<option value="${t}" ${filterTerritory === t ? 'selected' : ''}>${t}</option>`).join('')}
+                            </select>
+
+                            <!-- Upazila Filter -->
+                            <select id="analytics-filter-upazila" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-semibold rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500 max-w-[140px]">
+                                <option value="All" ${filterUpazila === 'All' ? 'selected' : ''}>All Upazilas</option>
+                                ${uniqueUpazilas.map(u => `<option value="${u}" ${filterUpazila === u ? 'selected' : ''}>${u}</option>`).join('')}
+                            </select>
+
+                            <!-- Risk Filter -->
+                            <select id="analytics-filter-risk" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-semibold rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500">
+                                <option value="All" ${filterRisk === 'All' ? 'selected' : ''}>All Risk Levels</option>
+                                <option value="Safe" ${filterRisk === 'Safe' ? 'selected' : ''}>Safe (0 OD)</option>
+                                <option value="At-Risk" ${filterRisk === 'At-Risk' ? 'selected' : ''}>At-Risk (1-2 OD)</option>
+                                <option value="Critical" ${filterRisk === 'Critical' ? 'selected' : ''}>Critical (3+ OD)</option>
+                            </select>
+
+                            <!-- Payment Status Filter -->
+                            <select id="analytics-filter-paystatus" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-semibold rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500">
+                                <option value="All" ${filterPayStatus === 'All' ? 'selected' : ''}>All Pay Status</option>
+                                <option value="Paid" ${filterPayStatus === 'Paid' ? 'selected' : ''}>Paid MTD</option>
+                                <option value="Partial" ${filterPayStatus === 'Partial' ? 'selected' : ''}>Partial MTD</option>
+                                <option value="Zero" ${filterPayStatus === 'Zero' ? 'selected' : ''}>Zero MTD</option>
+                            </select>
+
+                            <!-- Overdue Amount Range Filter -->
+                            <select id="analytics-filter-odamount" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-semibold rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500">
+                                <option value="All" ${filterOdAmount === 'All' ? 'selected' : ''}>All Overdue Tk</option>
+                                <option value="gt0" ${filterOdAmount === 'gt0' ? 'selected' : ''}>> 0 Overdue</option>
+                                <option value="gt50k" ${filterOdAmount === 'gt50k' ? 'selected' : ''}>> 50k Overdue</option>
+                                <option value="gt100k" ${filterOdAmount === 'gt100k' ? 'selected' : ''}>> 100k Overdue</option>
+                                <option value="gt500k" ${filterOdAmount === 'gt500k' ? 'selected' : ''}>> 500k Overdue</option>
+                            </select>
+
+                            <!-- Sort By Dropdown -->
+                            <select id="analytics-filter-sort" onchange="UI.renderAdminInDepthAnalytics()" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500 ml-auto">
+                                <option value="default" ${filterSort === 'default' ? 'selected' : ''}>Sort: Default</option>
+                                <option value="overdue_desc" ${filterSort === 'overdue_desc' ? 'selected' : ''}>Sort: Highest Overdue</option>
+                                <option value="outstanding_desc" ${filterSort === 'outstanding_desc' ? 'selected' : ''}>Sort: Highest Outstanding</option>
+                                <option value="odinst_desc" ${filterSort === 'odinst_desc' ? 'selected' : ''}>Sort: Most OD Inst</option>
+                                <option value="mtd_desc" ${filterSort === 'mtd_desc' ? 'selected' : ''}>Sort: Highest MTD Coll</option>
+                            </select>
+                            
+                            ${hasActiveFilters ? 
+                                `<button onclick="UI.applyAnalyticsPreset('clear')" class="text-[9px] font-bold text-rose-500 hover:text-rose-600 uppercase tracking-widest px-1.5 bg-rose-50 dark:bg-rose-950/30 rounded py-0.5">Reset</button>` 
+                            : ''}
                         </div>
 
                         <!-- Combined Single-Row Analytics Header (Stat Cards + Progress Bars in 1 Line) -->
