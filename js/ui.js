@@ -3567,15 +3567,15 @@ window.UI = {
                             return null;
                         };
 
-                        let minRatioOd = Infinity, maxRatioOd = -Infinity;
+                        let minAvgOd = Infinity, maxAvgOd = -Infinity;
                         let minCollPct = Infinity, maxCollPct = -Infinity;
 
                         for (const k in statsGroup) {
                             const s = statsGroup[k];
                             if (s.count > 0) {
-                                const ratioOd = s.count / (s.totalOd || 1);
-                                if (ratioOd < minRatioOd) minRatioOd = ratioOd;
-                                if (ratioOd > maxRatioOd) maxRatioOd = ratioOd;
+                                const avgOd = s.totalOd / s.count;
+                                if (avgOd < minAvgOd) minAvgOd = avgOd;
+                                if (avgOd > maxAvgOd) maxAvgOd = avgOd;
                                 
                                 const pct = (s.totalInst > 0) ? (s.totalMtd / s.totalInst) : 0;
                                 if (pct < minCollPct) minCollPct = pct;
@@ -3583,7 +3583,7 @@ window.UI = {
                                 s.collPct = pct;
                             }
                         }
-                        if (minRatioOd === Infinity) { minRatioOd = 0; maxRatioOd = 1; }
+                        if (minAvgOd === Infinity) { minAvgOd = 0; maxAvgOd = 1; }
                         if (minCollPct === Infinity) { minCollPct = 0; maxCollPct = 1; }
 
                         let geojsonLayer;
@@ -3638,10 +3638,11 @@ window.UI = {
                                     
                                     let ratio = 0;
                                     if (mapMetricFilter === 'OVERDUE') {
-                                        let range = maxRatioOd - minRatioOd;
-                                        let val = stats.count / (stats.totalOd || 1);
-                                        // ratio: High (more customers per overdue) -> Green, Low -> Red
-                                        ratio = range === 0 ? 0.5 : (val - minRatioOd) / range;
+                                        let range = maxAvgOd - minAvgOd;
+                                        let val = stats.totalOd / stats.count;
+                                        ratio = range === 0 ? 0.5 : (val - minAvgOd) / range;
+                                        // Overdue per file: High -> Red (ratio=1 -> Hue 0), Low -> Green (ratio=0 -> Hue 140)
+                                        ratio = 1 - ratio; // Invert: so high becomes 0 (Red), low becomes 1 (Green)
                                     } else {
                                         let range = maxCollPct - minCollPct;
                                         let val = stats.collPct;
