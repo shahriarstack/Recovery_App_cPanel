@@ -2513,7 +2513,7 @@ window.UI = {
                         <!-- UNIFIED EXECUTIVE CONTROL CENTER (LEFT: SUMMARY & RPI, RIGHT: MAP) -->
                         <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 mb-4">
                             <!-- LEFT COLUMN: RPI BANNER, METRIC TABLE & PART CARDS (8 Cols) -->
-                            <div class="xl:col-span-8 flex flex-col gap-3.5">
+                            <div class="xl:col-span-9 flex flex-col gap-3.5">
                                 <!-- GLOBAL RPI BANNER -->
                                 <div onclick="UI.showRPICriteriaModal()" class="py-2.5 px-4 rounded-2xl border ${Calc.getRPIBg(metrics.rpi)} shadow-xs hover-lift relative overflow-hidden group cursor-pointer" title="Click to view marking criteria">
                                     <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[1500ms] pointer-events-none"></div>
@@ -2750,7 +2750,7 @@ window.UI = {
                             </div> <!-- END LEFT COLUMN -->
 
                             <!-- RIGHT COLUMN: FULL-HEIGHT EXECUTIVE MAP CARD (4 Cols) -->
-                            <div class="xl:col-span-4 relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col min-h-[460px]">
+                            <div class="xl:col-span-3 relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col min-h-[460px]">
                                 <!-- Neck to neck Map Canvas Box -->
                                 <div class="w-full h-full flex-1 overflow-hidden relative flex flex-col bg-white dark:bg-slate-950">
                                     
@@ -2769,16 +2769,14 @@ window.UI = {
                                         </div>
                                     </div>
 
-                                    <!-- Floating Legend Panel -->
-                                    <div class="absolute bottom-3.5 right-3.5 z-[999] bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800/80 shadow-sm text-[8px] space-y-1 w-[100px] pointer-events-auto transition-all duration-300">
-                                        <div class="font-black text-slate-600 dark:text-slate-300 text-center uppercase tracking-tight">
-                                            <span>${UI.mapMetricFilter === 'OVERDUE' ? 'OVERDUE' : 'COLLECTION'}</span>
+                                    <!-- Floating Legend Panel (Right Middle Vertical) -->
+                                    <div class="absolute top-1/2 -translate-y-1/2 right-2.5 z-[999] bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-1.5 rounded-full border border-slate-200/80 dark:border-slate-800/80 shadow-sm flex flex-col items-center gap-1.5 pointer-events-auto transition-all duration-300 hover:scale-105">
+                                        <div class="font-black text-slate-500 dark:text-slate-400 text-[6px] tracking-tighter uppercase text-center leading-none" style="writing-mode: vertical-rl; transform: rotate(180deg);">
+                                            ${UI.mapMetricFilter === 'OVERDUE' ? 'OVERDUE' : 'COLLECTION'}
                                         </div>
-                                        <div class="w-full h-1.5 rounded-full shadow-inner opacity-90" style="background: linear-gradient(to right, hsl(0, 85%, 52%), hsl(70, 85%, 52%), hsl(140, 85%, 52%));"></div>
-                                        <div class="flex items-center justify-between font-bold text-[7px] text-slate-500 dark:text-slate-400">
-                                            <span>${UI.mapMetricFilter === 'OVERDUE' ? 'HIGH' : 'LOW'}</span>
-                                            <span>${UI.mapMetricFilter === 'OVERDUE' ? 'LOW' : 'HIGH'}</span>
-                                        </div>
+                                        <div class="font-bold text-[6px] text-slate-400 mt-0.5">${UI.mapMetricFilter === 'OVERDUE' ? 'LOW' : 'HIGH'}</div>
+                                        <div class="w-1.5 h-16 rounded-full shadow-inner opacity-90" style="background: linear-gradient(to top, hsl(140, 85%, 52%), hsl(70, 85%, 52%), hsl(0, 85%, 52%));"></div>
+                                        <div class="font-bold text-[6px] text-slate-400 mb-0.5">${UI.mapMetricFilter === 'OVERDUE' ? 'HIGH' : 'LOW'}</div>
                                     </div>
 
                                     <!-- Selected Territory Indicator Badge Overlay -->
