@@ -2750,7 +2750,7 @@ window.UI = {
                             </div> <!-- END LEFT COLUMN -->
 
                             <!-- RIGHT COLUMN: FULL-HEIGHT EXECUTIVE MAP CARD (3 Cols) -->
-                            <div class="xl:col-span-3 self-start relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col h-[520px]">
+                            <div class="xl:col-span-3 self-start relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col h-[420px]">
                                 <!-- Neck to neck Map Canvas Box -->
                                 <div class="w-full h-full flex-1 overflow-hidden relative flex flex-col bg-white dark:bg-slate-950">
                                     
@@ -2774,15 +2774,15 @@ window.UI = {
                                         <div class="font-black text-slate-500 dark:text-slate-400 text-[6px] tracking-tighter uppercase text-center leading-none" style="writing-mode: vertical-rl; transform: rotate(180deg);">
                                             ${UI.mapMetricFilter === 'OVERDUE' ? 'OVERDUE' : 'COLLECTION'}
                                         </div>
-                                        <div class="font-bold text-[6px] text-slate-400 mt-0.5">${UI.mapMetricFilter === 'OVERDUE' ? 'LOW' : 'HIGH'}</div>
-                                        <div class="w-1.5 h-16 rounded-full shadow-inner opacity-90" style="background: linear-gradient(to top, hsl(140, 85%, 52%), hsl(70, 85%, 52%), hsl(0, 85%, 52%));"></div>
-                                        <div class="font-bold text-[6px] text-slate-400 mb-0.5">${UI.mapMetricFilter === 'OVERDUE' ? 'HIGH' : 'LOW'}</div>
+                                        <div class="font-bold text-[6px] text-slate-400 mt-0.5">HIGH</div>
+                                        <div class="w-1.5 h-16 rounded-full shadow-inner opacity-90" style="background: linear-gradient(to top, ${UI.mapMetricFilter === 'OVERDUE' ? 'hsl(140, 85%, 52%), hsl(70, 85%, 52%), hsl(0, 85%, 52%)' : 'hsl(0, 85%, 52%), hsl(70, 85%, 52%), hsl(140, 85%, 52%)'});"></div>
+                                        <div class="font-bold text-[6px] text-slate-400 mb-0.5">LOW</div>
                                     </div>
 
                                     <!-- Selected Territory Indicator Badge Overlay -->
                                     <div id="map-territory-indicator" class="absolute top-16 left-3.5 z-[999] hidden pointer-events-auto"></div>
 
-                                    <div id="admin-bd-map" class="w-full h-full min-h-[460px] flex-1 relative z-0" style="background: #ffffff !important;"></div>
+                                    <div id="admin-bd-map" class="w-full h-full min-h-[400px] flex-1 relative z-0" style="background: #ffffff !important;"></div>
                                 </div>
                             </div>
                         </div>
