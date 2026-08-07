@@ -3567,14 +3567,15 @@ window.UI = {
                             return null;
                         };
 
-                        let minOd = Infinity, maxOd = -Infinity;
+                        let minRatioOd = Infinity, maxRatioOd = -Infinity;
                         let minCollPct = Infinity, maxCollPct = -Infinity;
 
                         for (const k in statsGroup) {
                             const s = statsGroup[k];
                             if (s.count > 0) {
-                                if (s.totalOd < minOd) minOd = s.totalOd;
-                                if (s.totalOd > maxOd) maxOd = s.totalOd;
+                                const ratioOd = s.count / (s.totalOd || 1);
+                                if (ratioOd < minRatioOd) minRatioOd = ratioOd;
+                                if (ratioOd > maxRatioOd) maxRatioOd = ratioOd;
                                 
                                 const pct = (s.totalInst > 0) ? (s.totalMtd / s.totalInst) : 0;
                                 if (pct < minCollPct) minCollPct = pct;
@@ -3582,7 +3583,7 @@ window.UI = {
                                 s.collPct = pct;
                             }
                         }
-                        if (minOd === Infinity) { minOd = 0; maxOd = 1; }
+                        if (minRatioOd === Infinity) { minRatioOd = 0; maxRatioOd = 1; }
                         if (minCollPct === Infinity) { minCollPct = 0; maxCollPct = 1; }
 
                         let geojsonLayer;
@@ -3637,11 +3638,10 @@ window.UI = {
                                     
                                     let ratio = 0;
                                     if (mapMetricFilter === 'OVERDUE') {
-                                        let range = maxOd - minOd;
-                                        let val = stats.totalOd;
-                                        ratio = range === 0 ? 0 : (val - minOd) / range;
-                                        // Overdue: High is Red (ratio=1 -> Hue 0), Low is Green (ratio=0 -> Hue 140)
-                                        ratio = 1 - ratio; // invert so high is 0, low is 1
+                                        let range = maxRatioOd - minRatioOd;
+                                        let val = stats.count / (stats.totalOd || 1);
+                                        // ratio: High (more customers per overdue) -> Green, Low -> Red
+                                        ratio = range === 0 ? 0.5 : (val - minRatioOd) / range;
                                     } else {
                                         let range = maxCollPct - minCollPct;
                                         let val = stats.collPct;
