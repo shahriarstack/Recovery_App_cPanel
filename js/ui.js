@@ -2515,7 +2515,7 @@ window.UI = {
                             <!-- LEFT COLUMN: RPI BANNER, METRIC TABLE & PART CARDS (8 Cols) -->
                             <div class="xl:col-span-9 flex flex-col gap-3.5">
                                 <!-- GLOBAL RPI BANNER (PREMIUM WHITISH) -->
-                                <div onclick="UI.showRPICriteriaModal()" class="py-3 px-5 rounded-2xl bg-gradient-to-br from-white/95 to-slate-50/95 dark:from-slate-900/90 dark:to-slate-900/50 backdrop-blur-xl border border-white/80 dark:border-slate-700/50 shadow-[0_8px_20px_-6px_rgba(0,0,0,0.08)] hover-lift relative overflow-hidden group cursor-pointer" title="Click to view marking criteria">
+                                <div onclick="UI.showRPICriteriaModal()" class="py-2 px-4 rounded-2xl bg-gradient-to-br from-white/95 to-slate-50/95 dark:from-slate-900/90 dark:to-slate-900/50 backdrop-blur-xl border border-white/80 dark:border-slate-700/50 shadow-[0_8px_20px_-6px_rgba(0,0,0,0.08)] hover-lift relative overflow-hidden group cursor-pointer" title="Click to view marking criteria">
                                     <div class="flex items-center justify-between gap-4">
                                         <div>
                                             <h3 class="text-xs font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-1.5">
@@ -2527,7 +2527,7 @@ window.UI = {
                                         <div class="text-2xl font-black ${Calc.getRPIColor(metrics.rpi)} leading-none drop-shadow-sm">${metrics.rpi}</div>
                                     </div>
                                     
-                                    <div class="pt-3 mt-3 border-t border-slate-200/50 dark:border-slate-700/30 flex flex-col gap-1.5">
+                                    <div class="pt-2 mt-2 border-t border-slate-200/50 dark:border-slate-700/30 flex flex-col gap-1.5">
                                         <div class="flex items-center justify-between leading-none">
                                             <span class="text-[8px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Till Date Achievement</span>
                                             <span class="text-[10px] font-black text-slate-800 dark:text-white">${metrics.tillDayAchievement}%</span>
