@@ -2514,24 +2514,27 @@ window.UI = {
                         <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 mb-4">
                             <!-- LEFT COLUMN: RPI BANNER, METRIC TABLE & PART CARDS (8 Cols) -->
                             <div class="xl:col-span-9 flex flex-col gap-3.5">
-                                <!-- GLOBAL RPI BANNER -->
-                                <div onclick="UI.showRPICriteriaModal()" class="py-2.5 px-4 rounded-2xl border ${Calc.getRPIBg(metrics.rpi)} shadow-xs hover-lift relative overflow-hidden group cursor-pointer" title="Click to view marking criteria">
-                                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[1500ms] pointer-events-none"></div>
+                                <!-- GLOBAL RPI BANNER (PREMIUM WHITISH) -->
+                                <div onclick="UI.showRPICriteriaModal()" class="py-3 px-5 rounded-2xl bg-gradient-to-br from-white/95 to-slate-50/95 dark:from-slate-900/90 dark:to-slate-900/50 backdrop-blur-xl border border-white/80 dark:border-slate-700/50 shadow-[0_8px_20px_-6px_rgba(0,0,0,0.08)] hover-lift relative overflow-hidden group cursor-pointer" title="Click to view marking criteria">
+                                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 dark:via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[1500ms] pointer-events-none"></div>
 
                                     <div class="flex items-center justify-between gap-4">
                                         <div>
-                                            <h3 class="text-sm font-black text-slate-800 dark:text-white tracking-tight">Global Recovery Index (RPI)</h3>
-                                            <p class="text-[9px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-black leading-none mt-0.5">Aggregate Performance across all territories</p>
+                                            <h3 class="text-sm font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-1.5">
+                                                GLOBAL RECOVERY INDEX
+                                                <span class="px-1.5 py-0.5 rounded text-[8px] font-black bg-indigo-50/80 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100/50 dark:border-indigo-500/20">RPI</span>
+                                            </h3>
+                                            <p class="text-[9px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-bold leading-none mt-1">Aggregate Performance across all territories</p>
                                         </div>
-                                        <div class="text-xl font-black ${Calc.getRPIColor(metrics.rpi)} leading-none">${metrics.rpi}</div>
+                                        <div class="text-2xl font-black ${Calc.getRPIColor(metrics.rpi)} leading-none drop-shadow-sm">${metrics.rpi}</div>
                                     </div>
                                     
-                                    <div class="pt-2 mt-2 border-t border-slate-200/50 dark:border-slate-700/30 flex items-center justify-between gap-3">
+                                    <div class="pt-2.5 mt-2.5 border-t border-slate-200/50 dark:border-slate-700/30 flex items-center justify-between gap-3">
                                         <div class="flex items-center gap-1.5 leading-none">
                                             <span class="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Till Date Achievement</span>
-                                            <span class="text-[10px] font-black text-brand-600 dark:text-brand-400">${metrics.tillDayAchievement}%</span>
+                                            <span class="text-[10px] font-black text-slate-800 dark:text-white">${metrics.tillDayAchievement}%</span>
                                         </div>
-                                        <div class="flex-1 max-w-[160px] sm:max-w-[200px] h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden relative border border-slate-200/20 dark:border-slate-700/20">
+                                        <div class="flex-1 max-w-[160px] sm:max-w-[200px] h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden relative shadow-inner">
                                             <div class="h-full bg-gradient-to-r from-brand-500 to-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all duration-1000 ease-out" style="width: ${Math.min(100, Math.max(0, parseFloat(metrics.tillDayAchievement)))}%"></div>
                                         </div>
                                     </div>
