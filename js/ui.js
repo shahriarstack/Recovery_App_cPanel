@@ -2770,15 +2770,14 @@ window.UI = {
                                     </div>
 
                                     <!-- Floating Legend Panel -->
-                                    <div class="absolute bottom-3.5 left-3.5 z-[999] bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3 py-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-md text-[9px] space-y-2 min-w-[135px] pointer-events-auto transition-all duration-300 hover:scale-105">
-                                        <div class="font-bold text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800/60 pb-1 mb-1.5 flex items-center justify-between">
-                                            <span>${UI.mapMetricFilter === 'OVERDUE' ? 'OVERDUE HEATMAP' : 'COLLECTION HEATMAP'}</span>
-                                            <i class="fa-solid fa-circle-info text-[9px] text-indigo-500 animate-pulse"></i>
+                                    <div class="absolute bottom-3.5 right-3.5 z-[999] bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800/80 shadow-sm text-[8px] space-y-1 w-[100px] pointer-events-auto transition-all duration-300">
+                                        <div class="font-black text-slate-600 dark:text-slate-300 text-center uppercase tracking-tight">
+                                            <span>${UI.mapMetricFilter === 'OVERDUE' ? 'OVERDUE' : 'COLLECTION'}</span>
                                         </div>
-                                        <div class="w-full h-2 rounded-full shadow-inner" style="background: linear-gradient(to right, hsl(0, 85%, 52%), hsl(70, 85%, 52%), hsl(140, 85%, 52%));"></div>
-                                        <div class="flex items-center justify-between font-bold text-[8px] text-slate-500 dark:text-slate-400 mt-1">
-                                            <span>${UI.mapMetricFilter === 'OVERDUE' ? 'High' : 'Low'}</span>
-                                            <span>${UI.mapMetricFilter === 'OVERDUE' ? 'Low' : 'High'}</span>
+                                        <div class="w-full h-1.5 rounded-full shadow-inner opacity-90" style="background: linear-gradient(to right, hsl(0, 85%, 52%), hsl(70, 85%, 52%), hsl(140, 85%, 52%));"></div>
+                                        <div class="flex items-center justify-between font-bold text-[7px] text-slate-500 dark:text-slate-400">
+                                            <span>${UI.mapMetricFilter === 'OVERDUE' ? 'HIGH' : 'LOW'}</span>
+                                            <span>${UI.mapMetricFilter === 'OVERDUE' ? 'LOW' : 'HIGH'}</span>
                                         </div>
                                     </div>
 
