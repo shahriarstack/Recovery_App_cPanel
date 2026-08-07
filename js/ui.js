@@ -2749,8 +2749,8 @@ window.UI = {
                                 </div>
                             </div> <!-- END LEFT COLUMN -->
 
-                            <!-- RIGHT COLUMN: FULL-HEIGHT EXECUTIVE MAP CARD (4 Cols) -->
-                            <div class="xl:col-span-3 relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col min-h-[460px]">
+                            <!-- RIGHT COLUMN: FULL-HEIGHT EXECUTIVE MAP CARD (3 Cols) -->
+                            <div class="xl:col-span-3 self-start relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col h-[520px]">
                                 <!-- Neck to neck Map Canvas Box -->
                                 <div class="w-full h-full flex-1 overflow-hidden relative flex flex-col bg-white dark:bg-slate-950">
                                     
