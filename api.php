@@ -41,11 +41,18 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS customers (
     upazila_code VARCHAR(100),
     upazila_name VARCHAR(255),
     territory_name VARCHAR(100),
+    district VARCHAR(100),
     INDEX idx_customer_id (customer_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
 try {
     $pdo->exec("ALTER TABLE customers ADD COLUMN vehicle_reg_no VARCHAR(100) AFTER customer_name");
+} catch (Exception $e) {
+    // Column already exists, ignore
+}
+
+try {
+    $pdo->exec("ALTER TABLE customers ADD COLUMN district VARCHAR(100) AFTER territory_name");
 } catch (Exception $e) {
     // Column already exists, ignore
 }
@@ -379,13 +386,13 @@ try {
             $pdo->exec("DELETE FROM customers");
 
             if (!empty($data)) {
-                $stmt = $pdo->prepare("INSERT INTO customers (customer_id, customer_name, vehicle_reg_no, phone, first_inst_date, inst_size, overdue_inst_no, overdue_taka, total_outstanding, last_payment_date, last_3_month_1, last_3_month_2, last_3_month_3, upazila_code, upazila_name, territory_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO customers (customer_id, customer_name, vehicle_reg_no, phone, first_inst_date, inst_size, overdue_inst_no, overdue_taka, total_outstanding, last_payment_date, last_3_month_1, last_3_month_2, last_3_month_3, upazila_code, upazila_name, territory_name, district) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 foreach ($data as $c) {
                     $stmt->execute([
                         $c['customerId'], $c['customerName'], isset($c['vehicleRegNo']) ? $c['vehicleRegNo'] : '', $c['phone'], $c['firstInstDate'], 
                         $c['instSize'], $c['overdueInstNo'], $c['overdueTaka'], $c['totalOutstanding'], 
                         $c['lastPaymentDate'], $c['last3Month1'], $c['last3Month2'], $c['last3Month3'], 
-                        $c['upazilaCode'], $c['upazilaName'], $c['territoryName']
+                        $c['upazilaCode'], $c['upazilaName'], $c['territoryName'], isset($c['district']) ? $c['district'] : ''
                     ]);
                 }
             }

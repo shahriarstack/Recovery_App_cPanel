@@ -2319,6 +2319,7 @@ window.UI = {
             renderAdminDashboard(tableMode = 'compact') {
                 const metrics = Calc.getMetrics();
                 const db = Store.get();
+                const customers = db.customers || [];
                 const cutoffSetting = db.system_settings?.find(s => s.key === 'cutoff_extension_hours');
                 const cutoffHours = parseInt(cutoffSetting?.value || 0);
                 const activeMonth = db.system_settings?.find(s => s.key === 'active_month')?.value || 'N/A';
@@ -2326,6 +2327,13 @@ window.UI = {
                 // Initialize ranking filter state if not present
                 UI.rankingSearchVal = UI.rankingSearchVal || '';
                 UI.rankingPartVal = UI.rankingPartVal || 'All';
+
+                // Initialize map interactive filter states if not present
+                UI.mapPartFilter = UI.mapPartFilter || 'ALL';
+                UI.mapTerritoryFilter = UI.mapTerritoryFilter || 'ALL';
+                UI.mapMetricFilter = UI.mapMetricFilter || 'MTD';
+                UI.mapViewMode = UI.mapViewMode && UI.mapViewMode !== 'UPAZILA' ? UI.mapViewMode : 'DISTRICT';
+                UI.selectedTerritoryFilter = UI.selectedTerritoryFilter || null;
 
                 // Calculate dynamic expected target achievement for the current day of the month
                 const todayStr = Utils.getLocalDate();
@@ -2502,240 +2510,283 @@ window.UI = {
                             </div>
                         </div>
                         
-                        <!-- GLOBAL RPI BANNER -->
-                        <div onclick="UI.showRPICriteriaModal()" class="py-2.5 px-4 rounded-xl border ${Calc.getRPIBg(metrics.rpi)} shadow-sm hover-lift relative overflow-hidden group cursor-pointer" title="Click to view marking criteria">
-                            <!-- Background shine animation -->
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[1500ms] pointer-events-none"></div>
+                        <!-- UNIFIED EXECUTIVE CONTROL CENTER (LEFT: SUMMARY & RPI, RIGHT: MAP) -->
+                        <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 mb-4">
+                            <!-- LEFT COLUMN: RPI BANNER, METRIC TABLE & PART CARDS (8 Cols) -->
+                            <div class="xl:col-span-8 flex flex-col gap-3.5">
+                                <!-- GLOBAL RPI BANNER -->
+                                <div onclick="UI.showRPICriteriaModal()" class="py-2.5 px-4 rounded-2xl border ${Calc.getRPIBg(metrics.rpi)} shadow-xs hover-lift relative overflow-hidden group cursor-pointer" title="Click to view marking criteria">
+                                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[1500ms] pointer-events-none"></div>
 
-                            <div class="flex items-center justify-between gap-4">
-                                <div>
-                                    <h3 class="text-sm font-black text-slate-800 dark:text-white tracking-tight">Global Recovery Index (RPI)</h3>
-                                    <p class="text-[9px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-black leading-none mt-0.5">Aggregate Performance across all territories</p>
-                                </div>
-                                <div class="text-xl font-black ${Calc.getRPIColor(metrics.rpi)} leading-none">${metrics.rpi}</div>
-                            </div>
-                            
-                            <!-- Premium Till Now Ach% Progress Bar -->
-                            <div class="pt-2 mt-2 border-t border-slate-200/50 dark:border-slate-700/30 flex items-center justify-between gap-3">
-                                <div class="flex items-center gap-1.5 leading-none">
-                                    <span class="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Till Date Achievement</span>
-                                    <span class="text-[10px] font-black text-brand-600 dark:text-brand-400">${metrics.tillDayAchievement}%</span>
-                                </div>
-                                <div class="flex-1 max-w-[160px] sm:max-w-[200px] h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden relative border border-slate-200/20 dark:border-slate-700/20">
-                                    <div class="h-full bg-gradient-to-r from-brand-500 to-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all duration-1000 ease-out" style="width: ${Math.min(100, Math.max(0, parseFloat(metrics.tillDayAchievement)))}%"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- COMPACT METRIC TABLE -->
-                        <div class="mb-4 overflow-hidden rounded-xl shadow-md border border-white/20 bg-gradient-to-r from-brand-600 to-blue-500 text-white relative group">
-                            <!-- Creative premium lighting effects -->
-                            <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+')] opacity-25 pointer-events-none"></div>
-                            
-                            <table class="w-full text-xs text-left border-collapse relative z-10">
-                                <tbody class="divide-y divide-white/20">
-                                    <!-- Row 1 -->
-                                    <tr class="hover:bg-white/10 transition duration-300">
-                                        <td class="px-2.5 py-1.5 border-r border-white/20 w-1/4">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Total Target (proj)</span>
-                                                <span class="font-black text-white">${parseInt(metrics.presetProjTotal).toLocaleString()}</span>
-                                            </div>
-                                        </td>
-                                        <td class="px-2.5 py-1.5 border-r border-white/20 w-1/4">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Total Files</span>
-                                                <span class="font-black text-white">${metrics.targetFiles}</span>
-                                            </div>
-                                        </td>
-                                        <td class="px-2.5 py-1.5 border-r border-white/20 w-1/4">
-                                             <div class="flex justify-between items-center">
-                                                <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Today Proj</span>
-                                                <span class="font-black text-white">${parseInt(metrics.todayProj).toLocaleString()}</span>
-                                             </div>
-                                        </td>
-                                        <td class="p-2.5 w-1/4">
-                                             <div class="flex justify-between items-center">
-                                                <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Remaining</span>
-                                                <span class="font-black text-amber-200">${parseInt(metrics.remainingAmt).toLocaleString()}</span>
-                                             </div>
-                                        </td>
-                                    </tr>
-                                    <!-- Row 2 -->
-                                    <tr class="hover:bg-white/10 transition duration-300">
-                                        <td class="px-2.5 py-1.5 border-r border-white/20">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Till Date Coll</span>
-                                                <span class="font-black text-green-200">${parseInt(metrics.mtdColl).toLocaleString()}</span>
-                                            </div>
-                                        </td>
-                                        <td class="px-2.5 py-1.5 border-r border-white/20">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Coll Files</span>
-                                                <span class="font-black text-green-200">${metrics.uniquePaidCodes}</span>
-                                            </div>
-                                        </td>
-                                        <td class="px-2.5 py-1.5 border-r border-white/20">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Collection</span>
-                                                <span class="font-black text-green-200">${parseInt(metrics.todayColl).toLocaleString()}</span>
-                                            </div>
-                                        </td>
-                                        <td class="p-2.5">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Daily Req</span>
-                                                <span class="font-black text-red-200">${parseInt(Math.round(metrics.rdrr)).toLocaleString()}</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <!-- Row 3 -->
-                                    <tr class="hover:bg-white/10 transition duration-300">
-                                        <td class="px-2.5 py-1.5 border-r border-white/20">
-                                            <div class="flex justify-between items-center">
-                                                <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Ach % (MTD)</span>
-                                                <span class="font-black text-blue-100">${metrics.tillDayAchievement}%</span>
-                                            </div>
-                                        </td>
-                                        <td class="px-2.5 py-1.5 border-r border-white/20">
-                                             <div class="flex justify-between items-center">
-                                                <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Uncollected</span>
-                                                <span class="font-black text-red-200">${metrics.tillDateNonPayFiles}</span>
-                                             </div>
-                                        </td>
-                                        <td class="px-2.5 py-1.5 border-r border-white/20">
-                                             <div class="flex justify-between items-center">
-                                                <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Ach % (Today)</span>
-                                                <span class="font-black text-fuchsia-200">${todayAch}%</span>
-                                             </div>
-                                        </td>
-                                        <td class="p-2.5 flex justify-center items-center opacity-90">
-                                            <div class="h-1.5 w-16 bg-white/25 rounded-full overflow-hidden border border-white/25 mt-1">
-                                                <div class="h-full bg-white rounded-full" style="width: ${Math.min(100, Math.max(0, todayAch))}%"></div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <!-- PART-WISE EXECUTIVE SUMMARY (NEW) -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-                            <!-- Part A Card -->
-                            <div class="relative overflow-hidden rounded-xl bg-white/70 dark:bg-dark-card/60 backdrop-blur-sm border border-emerald-100/80 dark:border-emerald-950 shadow-md group hover-lift transition-all">
-                                 <div class="absolute -right-4 -top-4 opacity-5 transform rotate-12 transition-transform group-hover:scale-110 group-hover:opacity-10">
-                                    <span class="text-7xl font-black text-emerald-900">A</span>
-                                 </div>
-                                 <div class="p-3.5 relative z-10">
-                                    <div class="flex items-center justify-between mb-3.5">
-                                        <div class="flex items-center gap-2.5">
-                                            <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center font-black text-sm shadow-sm border border-emerald-100 dark:border-emerald-900/50">A</div>
-                                            <div>
-                                                <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-tight">Part A Recovery</h3>
-                                                <p class="text-[9px] text-slate-500 font-medium">North & Central Portfolio</p>
-                                            </div>
-                                        </div>
-                                        <div class="text-right">
-                                            <p class="text-[8px] uppercase font-bold text-slate-400 tracking-wider">RPI Score</p>
-                                            <p class="text-base font-extrabold text-emerald-600 dark:text-emerald-400">${totalA.rpi}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 mb-3 p-2.5 bg-slate-50/50 dark:bg-slate-800/20 rounded-lg border border-slate-100 dark:border-slate-800/40">
+                                    <div class="flex items-center justify-between gap-4">
                                         <div>
-                                            <p class="text-[8px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Target Amt</p>
-                                            <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">${parseInt(totalA.presetProjTotal).toLocaleString()}</p>
+                                            <h3 class="text-sm font-black text-slate-800 dark:text-white tracking-tight">Global Recovery Index (RPI)</h3>
+                                            <p class="text-[9px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-black leading-none mt-0.5">Aggregate Performance across all territories</p>
                                         </div>
-                                        <div class="text-right">
-                                            <p class="text-[8px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Coll Amt</p>
-                                            <p class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">${parseInt(totalA.mtdColl).toLocaleString()}</p>
-                                        </div>
-                                        <div class="border-t border-slate-200/50 dark:border-slate-700/40 pt-1.5">
-                                            <p class="text-[8px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Today Proj</p>
-                                            <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">${parseInt(totalA.todayProj).toLocaleString()}</p>
-                                        </div>
-                                        <div class="text-right border-t border-slate-200/50 dark:border-slate-700/40 pt-1.5">
-                                            <p class="text-[8px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Today Coll</p>
-                                            <p class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">${parseInt(totalA.todayColl).toLocaleString()}</p>
-                                        </div>
-                                        <div class="border-t border-slate-200/50 dark:border-slate-700/40 pt-1.5">
-                                            <p class="text-[8px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Last Day Proj</p>
-                                            <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">${parseInt(totalA.yestProjAmt).toLocaleString()}</p>
-                                        </div>
-                                        <div class="text-right border-t border-slate-200/50 dark:border-slate-700/40 pt-1.5">
-                                            <p class="text-[8px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Last Day Coll</p>
-                                            <p class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">${parseInt(totalA.yestCollAmt).toLocaleString()}</p>
-                                        </div>
+                                        <div class="text-xl font-black ${Calc.getRPIColor(metrics.rpi)} leading-none">${metrics.rpi}</div>
                                     </div>
                                     
-                                    <div class="space-y-1">
-                                        <div class="flex justify-between text-[10px] font-semibold">
-                                            <span class="text-slate-500 dark:text-slate-400">Achievement</span>
-                                            <span class="text-emerald-600 dark:text-emerald-400">${totalA.tillDayAchievement}%</span>
+                                    <div class="pt-2 mt-2 border-t border-slate-200/50 dark:border-slate-700/30 flex items-center justify-between gap-3">
+                                        <div class="flex items-center gap-1.5 leading-none">
+                                            <span class="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Till Date Achievement</span>
+                                            <span class="text-[10px] font-black text-brand-600 dark:text-brand-400">${metrics.tillDayAchievement}%</span>
                                         </div>
-                                        <div class="w-full bg-slate-100/70 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden shadow-inner">
-                                            <div class="bg-gradient-to-r from-emerald-400 to-emerald-600 h-full rounded-full transition-all duration-1000 shadow-md" style="width: ${Math.min(parseFloat(totalA.tillDayAchievement), 100)}%"></div>
+                                        <div class="flex-1 max-w-[160px] sm:max-w-[200px] h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden relative border border-slate-200/20 dark:border-slate-700/20">
+                                            <div class="h-full bg-gradient-to-r from-brand-500 to-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all duration-1000 ease-out" style="width: ${Math.min(100, Math.max(0, parseFloat(metrics.tillDayAchievement)))}%"></div>
                                         </div>
                                     </div>
-                                 </div>
-                            </div>
+                                </div>
 
-                            <!-- Part B Card -->
-                            <div class="relative overflow-hidden rounded-xl bg-white/70 dark:bg-dark-card/60 backdrop-blur-sm border border-blue-100/80 dark:border-blue-950 shadow-md group hover-lift transition-all">
-                                 <div class="absolute -right-4 -top-4 opacity-5 transform rotate-12 transition-transform group-hover:scale-110 group-hover:opacity-10">
-                                    <span class="text-7xl font-black text-blue-900">B</span>
-                                 </div>
-                                 <div class="p-3.5 relative z-10">
-                                    <div class="flex items-center justify-between mb-3.5">
-                                        <div class="flex items-center gap-2.5">
-                                            <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center font-black text-sm shadow-sm border border-blue-100 dark:border-blue-900/50">B</div>
-                                            <div>
-                                                <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-tight">Part B Recovery</h3>
-                                                <p class="text-[9px] text-slate-500 font-medium">South & East Portfolio</p>
+                                <!-- COMPACT METRIC TABLE -->
+                                <div class="overflow-hidden rounded-2xl shadow-sm border border-white/20 bg-gradient-to-r from-brand-600 via-indigo-600 to-blue-600 text-white relative group">
+                                    <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+')] opacity-25 pointer-events-none"></div>
+                                    
+                                    <table class="w-full text-xs text-left border-collapse relative z-10">
+                                        <tbody class="divide-y divide-white/20">
+                                            <!-- Row 1 -->
+                                            <tr class="hover:bg-white/10 transition duration-300">
+                                                <td class="px-2.5 py-1.5 border-r border-white/20 w-1/4">
+                                                    <div class="flex justify-between items-center">
+                                                        <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Total Target (proj)</span>
+                                                        <span class="font-black text-white">${parseInt(metrics.presetProjTotal).toLocaleString()}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-2.5 py-1.5 border-r border-white/20 w-1/4">
+                                                    <div class="flex justify-between items-center">
+                                                        <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Total Files</span>
+                                                        <span class="font-black text-white">${metrics.targetFiles}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-2.5 py-1.5 border-r border-white/20 w-1/4">
+                                                     <div class="flex justify-between items-center">
+                                                        <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Today Proj</span>
+                                                        <span class="font-black text-white">${parseInt(metrics.todayProj).toLocaleString()}</span>
+                                                     </div>
+                                                </td>
+                                                <td class="p-2.5 w-1/4">
+                                                     <div class="flex justify-between items-center">
+                                                        <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Remaining</span>
+                                                        <span class="font-black text-amber-200">${parseInt(metrics.remainingAmt).toLocaleString()}</span>
+                                                     </div>
+                                                </td>
+                                            </tr>
+                                            <!-- Row 2 -->
+                                            <tr class="hover:bg-white/10 transition duration-300">
+                                                <td class="px-2.5 py-1.5 border-r border-white/20">
+                                                    <div class="flex justify-between items-center">
+                                                        <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Till Date Coll</span>
+                                                        <span class="font-black text-green-200">${parseInt(metrics.mtdColl).toLocaleString()}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-2.5 py-1.5 border-r border-white/20">
+                                                    <div class="flex justify-between items-center">
+                                                        <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Coll Files</span>
+                                                        <span class="font-black text-green-200">${metrics.uniquePaidCodes}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-2.5 py-1.5 border-r border-white/20">
+                                                    <div class="flex justify-between items-center">
+                                                        <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Collection</span>
+                                                        <span class="font-black text-green-200">${parseInt(metrics.todayColl).toLocaleString()}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="p-2.5">
+                                                    <div class="flex justify-between items-center">
+                                                        <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Daily Req</span>
+                                                        <span class="font-black text-red-200">${parseInt(Math.round(metrics.rdrr)).toLocaleString()}</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <!-- Row 3 -->
+                                            <tr class="hover:bg-white/10 transition duration-300">
+                                                <td class="px-2.5 py-1.5 border-r border-white/20">
+                                                    <div class="flex justify-between items-center">
+                                                        <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Ach % (MTD)</span>
+                                                        <span class="font-black text-blue-100">${metrics.tillDayAchievement}%</span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-2.5 py-1.5 border-r border-white/20">
+                                                     <div class="flex justify-between items-center">
+                                                        <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Uncollected</span>
+                                                        <span class="font-black text-red-200">${metrics.tillDateNonPayFiles}</span>
+                                                     </div>
+                                                </td>
+                                                <td class="px-2.5 py-1.5 border-r border-white/20">
+                                                     <div class="flex justify-between items-center">
+                                                        <span class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Ach % (Today)</span>
+                                                        <span class="font-black text-fuchsia-200">${todayAch}%</span>
+                                                     </div>
+                                                </td>
+                                                <td class="p-2.5 flex justify-center items-center opacity-90">
+                                                    <div class="h-1.5 w-16 bg-white/25 rounded-full overflow-hidden border border-white/25 mt-1">
+                                                        <div class="h-full bg-white rounded-full" style="width: ${Math.min(100, Math.max(0, todayAch))}%"></div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- PART A & PART B CARDS SIDE-BY-SIDE -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                                    <!-- Part A Card -->
+                                    <div class="relative overflow-hidden rounded-2xl bg-white/80 dark:bg-dark-card/70 backdrop-blur-sm border border-emerald-100/90 dark:border-emerald-950/60 shadow-xs group hover-lift transition-all">
+                                         <div class="absolute -right-4 -top-4 opacity-5 transform rotate-12 transition-transform group-hover:scale-110 group-hover:opacity-10">
+                                            <span class="text-7xl font-black text-emerald-900">A</span>
+                                         </div>
+                                         <div class="p-3.5 relative z-10">
+                                            <div class="flex items-center justify-between mb-2.5">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-xs shadow-2xs border border-emerald-500/20">A</div>
+                                                    <div>
+                                                        <h3 class="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">Part A Recovery</h3>
+                                                        <p class="text-[8px] text-slate-400 font-medium">North & Central Portfolio</p>
+                                                    </div>
+                                                </div>
+                                                <div class="text-right">
+                                                    <p class="text-[7px] uppercase font-bold text-slate-400 tracking-wider">RPI Score</p>
+                                                    <p class="text-xs font-black text-emerald-600 dark:text-emerald-400">${totalA.rpi}</p>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="grid grid-cols-2 gap-x-2 gap-y-1 mb-2.5 p-2 bg-slate-50/70 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800/50 text-[11px]">
+                                                <div>
+                                                    <p class="text-[7px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Target Amt</p>
+                                                    <p class="font-bold text-slate-700 dark:text-slate-200">৳${parseInt(totalA.presetProjTotal).toLocaleString()}</p>
+                                                </div>
+                                                <div class="text-right">
+                                                    <p class="text-[7px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Coll Amt</p>
+                                                    <p class="font-bold text-emerald-600 dark:text-emerald-400">৳${parseInt(totalA.mtdColl).toLocaleString()}</p>
+                                                </div>
+                                                <div class="border-t border-slate-200/40 dark:border-slate-700/40 pt-1">
+                                                    <p class="text-[7px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Today Proj</p>
+                                                    <p class="font-semibold text-slate-600 dark:text-slate-300">৳${parseInt(totalA.todayProj).toLocaleString()}</p>
+                                                </div>
+                                                <div class="text-right border-t border-slate-200/40 dark:border-slate-700/40 pt-1">
+                                                    <p class="text-[7px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Today Coll</p>
+                                                    <p class="font-semibold text-emerald-600 dark:text-emerald-400">৳${parseInt(totalA.todayColl).toLocaleString()}</p>
+                                                </div>
+                                                <div class="border-t border-slate-200/40 dark:border-slate-700/40 pt-1">
+                                                    <p class="text-[7px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Last Day Proj</p>
+                                                    <p class="font-semibold text-slate-600 dark:text-slate-300">৳${parseInt(totalA.yestProjAmt).toLocaleString()}</p>
+                                                </div>
+                                                <div class="text-right border-t border-slate-200/40 dark:border-slate-700/40 pt-1">
+                                                    <p class="text-[7px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Last Day Coll</p>
+                                                    <p class="font-semibold text-emerald-600 dark:text-emerald-400">৳${parseInt(totalA.yestCollAmt).toLocaleString()}</p>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="space-y-0.5">
+                                                <div class="flex justify-between text-[9px] font-semibold">
+                                                    <span class="text-slate-500 dark:text-slate-400">Achievement</span>
+                                                    <span class="text-emerald-600 dark:text-emerald-400">${totalA.tillDayAchievement}%</span>
+                                                </div>
+                                                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                                    <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000" style="width: ${Math.min(parseFloat(totalA.tillDayAchievement), 100)}%"></div>
+                                                </div>
+                                            </div>
+                                         </div>
+                                    </div>
+
+                                    <!-- Part B Card -->
+                                    <div class="relative overflow-hidden rounded-2xl bg-white/80 dark:bg-dark-card/70 backdrop-blur-sm border border-blue-100/90 dark:border-blue-950/60 shadow-xs group hover-lift transition-all">
+                                         <div class="absolute -right-4 -top-4 opacity-5 transform rotate-12 transition-transform group-hover:scale-110 group-hover:opacity-10">
+                                            <span class="text-7xl font-black text-blue-900">B</span>
+                                         </div>
+                                         <div class="p-3.5 relative z-10">
+                                            <div class="flex items-center justify-between mb-2.5">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-black text-xs shadow-2xs border border-blue-500/20">B</div>
+                                                    <div>
+                                                        <h3 class="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">Part B Recovery</h3>
+                                                        <p class="text-[8px] text-slate-400 font-medium">South & East Portfolio</p>
+                                                    </div>
+                                                </div>
+                                                <div class="text-right">
+                                                    <p class="text-[7px] uppercase font-bold text-slate-400 tracking-wider">RPI Score</p>
+                                                    <p class="text-xs font-black text-blue-600 dark:text-blue-400">${totalB.rpi}</p>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="grid grid-cols-2 gap-x-2 gap-y-1 mb-2.5 p-2 bg-slate-50/70 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800/50 text-[11px]">
+                                                <div>
+                                                    <p class="text-[7px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Target Amt</p>
+                                                    <p class="font-bold text-slate-700 dark:text-slate-200">৳${parseInt(totalB.presetProjTotal).toLocaleString()}</p>
+                                                </div>
+                                                <div class="text-right">
+                                                    <p class="text-[7px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Coll Amt</p>
+                                                    <p class="font-bold text-blue-600 dark:text-blue-400">৳${parseInt(totalB.mtdColl).toLocaleString()}</p>
+                                                </div>
+                                                <div class="border-t border-slate-200/40 dark:border-slate-700/40 pt-1">
+                                                    <p class="text-[7px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Today Proj</p>
+                                                    <p class="font-semibold text-slate-600 dark:text-slate-300">৳${parseInt(totalB.todayProj).toLocaleString()}</p>
+                                                </div>
+                                                <div class="text-right border-t border-slate-200/40 dark:border-slate-700/40 pt-1">
+                                                    <p class="text-[7px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Today Coll</p>
+                                                    <p class="font-semibold text-blue-600 dark:text-blue-400">৳${parseInt(totalB.todayColl).toLocaleString()}</p>
+                                                </div>
+                                                <div class="border-t border-slate-200/40 dark:border-slate-700/40 pt-1">
+                                                    <p class="text-[7px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Last Day Proj</p>
+                                                    <p class="font-semibold text-slate-600 dark:text-slate-300">৳${parseInt(totalB.yestProjAmt).toLocaleString()}</p>
+                                                </div>
+                                                <div class="text-right border-t border-slate-200/40 dark:border-slate-700/40 pt-1">
+                                                    <p class="text-[7px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Last Day Coll</p>
+                                                    <p class="font-semibold text-blue-600 dark:text-blue-400">৳${parseInt(totalB.yestCollAmt).toLocaleString()}</p>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="space-y-0.5">
+                                                <div class="flex justify-between text-[9px] font-semibold">
+                                                    <span class="text-slate-500 dark:text-slate-400">Achievement</span>
+                                                    <span class="text-blue-600 dark:text-blue-400">${totalB.tillDayAchievement}%</span>
+                                                </div>
+                                                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                                    <div class="bg-blue-500 h-full rounded-full transition-all duration-1000" style="width: ${Math.min(parseFloat(totalB.tillDayAchievement), 100)}%"></div>
+                                                </div>
+                                            </div>
+                                         </div>
+                                    </div>
+                                </div>
+                            </div> <!-- END LEFT COLUMN -->
+
+                            <!-- RIGHT COLUMN: FULL-HEIGHT EXECUTIVE MAP CARD (4 Cols) -->
+                            <div class="xl:col-span-4 relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col min-h-[460px]">
+                                <!-- Neck to neck Map Canvas Box -->
+                                <div class="w-full h-full flex-1 overflow-hidden relative flex flex-col bg-white dark:bg-slate-950">
+                                    
+                                    <!-- Floating Top-Left Controls: Removed as requested -->
+                                    <div class="absolute top-3.5 left-3.5 z-[999] flex flex-wrap items-center gap-1.5 pointer-events-auto">
+                                    </div>
+
+                                    <!-- Floating Top-Right Controls: Metric Switcher -->
+                                    <div class="absolute top-3.5 right-3.5 z-[999] flex flex-col items-end gap-2 pointer-events-auto">
+                                        <div class="flex items-center gap-1.5">
+                                            <!-- MTD vs Overdue Metric Filter Toggle -->
+                                            <div class="flex items-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-1 rounded-full border border-slate-200/80 dark:border-slate-800/80 shadow-sm gap-0.5">
+                                                <button onclick="UI.toggleMapMetric('MTD')" class="px-2.5 py-0.5 text-[9px] font-black rounded-full transition-all duration-200 ${UI.mapMetricFilter === 'MTD' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}">MTD</button>
+                                                <button onclick="UI.toggleMapMetric('OVERDUE')" class="px-2.5 py-0.5 text-[9px] font-black rounded-full transition-all duration-200 ${UI.mapMetricFilter === 'OVERDUE' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}">OVERDUE</button>
                                             </div>
                                         </div>
-                                        <div class="text-right">
-                                            <p class="text-[8px] uppercase font-bold text-slate-400 tracking-wider">RPI Score</p>
-                                            <p class="text-base font-extrabold text-blue-600 dark:text-blue-400">${totalB.rpi}</p>
+                                    </div>
+
+                                    <!-- Floating Legend Panel -->
+                                    <div class="absolute bottom-3.5 left-3.5 z-[999] bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3 py-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-md text-[9px] space-y-2 min-w-[135px] pointer-events-auto transition-all duration-300 hover:scale-105">
+                                        <div class="font-bold text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800/60 pb-1 mb-1.5 flex items-center justify-between">
+                                            <span>${UI.mapMetricFilter === 'OVERDUE' ? 'OVERDUE HEATMAP' : 'COLLECTION HEATMAP'}</span>
+                                            <i class="fa-solid fa-circle-info text-[9px] text-indigo-500 animate-pulse"></i>
+                                        </div>
+                                        <div class="w-full h-2 rounded-full shadow-inner" style="background: linear-gradient(to right, hsl(0, 85%, 52%), hsl(70, 85%, 52%), hsl(140, 85%, 52%));"></div>
+                                        <div class="flex items-center justify-between font-bold text-[8px] text-slate-500 dark:text-slate-400 mt-1">
+                                            <span>${UI.mapMetricFilter === 'OVERDUE' ? 'High' : 'Low'}</span>
+                                            <span>${UI.mapMetricFilter === 'OVERDUE' ? 'Low' : 'High'}</span>
                                         </div>
                                     </div>
-                                    
-                                    <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 mb-3 p-2.5 bg-slate-50/50 dark:bg-slate-800/20 rounded-lg border border-slate-100 dark:border-slate-800/40">
-                                        <div>
-                                            <p class="text-[8px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Target Amt</p>
-                                            <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">${parseInt(totalB.presetProjTotal).toLocaleString()}</p>
-                                        </div>
-                                        <div class="text-right">
-                                            <p class="text-[8px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Coll Amt</p>
-                                            <p class="text-xs font-semibold text-blue-600 dark:text-blue-400">${parseInt(totalB.mtdColl).toLocaleString()}</p>
-                                        </div>
-                                        <div class="border-t border-slate-200/50 dark:border-slate-700/40 pt-1.5">
-                                            <p class="text-[8px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Today Proj</p>
-                                            <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">${parseInt(totalB.todayProj).toLocaleString()}</p>
-                                        </div>
-                                        <div class="text-right border-t border-slate-200/50 dark:border-slate-700/40 pt-1.5">
-                                            <p class="text-[8px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Today Coll</p>
-                                            <p class="text-xs font-semibold text-blue-600 dark:text-blue-400">${parseInt(totalB.todayColl).toLocaleString()}</p>
-                                        </div>
-                                        <div class="border-t border-slate-200/50 dark:border-slate-700/40 pt-1.5">
-                                            <p class="text-[8px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Last Day Proj</p>
-                                            <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">${parseInt(totalB.yestProjAmt).toLocaleString()}</p>
-                                        </div>
-                                        <div class="text-right border-t border-slate-200/50 dark:border-slate-700/40 pt-1.5">
-                                            <p class="text-[8px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Last Day Coll</p>
-                                            <p class="text-xs font-semibold text-blue-600 dark:text-blue-400">${parseInt(totalB.yestCollAmt).toLocaleString()}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="space-y-1">
-                                        <div class="flex justify-between text-[10px] font-semibold">
-                                            <span class="text-slate-500 dark:text-slate-400">Achievement</span>
-                                            <span class="text-blue-600 dark:text-blue-400">${totalB.tillDayAchievement}%</span>
-                                        </div>
-                                        <div class="w-full bg-slate-100/70 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden shadow-inner">
-                                            <div class="bg-gradient-to-r from-blue-400 to-blue-600 h-full rounded-full transition-all duration-1000 shadow-md" style="width: ${Math.min(parseFloat(totalB.tillDayAchievement), 100)}%"></div>
-                                        </div>
-                                    </div>
-                                 </div>
+
+                                    <!-- Selected Territory Indicator Badge Overlay -->
+                                    <div id="map-territory-indicator" class="absolute top-16 left-3.5 z-[999] hidden pointer-events-auto"></div>
+
+                                    <div id="admin-bd-map" class="w-full h-full min-h-[460px] flex-1 relative z-0" style="background: #ffffff !important;"></div>
+                                </div>
                             </div>
                         </div>
 
@@ -3032,7 +3083,10 @@ window.UI = {
                 setTimeout(() => {
                     UI.updateMomentumChart();
                     Charts.renderDoughnut('admin-mode-chart', modes, modeData);
-                }, 100);
+                    if (document.getElementById('admin-bd-map')) {
+                        UI.initAdminMap();
+                    }
+                }, 200);
             },
 
             populateRankingTable(tableMode) {
@@ -3302,6 +3356,497 @@ window.UI = {
                 }
             },
 
+            initAdminMap(mapCustomers) {
+                if (window.adminMapInstance) {
+                    window.adminMapInstance.remove();
+                }
+
+                // Initialize Leaflet Map (Static, No tiles)
+                const map = L.map('admin-bd-map', {
+                    zoomControl: false,
+                    attributionControl: false,
+                    dragging: false,
+                    scrollWheelZoom: false,
+                    doubleClickZoom: false,
+                    touchZoom: false,
+                    boxZoom: false,
+                    keyboard: false
+                }).setView([23.8859, 90.2736], 6); // Centered on Bangladesh
+                
+                window.adminMapInstance = map;
+
+                const isDark = document.documentElement.classList.contains('dark');
+
+                // Load Custom Bangladesh Districts GeoJSON
+                fetch('js/bd_districts.json')
+                    .then(res => res.json())
+                    .then(geojsonData => {
+                        const db = Store.get();
+                        const customers = mapCustomers || db.customers || Store.cache.customers || [];
+                        const allCollections = db.collections || Store.cache.collections || [];
+                        const activeMonth = (typeof Utils !== 'undefined' && Utils.getActiveMonth) ? Utils.getActiveMonth() : (new Date().toISOString().slice(0, 7));
+
+                        const parseNum = (val) => {
+                            if (val === undefined || val === null) return 0;
+                            const cleanStr = String(val).replace(/[^0-9.-]/g, '');
+                            const num = parseFloat(cleanStr);
+                            return isNaN(num) ? 0 : num;
+                        };
+
+                        // Helper function to normalize district spellings dynamically with intelligent fuzzy mapping
+                        const normalizeDistrictName = (name) => {
+                            if (!name) return "";
+                            let clean = name.trim().toLowerCase()
+                                .replace(/\s+/g, '')
+                                .replace(/[^a-z0-9]/g, '');
+                            
+                            const corrections = {
+                                'jashore': 'jessore',
+                                'comilla': 'comilla',
+                                'cumilla': 'comilla',
+                                'cumulla': 'comilla',
+                                'brahamnbaria': 'brahmanbaria',
+                                'brahandbaria': 'brahmanbaria',
+                                'brahandnaria': 'brahmanbaria',
+                                'jhalokhati': 'jhalokati',
+                                'jhalkhati': 'jhalokati',
+                                'jhalkati': 'jhalokati',
+                                'barishal': 'barisal',
+                                'meharpur': 'meherpur',
+                                'chittagong': 'chattogram',
+                                'bogra': 'bogura',
+                                'coxsbazar': "cox's bazar"
+                            };
+                            if (corrections[clean]) return corrections[clean];
+
+                            // List of 64 official district names (normalized for search)
+                            const officialDistricts = [
+                                "bagerhat", "bandarban", "barguna", "barisal", "bhola", "bogura", "brahmanbaria", "chandpur", 
+                                "chattogram", "chuadanga", "comilla", "coxsbazar", "dhaka", "dinajpur", "faridpur", "feni", 
+                                "gaibandha", "gazipur", "gopalganj", "habiganj", "jamalpur", "jessore", "jhalokati", "jhenaidah", 
+                                "joypurhat", "khagrachhari", "khulna", "kishoreganj", "kurigram", "kushtia", "lakshmipur", 
+                                "lalmonirhat", "madaripur", "magura", "manikganj", "moulvibazar", "meherpur", "munshiganj", 
+                                "mymensingh", "naogaon", "narail", "narayanganj", "narsingdi", "natore", "chapainawabganj", 
+                                "netrokona", "nilphamari", "noakhali", "pabna", "panchagarh", "patuakhali", "pirojpur", "rajbari", 
+                                "rajshahi", "rangamati", "rangpur", "satkhira", "shariatpur", "sherpur", "sirajganj", "sunamganj", 
+                                "sylhet", "tangail", "thakurgaon"
+                            ];
+
+                            // 1. Direct match check
+                            for (const official of officialDistricts) {
+                                if (official === clean) return official === 'coxsbazar' ? "cox's bazar" : official;
+                            }
+
+                            // 2. Intelligent spelling match using Levenshtein distance
+                            const levenshtein = (a, b) => {
+                                const matrix = [];
+                                for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+                                for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+                                for (let i = 1; i <= b.length; i++) {
+                                    for (let j = 1; j <= a.length; j++) {
+                                        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                                            matrix[i][j] = matrix[i - 1][j - 1];
+                                        } else {
+                                            matrix[i][j] = Math.min(
+                                                matrix[i - 1][j - 1] + 1, // substitution
+                                                matrix[i][j - 1] + 1,     // insertion
+                                                matrix[i - 1][j] + 1      // deletion
+                                            );
+                                        }
+                                    }
+                                }
+                                return matrix[b.length][a.length];
+                            };
+
+                            let bestMatch = null;
+                            let minDistance = Infinity;
+
+                            for (const official of officialDistricts) {
+                                const dist = levenshtein(clean, official);
+                                if (dist < minDistance) {
+                                    minDistance = dist;
+                                    bestMatch = official;
+                                }
+                            }
+
+                            // If distance is very small relative to length, trust the correction
+                            const maxAllowedDistance = Math.min(3, Math.floor(clean.length / 3) + 1);
+                            if (minDistance <= maxAllowedDistance && bestMatch) {
+                                return bestMatch === 'coxsbazar' ? "cox's bazar" : bestMatch;
+                            }
+
+                            return clean;
+                        };
+
+                        // Retrieve active map filters
+                        const mapMetricFilter = UI.mapMetricFilter || 'MTD';
+
+                        // Filter customers based on Part filter
+                        const filteredCustomers = customers.filter(c => {
+                            if (UI.mapPartFilter && UI.mapPartFilter !== 'ALL') {
+                                const cPart = String(c.part || '').trim().toUpperCase();
+                                if (cPart !== UI.mapPartFilter) {
+                                    return false;
+                                }
+                            }
+                            return true;
+                        });
+                        
+                        // 1. Group customer metrics at the selected view level
+                        const statsGroup = {};
+                        const mapViewMode = UI.mapViewMode || 'DISTRICT';
+
+                        // Construct lookup maps for mapping district to territory dynamically
+                        const distToTerritory = {};
+                        customers.forEach(c => {
+                            const tName = String(c.territoryName || c.territory_name || c.territory || '').trim().toLowerCase();
+                            if (!tName) return;
+
+                            let dName = String(c.district || c.districtName || c.district_name || '').trim().toLowerCase();
+                            dName = normalizeDistrictName(dName);
+                            if (dName) distToTerritory[dName] = tName;
+                        });
+                        
+                        filteredCustomers.forEach(c => {
+                            // Find aggregation key
+                            let groupKey = '';
+                            if (mapViewMode === 'TERRITORY') {
+                                groupKey = String(c.territoryName || c.territory_name || c.territory || '').trim().toLowerCase();
+                            } else {
+                                // Default: DISTRICT (No upazila)
+                                let dName = String(c.district || c.districtName || c.district_name || '').trim().toLowerCase();
+                                groupKey = normalizeDistrictName(dName);
+                                if (!groupKey && c.territoryName) {
+                                    groupKey = String(c.territoryName).trim().toLowerCase();
+                                }
+                            }
+
+                            if (!groupKey) return;
+
+                            // Overdue amount
+                            const od = parseNum(c.overdueTaka || c.overdue_taka || c.totalOverdue || c['Total OD'] || c.totalOd || c.overdue);
+                            
+                            // MTD Collection amount
+                            let mtd = parseNum(c.collectedMTD || c.mtdCollection || c['MTD Collection'] || c.collected_mtd || c.mtdColl);
+                            if (mtd === 0 && allCollections.length > 0) {
+                                const cleanId = String(c.customerId || c.customer_id || c.id || '').trim().toLowerCase();
+                                if (cleanId) {
+                                    const custColls = allCollections.filter(coll => {
+                                        const code = String(coll.customerCode || coll.customer_code || '').trim().toLowerCase();
+                                        const m = coll.activeMonth || coll.active_month || (coll.date ? coll.date.slice(0, 7) : '');
+                                        return code === cleanId && m === activeMonth;
+                                    });
+                                    mtd = custColls.reduce((sum, coll) => sum + parseNum(coll.amount), 0);
+                                }
+                            }
+
+                            const inst = parseNum(c.instSize || c.inst_size || c.installmentSize || c['Installment Size'] || c.emi);
+
+                            if (!statsGroup[groupKey]) {
+                                statsGroup[groupKey] = {
+                                    count: 0,
+                                    totalOd: 0,
+                                    totalMtd: 0,
+                                    totalInst: 0,
+                                    originalName: groupKey
+                                };
+                            }
+                            statsGroup[groupKey].count++;
+                            statsGroup[groupKey].totalOd += od;
+                            statsGroup[groupKey].totalMtd += mtd;
+                            statsGroup[groupKey].totalInst += inst;
+                        });
+
+                        const getGroupStats = (key) => {
+                            if (!key) return null;
+                            const normKey = normalizeDistrictName(key);
+                            if (statsGroup[normKey]) return statsGroup[normKey];
+                            for (const k in statsGroup) {
+                                if (normKey.includes(k) || k.includes(normKey)) return statsGroup[k];
+                            }
+                            return null;
+                        };
+
+                        let minOd = Infinity, maxOd = -Infinity;
+                        let minCollPct = Infinity, maxCollPct = -Infinity;
+
+                        for (const k in statsGroup) {
+                            const s = statsGroup[k];
+                            if (s.count > 0) {
+                                if (s.totalOd < minOd) minOd = s.totalOd;
+                                if (s.totalOd > maxOd) maxOd = s.totalOd;
+                                
+                                const pct = (s.totalInst > 0) ? (s.totalMtd / s.totalInst) : 0;
+                                if (pct < minCollPct) minCollPct = pct;
+                                if (pct > maxCollPct) maxCollPct = pct;
+                                s.collPct = pct;
+                            }
+                        }
+                        if (minOd === Infinity) { minOd = 0; maxOd = 1; }
+                        if (minCollPct === Infinity) { minCollPct = 0; maxCollPct = 1; }
+
+                        let geojsonLayer;
+
+                        geojsonLayer = L.geoJSON(geojsonData, {
+                            style: function(feature) {
+                                const p = feature.properties || {};
+                                const distName = normalizeDistrictName(p.ADM2_EN || '');
+                                
+                                // Get the territory for this district
+                                let tName = distToTerritory[distName];
+                                if (!tName) {
+                                    const matchedDistKey = Object.keys(distToTerritory).find(dk => {
+                                        return dk.includes(distName) || distName.includes(dk);
+                                    });
+                                    if (matchedDistKey) {
+                                        tName = distToTerritory[matchedDistKey];
+                                    }
+                                }
+
+                                // If a territory filter is active, hide districts that don't belong to it
+                                if (UI.selectedTerritoryFilter && tName !== UI.selectedTerritoryFilter) {
+                                    return {
+                                        fillColor: 'transparent',
+                                        fillOpacity: 0,
+                                        color: isDark ? '#334155' : '#cbd5e1',
+                                        weight: 0.1,
+                                        opacity: 0.1,
+                                        interactive: false
+                                    };
+                                }
+
+                                let stats = null;
+
+                                if (mapViewMode === 'TERRITORY') {
+                                    if (tName) {
+                                        stats = statsGroup[tName];
+                                    }
+                                } else {
+                                    stats = getGroupStats(distName);
+                                }
+
+                                let fillColor = isDark ? '#0f172a' : '#f8fafc';
+                                let fillOpacity = 0.4;
+                                let weight = 0.5;
+                                let color = isDark ? '#334155' : '#cbd5e1';
+
+                                if (stats && stats.count > 0) {
+                                    fillOpacity = 0.85;
+                                    weight = 0.8;
+                                    color = isDark ? '#475569' : '#94a3b8';
+                                    
+                                    let ratio = 0;
+                                    if (mapMetricFilter === 'OVERDUE') {
+                                        let range = maxOd - minOd;
+                                        let val = stats.totalOd;
+                                        ratio = range === 0 ? 0 : (val - minOd) / range;
+                                        // Overdue: High is Red (ratio=1 -> Hue 0), Low is Green (ratio=0 -> Hue 140)
+                                        ratio = 1 - ratio; // invert so high is 0, low is 1
+                                    } else {
+                                        let range = maxCollPct - minCollPct;
+                                        let val = stats.collPct;
+                                        ratio = range === 0 ? 0.5 : (val - minCollPct) / range;
+                                        // MTD: High is Green (ratio=1 -> Hue 140), Low is Red (ratio=0 -> Hue 0)
+                                    }
+                                    
+                                    // Hue from 0 (Red) to 140 (Green)
+                                    const hue = Math.floor(ratio * 140);
+                                    fillColor = `hsl(${hue}, 85%, 52%)`;
+                                }
+
+                                return {
+                                    fillColor: fillColor,
+                                    fillOpacity: fillOpacity,
+                                    color: color,
+                                    weight: weight,
+                                    opacity: 1,
+                                    interactive: true
+                                };
+                            },
+                            onEachFeature: function(feature, layer) {
+                                const p = feature.properties || {};
+                                const distName = normalizeDistrictName(p.ADM2_EN || '');
+                                
+                                let stats = null;
+                                let mappedGroupName = '';
+                                let subLabel = '';
+
+                                // Find territory key
+                                let tName = distToTerritory[distName];
+                                if (!tName) {
+                                    const matchedDistKey = Object.keys(distToTerritory).find(dk => {
+                                        return dk.includes(distName) || distName.includes(dk);
+                                    });
+                                    if (matchedDistKey) {
+                                        tName = distToTerritory[matchedDistKey];
+                                    }
+                                }
+
+                                if (mapViewMode === 'TERRITORY') {
+                                    if (tName) {
+                                        stats = statsGroup[tName];
+                                        mappedGroupName = tName.toUpperCase();
+                                    }
+                                    subLabel = `District: ${p.ADM2_EN || 'Unknown'}`;
+                                } else {
+                                    stats = getGroupStats(distName);
+                                    mappedGroupName = (p.ADM2_EN || 'Unknown').toUpperCase();
+                                    subLabel = p.ADM1_EN ? `Division: ${p.ADM1_EN}` : '';
+                                }
+
+                                // Construct Ultra-Minimal Premium Tooltip structure with small fonts
+                                let tooltipContent = `<div class="font-sans min-w-[105px]">`;
+                                tooltipContent += `
+                                    <div class="flex items-center gap-1 border-b border-slate-100 dark:border-slate-800/60 pb-1 mb-1 font-bold text-[9px] uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                                        <i class="fa-solid fa-location-dot text-indigo-500"></i>
+                                        <span>${mappedGroupName}</span>
+                                    </div>
+                                `;
+                                
+                                if (stats && stats.count > 0) {
+                                    tooltipContent += `
+                                        <div class="text-[8px] font-black space-y-0.5 text-slate-600 dark:text-slate-300">
+                                            <div class="flex justify-between gap-3"><span>CUSTOMERS</span> <strong class="text-slate-800 dark:text-white">${stats.count}</strong></div>
+                                            <div class="flex justify-between gap-3"><span>MTD COLL.</span> <strong class="text-emerald-500">৳${stats.totalMtd.toLocaleString()}</strong></div>
+                                            <div class="flex justify-between gap-3"><span>OVERDUE</span> <strong class="text-rose-500">৳${stats.totalOd.toLocaleString()}</strong></div>
+                                        </div>
+                                    `;
+                                } else {
+                                    tooltipContent += `<div class="text-[8px] font-bold text-slate-400 dark:text-slate-500 italic">NO ACTIVE CUSTOMERS</div>`;
+                                }
+                                tooltipContent += `</div>`;
+
+                                // Inject Premium map custom styles into document head
+                                if (!document.getElementById('map-tooltip-styles')) {
+                                    const style = document.createElement('style');
+                                    style.id = 'map-tooltip-styles';
+                                    style.innerHTML = `
+                                        .premium-map-tooltip {
+                                            background: rgba(255, 255, 255, 0.95) !important;
+                                            backdrop-filter: blur(8px) !important;
+                                            border: 1px solid rgba(226, 232, 240, 0.8) !important;
+                                            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+                                            border-radius: 8px !important;
+                                            padding: 6px 10px !important;
+                                            color: #1e293b !important;
+                                            font-family: inherit !important;
+                                        }
+                                        .dark .premium-map-tooltip {
+                                            background: rgba(15, 23, 42, 0.96) !important;
+                                            backdrop-filter: blur(8px) !important;
+                                            border: 1px solid rgba(51, 65, 85, 0.7) !important;
+                                            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+                                            color: #f8fafc !important;
+                                        }
+                                        .leaflet-tooltip-pane .premium-map-tooltip::before {
+                                            display: none !important;
+                                        }
+                                    `;
+                                    document.head.appendChild(style);
+                                }
+
+                                layer.bindTooltip(tooltipContent, {
+                                    sticky: true,
+                                    className: 'premium-map-tooltip shadow-xs border-0'
+                                });
+                                
+                                layer.on({
+                                    click: function(e) {
+                                        if (tName) {
+                                            UI.selectedTerritoryFilter = tName;
+                                            // Reapply styling to hide unrelated districts
+                                            geojsonLayer.setStyle(geojsonLayer.options.style);
+
+                                            // Fit map boundary to the visible districts of this territory
+                                            const subGroup = [];
+                                            geojsonLayer.eachLayer(l => {
+                                                const dNm = normalizeDistrictName(l.feature.properties.ADM2_EN || '');
+                                                let layerTer = distToTerritory[dNm];
+                                                if (!layerTer) {
+                                                    const matchedDK = Object.keys(distToTerritory).find(dk => dk.includes(dNm) || dNm.includes(dk));
+                                                    if (matchedDK) layerTer = distToTerritory[matchedDK];
+                                                }
+                                                if (layerTer === tName) {
+                                                    subGroup.push(l);
+                                                }
+                                            });
+                                            if (subGroup.length > 0) {
+                                                const group = L.featureGroup(subGroup);
+                                                map.fitBounds(group.getBounds(), { padding: [15, 15] });
+                                            }
+
+                                            // Render visual indicator overlay in top-left
+                                            const indicator = document.getElementById('map-territory-indicator');
+                                            if (indicator) {
+                                                indicator.innerHTML = `
+                                                    <span class="flex items-center gap-1.5 bg-indigo-600 text-white text-[9px] font-black uppercase px-2.5 py-1 rounded-full shadow-2xs">
+                                                        <span>Territory: ${tName}</span>
+                                                        <button onclick="UI.clearMapTerritoryFilter(event)" class="hover:text-red-300 font-bold ml-1 text-xs">×</button>
+                                                    </span>
+                                                `;
+                                                indicator.classList.remove('hidden');
+                                            }
+                                        }
+                                    },
+                                    mouseover: function(e) {
+                                        if (UI.selectedTerritoryFilter && tName !== UI.selectedTerritoryFilter) return;
+                                        e.target.setStyle({ weight: 2.5, fillOpacity: 0.95, color: '#6366f1' });
+                                        if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                                            e.target.bringToFront();
+                                        }
+                                    },
+                                    mouseout: function(e) {
+                                        if (UI.selectedTerritoryFilter && tName !== UI.selectedTerritoryFilter) return;
+                                        geojsonLayer.resetStyle(e.target);
+                                    }
+                                });
+                            }
+                        }).addTo(map);
+
+                        // Save GeoJSON layer ref globally for external search operations
+                        window.adminMapGeojsonLayer = geojsonLayer;
+
+                        // Auto-fit map tightly to polygons with minimal padding
+                        if (geojsonLayer && Object.keys(geojsonLayer._layers).length > 0) {
+                            if (UI.selectedTerritoryFilter) {
+                                const subGroup = [];
+                                geojsonLayer.eachLayer(l => {
+                                    const dNm = normalizeDistrictName(l.feature.properties.ADM2_EN || '');
+                                    let layerTer = distToTerritory[dNm];
+                                    if (!layerTer) {
+                                        const matchedDK = Object.keys(distToTerritory).find(dk => dk.includes(dNm) || dNm.includes(dk));
+                                        if (matchedDK) layerTer = distToTerritory[matchedDK];
+                                    }
+                                    if (layerTer === UI.selectedTerritoryFilter) {
+                                        subGroup.push(l);
+                                    }
+                                });
+                                if (subGroup.length > 0) {
+                                    const group = L.featureGroup(subGroup);
+                                    map.fitBounds(group.getBounds(), { padding: [15, 15] });
+                                    
+                                    // Make sure indicator badge is shown
+                                    const indicator = document.getElementById('map-territory-indicator');
+                                    if (indicator) {
+                                        indicator.innerHTML = `
+                                            <span class="flex items-center gap-1.5 bg-indigo-600 text-white text-[9px] font-black uppercase px-2.5 py-1 rounded-full shadow-2xs">
+                                                <span>Territory: ${UI.selectedTerritoryFilter}</span>
+                                                <button onclick="UI.clearMapTerritoryFilter(event)" class="hover:text-red-300 font-bold ml-1 text-xs">×</button>
+                                            </span>
+                                        `;
+                                        indicator.classList.remove('hidden');
+                                    }
+                                } else {
+                                    map.fitBounds(geojsonLayer.getBounds(), { padding: [5, 5] });
+                                }
+                            } else {
+                                map.fitBounds(geojsonLayer.getBounds(), { padding: [5, 5] });
+                            }
+                        }
+                    })
+                    .catch(err => console.error("Error loading GeoJSON Map:", err));
+            },
+
             filterRankingTable() {
                 const searchInput = document.getElementById('ranking-search');
                 const partSelect = document.getElementById('ranking-part-filter');
@@ -3311,6 +3856,105 @@ window.UI = {
 
                 const isCompact = document.getElementById('views-container').innerHTML.includes("UI.renderAdminDashboard('compact')");
                 this.populateRankingTable(isCompact ? 'compact' : 'full');
+            },
+
+            toggleMapPart(part) {
+                UI.mapPartFilter = part;
+                const isCompact = document.getElementById('views-container').innerHTML.includes("UI.renderAdminDashboard('compact')");
+                this.renderAdminDashboard(isCompact ? 'compact' : 'full');
+            },
+
+            changeMapTerritory(ter) {
+                UI.mapTerritoryFilter = ter;
+                const isCompact = document.getElementById('views-container').innerHTML.includes("UI.renderAdminDashboard('compact')");
+                this.renderAdminDashboard(isCompact ? 'compact' : 'full');
+            },
+
+            toggleMapMetric(metric) {
+                UI.mapMetricFilter = metric;
+                const isCompact = document.getElementById('views-container').innerHTML.includes("UI.renderAdminDashboard('compact')");
+                this.renderAdminDashboard(isCompact ? 'compact' : 'full');
+            },
+
+            toggleMapViewMode(mode) {
+                UI.mapViewMode = mode;
+                const isCompact = document.getElementById('views-container').innerHTML.includes("UI.renderAdminDashboard('compact')");
+                this.renderAdminDashboard(isCompact ? 'compact' : 'full');
+            },
+
+            selectSpecificMapTerritory(val) {
+                if (val === 'ALL') {
+                    UI.selectedTerritoryFilter = null;
+                } else {
+                    UI.selectedTerritoryFilter = val.toLowerCase();
+                }
+                const isCompact = document.getElementById('views-container').innerHTML.includes("UI.renderAdminDashboard('compact')");
+                this.renderAdminDashboard(isCompact ? 'compact' : 'full');
+            },
+
+            clearMapTerritoryFilter(e) {
+                if (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
+                UI.selectedTerritoryFilter = null;
+                const indicator = document.getElementById('map-territory-indicator');
+                if (indicator) {
+                    indicator.classList.add('hidden');
+                }
+                const isCompact = document.getElementById('views-container').innerHTML.includes("UI.renderAdminDashboard('compact')");
+                this.renderAdminDashboard(isCompact ? 'compact' : 'full');
+            },
+
+            searchAndHighlightMapDistrict(searchVal) {
+                if (!window.adminMapInstance || !window.adminMapGeojsonLayer) return;
+                const query = (searchVal || '').trim().toLowerCase()
+                    .replace(/\s+/g, '')
+                    .replace(/[^a-z0-9]/g, '');
+
+                const corrections = {
+                    'jashore': 'jessore',
+                    'cumilla': 'comilla',
+                    'cumulla': 'comilla',
+                    'brahamnbaria': 'brahmanbaria',
+                    'jhalokhati': 'jhalokati',
+                    'barishal': 'barisal',
+                    'meharpur': 'meherpur',
+                    'chittagong': 'chattogram',
+                    'bogra': 'bogura'
+                };
+                const normQuery = corrections[query] || query;
+
+                window.adminMapGeojsonLayer.eachLayer(layer => {
+                    const p = layer.feature.properties || {};
+                    const distName = (p.ADM2_EN || '').toLowerCase()
+                        .replace(/\s+/g, '')
+                        .replace(/[^a-z0-9]/g, '');
+
+                    if (!normQuery) {
+                        // Reset to original heatmap styling if search query is empty
+                        window.adminMapGeojsonLayer.resetStyle(layer);
+                    } else if (distName.includes(normQuery) || normQuery.includes(distName)) {
+                        // Highlight the target district
+                        layer.setStyle({
+                            weight: 3.5,
+                            color: '#6366f1', // Indigo glow border
+                            fillOpacity: 0.95
+                        });
+                        if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                            layer.bringToFront();
+                        }
+                        // Soft zoom to this district feature
+                        window.adminMapInstance.fitBounds(layer.getBounds(), { maxZoom: 8 });
+                    } else {
+                        // Fade out unrelated districts for high-contrast focus
+                        layer.setStyle({
+                            fillOpacity: 0.15,
+                            weight: 0.5,
+                            color: '#cbd5e1'
+                        });
+                    }
+                });
             },
 
             renderAdminOffroadView(viewMode = 'active') {
@@ -6543,14 +7187,51 @@ window.UI = {
 
             // --- EXPORTS & MODALS ---
             
-            downloadCustomerTemplateCSV() {
-                const headers = ["Territory_Name", "Upazila_Name", "Upazila_Code", "Customer_ID", "Customer_Name", "Phone_Number", "Vehicle_Reg_Number", "First_Installment_Date", "Installment_Size", "Overdue_Inst_No", "Overdue_Taka", "Total_Outstanding", "Last_Payment_Date", "Last_3_Month_Payment_1", "Last_3_Month_Payment_2", "Last_3_Month_Payment_3"];
-                const csvContent = headers.join(',') + "\n";
+            downloadCustomerTemplateCSV(withData = false) {
+                const headers = ["Territory_Name", "District", "Upazila_Name", "Upazila_Code", "Customer_ID", "Customer_Name", "Phone_Number", "Vehicle_Reg_Number", "First_Installment_Date", "Installment_Size", "Overdue_Inst_No", "Overdue_Taka", "Total_Outstanding", "Last_Payment_Date", "Last_3_Month_Payment_1", "Last_3_Month_Payment_2", "Last_3_Month_Payment_3"];
+                let csvRows = [headers.join(',')];
+                
+                if (withData) {
+                    const db = Store.get();
+                    const customers = db.customers || Store.cache.customers || [];
+                    customers.forEach(c => {
+                        const row = [
+                            c.territoryName || c.territory_name || '',
+                            c.district || c.districtName || c.district_name || '',
+                            c.upazilaName || c.upazila_name || c.upazila || '',
+                            c.upazilaCode || c.upazila_code || '',
+                            c.customerId || c.customer_id || '',
+                            c.customerName || c.customer_name || '',
+                            c.phone || '',
+                            c.vehicleRegNo || c.vehicle_reg_no || '',
+                            c.firstInstDate || c.first_inst_date || '',
+                            c.instSize || c.inst_size || 0,
+                            c.overdueInstNo || c.overdue_inst_no || 0,
+                            c.overdueTaka || c.overdue_taka || 0,
+                            c.totalOutstanding || c.total_outstanding || 0,
+                            c.lastPaymentDate || c.last_payment_date || '',
+                            c.last3Month1 || c.last_3_month_1 || 0,
+                            c.last3Month2 || c.last_3_month_2 || 0,
+                            c.last3Month3 || c.last_3_month_3 || 0
+                        ];
+                        const escapedRow = row.map(val => {
+                            const str = String(val === undefined || val === null ? '' : val).trim();
+                            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                                return `"${str.replace(/"/g, '""')}"`;
+                            }
+                            return str;
+                        });
+                        csvRows.push(escapedRow.join(','));
+                    });
+                }
+
+                const csvContent = csvRows.join('\n');
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement("a");
                 const url = URL.createObjectURL(blob);
                 link.setAttribute("href", url);
-                link.setAttribute("download", "customer_upload_template.csv");
+                const filename = withData ? `customer_data_export_${Utils.getLocalDate()}.csv` : "customer_upload_template.csv";
+                link.setAttribute("download", filename);
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -6601,21 +7282,22 @@ window.UI = {
 
                         const defaults = isTableOrderLayout ? {
                             territoryName: 0,
-                            upazilaName: 1,
-                            upazilaCode: 2,
-                            customerId: 3,
-                            customerName: 4,
-                            phone: 5,
-                            vehicleRegNo: 6,
-                            firstInstDate: 7,
-                            instSize: 8,
-                            overdueInstNo: 9,
-                            overdueTaka: 10,
-                            totalOutstanding: 11,
-                            lastPaymentDate: 12,
-                            last3Month1: 13,
-                            last3Month2: 14,
-                            last3Month3: 15
+                            district: 1,
+                            upazilaName: 2,
+                            upazilaCode: 3,
+                            customerId: 4,
+                            customerName: 5,
+                            phone: 6,
+                            vehicleRegNo: 7,
+                            firstInstDate: 8,
+                            instSize: 9,
+                            overdueInstNo: 10,
+                            overdueTaka: 11,
+                            totalOutstanding: 12,
+                            lastPaymentDate: 13,
+                            last3Month1: 14,
+                            last3Month2: 15,
+                            last3Month3: 16
                         } : {
                             customerId: 0,
                             customerName: 1,
@@ -6632,7 +7314,8 @@ window.UI = {
                             last3Month3: 12,
                             upazilaCode: 13,
                             upazilaName: 14,
-                            territoryName: 15
+                            territoryName: 15,
+                            district: 16
                         };
 
                         const parseCleanFloat = (val) => {
@@ -6697,6 +7380,7 @@ window.UI = {
                             const upazilaCode = getVal(cleanRow, ['upazila_code', 'upazila code', 'upazilacode', 'thana_code', 'thana code'], defaults.upazilaCode);
                             const upazilaName = getVal(cleanRow, ['upazila_name', 'upazila name', 'upazila', 'upazilaname', 'thana_name', 'thana name', 'thana'], defaults.upazilaName);
                             let territoryName = getVal(cleanRow, ['territory_name', 'territory name', 'territory', 'territory_id', 'territory id', 'territoryname', 'territoryid', 'zone', 'region', 'area'], defaults.territoryName);
+                            const district = getVal(cleanRow, ['district', 'district_name', 'district name', 'dist_name', 'dist name', 'dist'], defaults.district);
                             
                             if (territoryName) {
                                 territoryName = territoryName.trim();
@@ -6722,7 +7406,8 @@ window.UI = {
                                 last3Month3,
                                 upazilaCode,
                                 upazilaName,
-                                territoryName
+                                territoryName,
+                                district
                             });
                         }
 
@@ -6785,8 +7470,11 @@ window.UI = {
                             <button onclick="document.getElementById('customer-csv-upload').click()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5">
                                 <i class="fa-solid fa-cloud-arrow-up"></i> Upload CSV
                             </button>
-                            <button onclick="UI.downloadCustomerTemplateCSV()" class="px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all shadow-sm flex items-center gap-1.5">
-                                <i class="fa-solid fa-download"></i> Template
+                            <button onclick="UI.downloadCustomerTemplateCSV(false)" class="px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-750 transition-all shadow-sm flex items-center gap-1.5" title="Download empty CSV template">
+                                <i class="fa-solid fa-file-csv"></i> Blank Template
+                            </button>
+                            <button onclick="UI.downloadCustomerTemplateCSV(true)" class="px-3.5 py-2 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all shadow-sm flex items-center gap-1.5" title="Download template prefilled with all current customer data">
+                                <i class="fa-solid fa-download"></i> Template with Data
                             </button>
                         </div>
                     </div>
