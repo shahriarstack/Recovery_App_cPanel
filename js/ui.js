@@ -5944,67 +5944,75 @@ window.UI = {
 
                         <div class="flex-1 glass-panel rounded-xl shadow-md dark:bg-dark-card overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700">
                             <div class="overflow-auto flex-1">
-                                <table class="w-full text-sm text-left border-collapse" id="data-entry-table">
-                                    <thead class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase sticky top-0 z-10 font-bold text-xs">
+                                <table class="w-full text-xs text-left border-collapse" id="data-entry-table">
+                                    <thead class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase sticky top-0 z-10 font-bold text-[10px]">
                                         <!-- Top Group Header -->
                                         <tr>
-                                            <th class="p-3 border-b border-slate-200 dark:border-slate-700 text-center" colspan="12"></th> <!-- Spacer for existing cols -->
-                                            <th class="p-3 border-b border-l border-slate-200 dark:border-slate-700 bg-brand-50 dark:bg-brand-900/30 text-center text-brand-700 dark:text-brand-300 tracking-widest" colspan="5">Month First Status</th>
-                                            <th class="p-3 border-b border-slate-200 dark:border-slate-700 text-center"></th>
+                                            <th class="py-1.5 px-2 border-b border-slate-200 dark:border-slate-700 text-center" colspan="12"></th> <!-- Spacer for existing cols -->
+                                            <th class="py-1.5 px-2 border-b border-l border-slate-200 dark:border-slate-700 bg-brand-50 dark:bg-brand-900/30 text-center text-brand-700 dark:text-brand-300 tracking-wider" colspan="5">Month First Status</th>
+                                            <th class="py-1.5 px-2 border-b border-slate-200 dark:border-slate-700 text-center"></th>
                                         </tr>
                                         <!-- Column Headers -->
                                         <tr>
-                                            <th class="p-3 border-b dark:border-slate-700 w-12 text-center">#</th>
-                                            <th class="p-3 border-b dark:border-slate-700 w-20">Part</th>
-                                            <th class="p-3 border-b dark:border-slate-700 min-w-[150px]">Territory Name</th>
-                                            <th class="p-3 border-b dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20 w-24">Total Files</th>
-                                            <th class="p-3 border-b dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20 w-24">Proj Files</th>
-                                            <th class="p-3 border-b dark:border-slate-700 bg-green-50 dark:bg-green-900/20 w-32">Total EMI</th>
-                                            <th class="p-3 border-b dark:border-slate-700 bg-green-50 dark:bg-green-900/20 w-32">Proj (Reg)</th>
-                                            <th class="p-3 border-b dark:border-slate-700 bg-green-50 dark:bg-green-900/20 w-32">Proj (Adv)</th>
-                                            <th class="p-3 border-b dark:border-slate-700 bg-slate-200 dark:bg-slate-700 w-32 font-bold">Total Proj</th>
-                                            <th class="p-3 border-b dark:border-slate-700 bg-rose-50 dark:bg-rose-900/20 w-32">LM NP Amt</th>
-                                            <th class="p-3 border-b dark:border-slate-700 bg-rose-50 dark:bg-rose-900/20 w-24">LM NP Files</th>
+                                            <th class="py-1.5 px-2 border-b dark:border-slate-700 w-10 text-center">#</th>
+                                            <th class="py-1.5 px-2 border-b dark:border-slate-700 w-16 text-center">Part</th>
+                                            <th class="py-1.5 px-2 border-b dark:border-slate-700 min-w-[130px]">Territory Name</th>
+                                            <th class="py-1.5 px-2 border-b dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20 w-20 text-center">Total Files</th>
+                                            <th class="py-1.5 px-2 border-b dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20 w-20 text-center">Proj Files</th>
+                                            <th class="py-1.5 px-2 border-b dark:border-slate-700 bg-green-50 dark:bg-green-900/20 w-28 text-center">Total EMI</th>
+                                            <th class="py-1.5 px-2 border-b dark:border-slate-700 bg-green-50 dark:bg-green-900/20 w-28 text-center">Proj (Reg)</th>
+                                            <th class="py-1.5 px-2 border-b dark:border-slate-700 bg-green-50 dark:bg-green-900/20 w-28 text-center">Proj (Adv)</th>
+                                            <th class="py-1.5 px-2 border-b dark:border-slate-700 bg-slate-250 dark:bg-slate-700 w-28 text-center font-bold">Total Proj</th>
+                                            <th class="py-1.5 px-2 border-b dark:border-slate-700 bg-rose-50 dark:bg-rose-900/20 w-28 text-center">LM NP Amt</th>
+                                            <th class="py-1.5 px-2 border-b dark:border-slate-700 bg-rose-50 dark:bg-rose-900/20 w-20 text-center">LM NP Files</th>
                                             
                                             <!-- New Columns -->
-                                            <th class="p-3 border-b border-l border-slate-200 dark:border-slate-700 bg-brand-50/50 dark:bg-brand-900/10 w-28 text-center">Total OD</th>
-                                            <th class="p-3 border-b dark:border-slate-700 bg-brand-50/50 dark:bg-brand-900/10 w-28 text-center">OD Growth SPLY <span class="text-[10px] text-slate-400 font-bold ml-1">(%)</span></th>
-                                            <th class="p-3 border-b dark:border-slate-700 bg-brand-50/50 dark:bg-brand-900/10 w-28 text-center">Per File OD</th>
-                                            <th class="p-3 border-b dark:border-slate-700 bg-brand-50/50 dark:bg-brand-900/10 w-24 text-center">6+ OD Files</th>
-                                            <th class="p-3 border-b dark:border-slate-700 bg-brand-50/50 dark:bg-brand-900/10 w-28 text-center">6+ OD Growth SPLM <span class="text-[10px] text-slate-400 font-bold ml-1">(%)</span></th>
+                                            <th class="py-1.5 px-2 border-b border-l border-slate-200 dark:border-slate-700 bg-brand-50/50 dark:bg-brand-900/10 w-24 text-center">Total OD</th>
+                                            <th class="py-1.5 px-2 border-b dark:border-slate-700 bg-brand-50/50 dark:bg-brand-900/10 w-24 text-center">OD Growth SPLY <span class="text-[9px] text-slate-400 font-bold ml-0.5">(%)</span></th>
+                                            <th class="py-1.5 px-2 border-b dark:border-slate-700 bg-brand-50/50 dark:bg-brand-900/10 w-24 text-center">Per File OD</th>
+                                            <th class="py-1.5 px-2 border-b dark:border-slate-700 bg-brand-50/50 dark:bg-brand-900/10 w-20 text-center">6+ OD Files</th>
+                                            <th class="py-1.5 px-2 border-b dark:border-slate-700 bg-brand-50/50 dark:bg-brand-900/10 w-24 text-center">6+ OD Growth SPLM <span class="text-[9px] text-slate-400 font-bold ml-0.5">(%)</span></th>
+                                            <th class="py-1.5 px-2 border-b dark:border-slate-700 w-16 text-center">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
                                         ${displayData.map((row, index) => {
                     const totalProj = (parseFloat(row.projReg) || 0) + (parseFloat(row.projAdv) || 0);
                     return `
-                                            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition" data-id="${row.id || 'new'}">
-                                                <td class="p-2 text-center text-slate-400 text-xs">${index + 1}</td>
-                                                <td class="p-1"><select name="part" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-center"><option value="A" ${row.part === 'A' ? 'selected' : ''}>A</option><option value="B" ${row.part === 'B' ? 'selected' : ''}>B</option></select></td>
-                                                <td class="p-1"><input type="text" name="name" value="${row.name}" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none font-medium"></td>
-                                                <td class="p-1"><input type="number" name="targetFiles" value="${row.targetFiles}" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-center font-mono"></td>
-                                                <td class="p-1"><input type="number" name="projFiles" value="${row.projFiles}" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-center font-mono"></td>
-                                                <td class="p-1"><input type="number" name="targetAmount" value="${row.targetAmount}" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-right font-mono text-blue-600"></td>
-                                                <td class="p-1"><input type="number" name="projReg" value="${row.projReg}" oninput="UI.calcRowTotal(this)" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-right font-mono"></td>
-                                                <td class="p-1"><input type="number" name="projAdv" value="${row.projAdv}" oninput="UI.calcRowTotal(this)" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-right font-mono"></td>
-                                                <td class="p-1"><input type="number" name="totalProj" value="${totalProj}" readonly class="w-full p-2 bg-slate-50 dark:bg-slate-800 border-none text-right font-mono font-bold text-slate-500 cursor-default"></td>
-                                                <td class="p-1"><input type="number" name="lmNpTargetAmount" value="${row.lmNpTargetAmount}" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-right font-mono text-rose-600"></td>
-                                                <td class="p-1"><input type="number" name="lmNpTargetFiles" value="${row.lmNpTargetFiles}" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-center font-mono"></td>
+                                            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition text-slate-700 dark:text-slate-350" data-id="${row.id || 'new'}">
+                                                <td class="py-0.5 px-1 text-center text-slate-400 text-[10px]">${index + 1}</td>
+                                                <td class="p-0.5"><select name="part" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-center text-[11px] font-bold outline-none"><option value="A" ${row.part === 'A' ? 'selected' : ''}>A</option><option value="B" ${row.part === 'B' ? 'selected' : ''}>B</option></select></td>
+                                                <td class="p-0.5"><input type="text" name="name" value="${row.name}" class="w-full px-1.5 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-[11px] font-semibold outline-none"></td>
+                                                <td class="p-0.5"><input type="number" name="targetFiles" value="${row.targetFiles}" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-center text-[11px] font-mono outline-none"></td>
+                                                <td class="p-0.5"><input type="number" name="projFiles" value="${row.projFiles}" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-center text-[11px] font-mono outline-none"></td>
+                                                <td class="p-0.5"><input type="number" name="targetAmount" value="${row.targetAmount}" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-right text-[11px] font-mono outline-none text-blue-600 dark:text-blue-400 font-bold"></td>
+                                                <td class="p-0.5"><input type="number" name="projReg" value="${row.projReg}" oninput="UI.calcRowTotal(this)" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-right text-[11px] font-mono outline-none"></td>
+                                                <td class="p-0.5"><input type="number" name="projAdv" value="${row.projAdv}" oninput="UI.calcRowTotal(this)" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-right text-[11px] font-mono outline-none"></td>
+                                                <td class="p-0.5"><input type="number" name="totalProj" value="${totalProj}" readonly class="w-full px-1 py-0.5 h-6 bg-slate-50/50 dark:bg-slate-800/50 border-none text-right text-[11px] font-mono font-bold text-slate-500 cursor-default"></td>
+                                                <td class="p-0.5"><input type="number" name="lmNpTargetAmount" value="${row.lmNpTargetAmount}" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-right text-[11px] font-mono outline-none text-rose-600 dark:text-rose-400"></td>
+                                                <td class="p-0.5"><input type="number" name="lmNpTargetFiles" value="${row.lmNpTargetFiles}" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-center text-[11px] font-mono outline-none"></td>
                                                 
                                                 <!-- New Inputs -->
-                                                <td class="p-1 border-l border-slate-100 dark:border-slate-700"><input type="number" name="totalOd" value="${row.totalOd}" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-right font-mono text-brand-600 dark:text-brand-400"></td>
-                                                <td class="p-1"><div class="relative"><input type="number" name="odGrowthSply" value="${row.odGrowthSply}" step="0.01" class="w-full p-2 pr-6 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-right font-mono"><span class="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-400 font-bold text-[10px]">%</span></div></td>
-                                                <td class="p-1"><input type="number" name="perFileOd" value="${row.perFileOd}" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-right font-mono"></td>
-                                                <td class="p-1"><input type="number" name="sixPlusOdFiles" value="${row.sixPlusOdFiles}" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-center font-mono"></td>
-                                                <td class="p-1"><div class="relative"><input type="number" name="sixPlusOdGrowthSplm" value="${row.sixPlusOdGrowthSplm}" step="0.01" class="w-full p-2 pr-6 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-right font-mono"><span class="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-400 font-bold text-[10px]">%</span></div></td>
+                                                <td class="p-0.5 border-l border-slate-100 dark:border-slate-700"><input type="number" name="totalOd" value="${row.totalOd}" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-right text-[11px] font-mono outline-none text-brand-600 dark:text-brand-400"></td>
+                                                <td class="p-0.5"><div class="relative"><input type="number" name="odGrowthSply" value="${row.odGrowthSply}" step="0.01" class="w-full px-1 pr-4 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-right text-[11px] font-mono outline-none"><span class="absolute right-1 top-1/2 transform -translate-y-1/2 text-slate-400 font-bold text-[9px]">%</span></div></td>
+                                                <td class="p-0.5"><input type="number" name="perFileOd" value="${row.perFileOd}" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-right text-[11px] font-mono outline-none"></td>
+                                                <td class="p-0.5"><input type="number" name="sixPlusOdFiles" value="${row.sixPlusOdFiles}" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-center text-[11px] font-mono outline-none"></td>
+                                                <td class="p-0.5"><div class="relative"><input type="number" name="sixPlusOdGrowthSplm" value="${row.sixPlusOdGrowthSplm}" step="0.01" class="w-full px-1 pr-4 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-right text-[11px] font-mono outline-none"><span class="absolute right-1 top-1/2 transform -translate-y-1/2 text-slate-400 font-bold text-[9px]">%</span></div></td>
 
-                                                <td class="p-1 text-center"><button onclick="UI.deleteDataEntryRow(this, '${row.id || 'new'}')" class="text-slate-300 hover:text-red-500"><i class="fa-solid fa-trash-can"></i></button></td>
+                                                <td class="p-0.5 text-center flex items-center justify-center space-x-1 h-7">
+                                                    <button onclick="UI.openEditRowModal(this)" class="text-brand-600 hover:text-brand-700 p-0.5 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded transition" title="Advanced Edit Row">
+                                                        <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                                    </button>
+                                                    <button onclick="UI.deleteDataEntryRow(this, '${row.id || 'new'}')" class="text-slate-300 hover:text-red-500 p-0.5 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition" title="Delete Row">
+                                                        <i class="fa-solid fa-trash-can text-xs"></i>
+                                                    </button>
+                                                </td>
                                             </tr>`;
                 }).join('')}
                                     </tbody>
                                 </table>
                             </div>
-                            <div class="p-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-500 flex justify-between">
+                            <div class="p-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-500 flex justify-between">
                                 <button onclick="UI.addEmptyDataRow()" class="text-brand-600 hover:text-brand-700 font-bold">+ Add Row</button>
                             </div>
                         </div>
@@ -8684,30 +8692,39 @@ window.UI = {
 
             addEmptyDataRow() {
                 const tbody = document.querySelector('#data-entry-table tbody');
+                if (!tbody) return;
                 const rowCount = tbody.children.length + 1;
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800/50 transition";
+                tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800/50 transition text-slate-700 dark:text-slate-350";
                 tr.setAttribute('data-id', 'new');
                 tr.innerHTML = `
-            <td class="p-2 text-center text-slate-400 text-xs" > ${rowCount}</td>
-                    <td class="p-1"><select name="part" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-center"><option value="A">A</option><option value="B">B</option></select></td>
-                    <td class="p-1"><input type="text" name="name" placeholder="New Territory" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none font-medium"></td>
-                    <td class="p-1"><input type="number" name="targetFiles" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-center font-mono"></td>
-                    <td class="p-1"><input type="number" name="projFiles" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-center font-mono"></td>
-                    <td class="p-1"><input type="number" name="targetAmount" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-right font-mono text-blue-600"></td>
-                    <td class="p-1"><input type="number" name="projReg" oninput="UI.calcRowTotal(this)" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-right font-mono"></td>
-                    <td class="p-1"><input type="number" name="projAdv" oninput="UI.calcRowTotal(this)" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-right font-mono"></td>
-                    <td class="p-1"><input type="number" name="totalProj" readonly class="w-full p-2 bg-slate-50 dark:bg-slate-800 border-none text-right font-mono font-bold text-slate-500 cursor-default"></td>
-                    <td class="p-1"><input type="number" name="lmNpTargetAmount" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-right font-mono text-rose-600"></td>
-                    <td class="p-1"><input type="number" name="lmNpTargetFiles" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-center font-mono"></td>
-                    <td class="p-1 border-l border-slate-100 dark:border-slate-700"><input type="number" name="totalOd" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-right font-mono text-brand-600 dark:text-brand-400"></td>
-                    <td class="p-1"><div class="relative"><input type="number" name="odGrowthSply" step="0.01" class="w-full p-2 pr-6 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-right font-mono"><span class="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-400 font-bold text-[10px]">%</span></div></td>
-                    <td class="p-1"><input type="number" name="perFileOd" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-right font-mono"></td>
-                    <td class="p-1"><input type="number" name="sixPlusOdFiles" class="w-full p-2 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-center font-mono"></td>
-                    <td class="p-1"><div class="relative"><input type="number" name="sixPlusOdGrowthSplm" step="0.01" class="w-full p-2 pr-6 bg-transparent border border-transparent hover:border-slate-300 rounded outline-none text-right font-mono"><span class="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-400 font-bold text-[10px]">%</span></div></td>
+                    <td class="py-0.5 px-1 text-center text-slate-400 text-[10px]">${rowCount}</td>
+                    <td class="p-0.5"><select name="part" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-center text-[11px] font-bold outline-none"><option value="A">A</option><option value="B">B</option></select></td>
+                    <td class="p-0.5"><input type="text" name="name" placeholder="New Territory" class="w-full px-1.5 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-[11px] font-semibold outline-none"></td>
+                    <td class="p-0.5"><input type="number" name="targetFiles" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-center text-[11px] font-mono outline-none"></td>
+                    <td class="p-0.5"><input type="number" name="projFiles" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-center text-[11px] font-mono outline-none"></td>
+                    <td class="p-0.5"><input type="number" name="targetAmount" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-right text-[11px] font-mono outline-none text-blue-600 dark:text-blue-400 font-bold"></td>
+                    <td class="p-0.5"><input type="number" name="projReg" oninput="UI.calcRowTotal(this)" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-right text-[11px] font-mono outline-none"></td>
+                    <td class="p-0.5"><input type="number" name="projAdv" oninput="UI.calcRowTotal(this)" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-right text-[11px] font-mono outline-none"></td>
+                    <td class="p-0.5"><input type="number" name="totalProj" readonly class="w-full px-1 py-0.5 h-6 bg-slate-50/50 dark:bg-slate-800/50 border-none text-right text-[11px] font-mono font-bold text-slate-500 cursor-default"></td>
+                    <td class="p-0.5"><input type="number" name="lmNpTargetAmount" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-right text-[11px] font-mono outline-none text-rose-600 dark:text-rose-400"></td>
+                    <td class="p-0.5"><input type="number" name="lmNpTargetFiles" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-center text-[11px] font-mono outline-none"></td>
+                    
+                    <td class="p-0.5 border-l border-slate-100 dark:border-slate-700"><input type="number" name="totalOd" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-right text-[11px] font-mono outline-none text-brand-600 dark:text-brand-400"></td>
+                    <td class="p-0.5"><div class="relative"><input type="number" name="odGrowthSply" step="0.01" class="w-full px-1 pr-4 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-right text-[11px] font-mono outline-none"><span class="absolute right-1 top-1/2 transform -translate-y-1/2 text-slate-400 font-bold text-[9px]">%</span></div></td>
+                    <td class="p-0.5"><input type="number" name="perFileOd" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-right text-[11px] font-mono outline-none"></td>
+                    <td class="p-0.5"><input type="number" name="sixPlusOdFiles" class="w-full px-1 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-center text-[11px] font-mono outline-none"></td>
+                    <td class="p-0.5"><div class="relative"><input type="number" name="sixPlusOdGrowthSplm" step="0.01" class="w-full px-1 pr-4 py-0.5 h-6 bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded text-right text-[11px] font-mono outline-none"><span class="absolute right-1 top-1/2 transform -translate-y-1/2 text-slate-400 font-bold text-[9px]">%</span></div></td>
 
-                    <td class="p-1 text-center"><button onclick="UI.deleteDataEntryRow(this, 'new')" class="text-slate-300 hover:text-red-500"><i class="fa-solid fa-trash-can"></i></button></td>
-        `;
+                    <td class="p-0.5 text-center flex items-center justify-center space-x-1 h-7">
+                        <button onclick="UI.openEditRowModal(this)" class="text-brand-600 hover:text-brand-700 p-0.5 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded transition" title="Advanced Edit Row">
+                            <i class="fa-solid fa-pen-to-square text-xs"></i>
+                        </button>
+                        <button onclick="UI.deleteDataEntryRow(this, 'new')" class="text-slate-300 hover:text-red-500 p-0.5 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition" title="Delete Row">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </td>
+                `;
                 tbody.appendChild(tr);
             },
 
@@ -8779,6 +8796,212 @@ window.UI = {
                         }
                     }
                 };
+            },
+
+            openEditRowModal(btn) {
+                const tr = btn.closest('tr');
+                const rowId = tr.getAttribute('data-id');
+                
+                // Get all inputs from the table row
+                const getVal = (name) => tr.querySelector(`[name="${name}"]`).value;
+                const getNum = (name) => parseFloat(getVal(name)) || 0;
+
+                const data = {
+                    part: getVal('part'),
+                    name: getVal('name'),
+                    targetFiles: getNum('targetFiles'),
+                    projFiles: getNum('projFiles'),
+                    targetAmount: getNum('targetAmount'),
+                    projReg: getNum('projReg'),
+                    projAdv: getNum('projAdv'),
+                    lmNpTargetAmount: getNum('lmNpTargetAmount'),
+                    lmNpTargetFiles: getNum('lmNpTargetFiles'),
+                    totalOd: getNum('totalOd'),
+                    odGrowthSply: getNum('odGrowthSply'),
+                    perFileOd: getNum('perFileOd'),
+                    sixPlusOdFiles: getNum('sixPlusOdFiles'),
+                    sixPlusOdGrowthSplm: getNum('sixPlusOdGrowthSplm')
+                };
+
+                const modalContent = document.getElementById('modal-content');
+                
+                // Set modal to be wider for the inputs layout
+                modalContent.classList.remove('max-w-lg');
+                modalContent.classList.add('max-w-2xl');
+
+                modalContent.innerHTML = `
+                    <div class="p-1">
+                        <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-200 dark:border-slate-700">
+                            <h3 class="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                <i class="fa-solid fa-sliders text-brand-500"></i>
+                                ADVANCED DATA EDITOR
+                            </h3>
+                            <span class="px-2.5 py-0.5 rounded text-[10px] font-black bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 border border-brand-100 dark:border-brand-900/50">
+                                ${data.name || 'New Territory'}
+                            </span>
+                        </div>
+
+                        <form id="row-edit-form" onsubmit="event.preventDefault();" class="space-y-4 text-left">
+                            <!-- Territory Identity -->
+                            <div class="grid grid-cols-3 gap-3">
+                                <div class="col-span-1">
+                                    <label class="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Part</label>
+                                    <select id="edit-part" class="w-full p-2 rounded-lg border dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-xs focus:ring-2 focus:ring-brand-500 font-bold outline-none">
+                                        <option value="A" ${data.part === 'A' ? 'selected' : ''}>Part A</option>
+                                        <option value="B" ${data.part === 'B' ? 'selected' : ''}>Part B</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Territory Name</label>
+                                    <input type="text" id="edit-name" value="${data.name}" class="w-full p-2 rounded-lg border dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-xs focus:ring-2 focus:ring-brand-500 font-semibold outline-none" required>
+                                </div>
+                            </div>
+
+                            <!-- Flex container for sections -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Group 1: Files & Recoveries -->
+                                <div class="p-3 rounded-xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-200/50 dark:border-slate-800/50 space-y-3">
+                                    <h4 class="text-[11px] font-bold text-brand-600 dark:text-brand-400 flex items-center gap-1.5 mb-1 uppercase tracking-wider">
+                                        <i class="fa-solid fa-folder-closed text-[10px]"></i> Files & Target EMI
+                                    </h4>
+                                    <div class="grid grid-cols-2 gap-2.5">
+                                        <div>
+                                            <label class="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Target Files</label>
+                                            <input type="number" id="edit-targetFiles" value="${data.targetFiles}" class="w-full p-2 mt-0.5 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-800 text-xs font-mono outline-none">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Proj Files</label>
+                                            <input type="number" id="edit-projFiles" value="${data.projFiles}" class="w-full p-2 mt-0.5 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-800 text-xs font-mono outline-none">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Total EMI (Target Amt)</label>
+                                        <input type="number" id="edit-targetAmount" value="${data.targetAmount}" class="w-full p-2 mt-0.5 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-800 text-xs font-mono font-bold text-blue-600 dark:text-blue-400 outline-none">
+                                    </div>
+                                </div>
+
+                                <!-- Group 2: Projections -->
+                                <div class="p-3 rounded-xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-200/50 dark:border-slate-800/50 space-y-3">
+                                    <h4 class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 mb-1 uppercase tracking-wider">
+                                        <i class="fa-solid fa-chart-line text-[10px]"></i> Projections
+                                    </h4>
+                                    <div class="grid grid-cols-2 gap-2.5">
+                                        <div>
+                                            <label class="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Proj Regular</label>
+                                            <input type="number" id="edit-projReg" value="${data.projReg}" oninput="UI.updateModalProjSum()" class="w-full p-2 mt-0.5 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-800 text-xs font-mono outline-none">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Proj Advance</label>
+                                            <input type="number" id="edit-projAdv" value="${data.projAdv}" oninput="UI.updateModalProjSum()" class="w-full p-2 mt-0.5 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-800 text-xs font-mono outline-none">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Total Projection</label>
+                                        <input type="number" id="edit-totalProj" value="${data.projReg + data.projAdv}" readonly class="w-full p-2 mt-0.5 rounded-lg border-0 bg-slate-100 dark:bg-slate-800/80 text-xs font-mono font-bold text-slate-550 cursor-default">
+                                    </div>
+                                </div>
+
+                                <!-- Group 3: Last Month Non-Pay (LM NP) -->
+                                <div class="p-3 rounded-xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-200/50 dark:border-slate-800/50 space-y-3">
+                                    <h4 class="text-[11px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 mb-1 uppercase tracking-wider">
+                                        <i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Last Month Non-Pay Target
+                                    </h4>
+                                    <div class="grid grid-cols-2 gap-2.5">
+                                        <div>
+                                            <label class="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Target Amount</label>
+                                            <input type="number" id="edit-lmNpTargetAmount" value="${data.lmNpTargetAmount}" class="w-full p-2 mt-0.5 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-800 text-xs font-mono text-rose-600 dark:text-rose-400 font-semibold outline-none">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Target Files</label>
+                                            <input type="number" id="edit-lmNpTargetFiles" value="${data.lmNpTargetFiles}" class="w-full p-2 mt-0.5 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-800 text-xs font-mono outline-none">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Group 4: Month First Overdue Status -->
+                                <div class="p-3 rounded-xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-200/50 dark:border-slate-800/50 space-y-3">
+                                    <h4 class="text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mb-1 uppercase tracking-wider">
+                                        <i class="fa-solid fa-clock text-[10px]"></i> Month First Overdue Status
+                                    </h4>
+                                    <div class="grid grid-cols-2 gap-2.5">
+                                        <div>
+                                            <label class="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Total Overdue</label>
+                                            <input type="number" id="edit-totalOd" value="${data.totalOd}" class="w-full p-2 mt-0.5 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-800 text-xs font-mono font-bold text-amber-600 dark:text-amber-400 outline-none">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">OD Growth SPLY (%)</label>
+                                            <input type="number" id="edit-odGrowthSply" value="${data.odGrowthSply}" step="0.01" class="w-full p-2 mt-0.5 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-800 text-xs font-mono outline-none">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Per File OD</label>
+                                            <input type="number" id="edit-perFileOd" value="${data.perFileOd}" class="w-full p-2 mt-0.5 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-800 text-xs font-mono outline-none">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">6+ OD Files</label>
+                                            <input type="number" id="edit-sixPlusOdFiles" value="${data.sixPlusOdFiles}" class="w-full p-2 mt-0.5 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-800 text-xs font-mono outline-none">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">6+ OD Growth SPLM (%)</label>
+                                        <input type="number" id="edit-sixPlusOdGrowthSplm" value="${data.sixPlusOdGrowthSplm}" step="0.01" class="w-full p-2 mt-0.5 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-800 text-xs font-mono outline-none">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end space-x-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                                <button type="button" onclick="UI.closeModal()" class="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800 transition text-xs font-semibold">
+                                    Cancel
+                                </button>
+                                <button type="button" id="btn-save-row-edit" class="px-5 py-2 bg-brand-600 text-white rounded-xl hover:bg-brand-700 shadow-md hover:shadow-brand-500/20 transition transform active:scale-95 text-xs font-bold">
+                                    Apply Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                `;
+
+                // Set handler
+                document.getElementById('btn-save-row-edit').onclick = () => {
+                    const setVal = (name, idName) => {
+                        tr.querySelector(`[name="${name}"]`).value = document.getElementById(idName).value;
+                    };
+                    
+                    setVal('part', 'edit-part');
+                    setVal('name', 'edit-name');
+                    setVal('targetFiles', 'edit-targetFiles');
+                    setVal('projFiles', 'edit-projFiles');
+                    setVal('targetAmount', 'edit-targetAmount');
+                    setVal('projReg', 'edit-projReg');
+                    setVal('projAdv', 'edit-projAdv');
+                    setVal('lmNpTargetAmount', 'edit-lmNpTargetAmount');
+                    setVal('lmNpTargetFiles', 'edit-lmNpTargetFiles');
+                    setVal('totalOd', 'edit-totalOd');
+                    setVal('odGrowthSply', 'edit-odGrowthSply');
+                    setVal('perFileOd', 'edit-perFileOd');
+                    setVal('sixPlusOdFiles', 'edit-sixPlusOdFiles');
+                    setVal('sixPlusOdGrowthSplm', 'edit-sixPlusOdGrowthSplm');
+
+                    // Recalculate row sum
+                    const reg = parseFloat(document.getElementById('edit-projReg').value) || 0;
+                    const adv = parseFloat(document.getElementById('edit-projAdv').value) || 0;
+                    tr.querySelector('[name="totalProj"]').value = reg + adv;
+
+                    UI.closeModal();
+                    UI.showSuccess('Territory updates applied to draft!');
+                };
+
+                // Show modal
+                document.getElementById('generic-modal').classList.remove('hidden');
+                setTimeout(() => {
+                    modalContent.classList.remove('scale-95', 'opacity-0');
+                    modalContent.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            },
+
+            updateModalProjSum() {
+                const reg = parseFloat(document.getElementById('edit-projReg').value) || 0;
+                const adv = parseFloat(document.getElementById('edit-projAdv').value) || 0;
+                document.getElementById('edit-totalProj').value = reg + adv;
             },
 
             saveBulkData() {
@@ -10053,7 +10276,14 @@ window.UI = {
                         m.firstElementChild.classList.remove('opacity-100', 'scale-100');
                         m.firstElementChild.classList.add('opacity-0', 'scale-95');
                     }
-                    setTimeout(() => m.classList.add('hidden'), 300);
+                    setTimeout(() => {
+                        m.classList.add('hidden');
+                        const mc = document.getElementById('modal-content');
+                        if (mc) {
+                            mc.classList.remove('max-w-2xl');
+                            mc.classList.add('max-w-lg');
+                        }
+                    }, 300);
                 }
             },
             showRPICriteriaModal() {
