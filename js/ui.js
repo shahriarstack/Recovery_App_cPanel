@@ -2828,9 +2828,9 @@ window.UI = {
                                     <!-- Part Filter -->
                                     <div class="relative w-full sm:w-24">
                                         <select id="ranking-part-filter" onchange="UI.filterRankingTable()" class="w-full pl-2 pr-6 py-0.5 h-7 rounded-lg border border-white/10 dark:border-slate-700/30 bg-white/45 dark:bg-slate-900/30 text-[11px] font-bold text-slate-700 dark:text-slate-200 appearance-none shadow-sm cursor-pointer focus:border-brand-500/60 dark:focus:border-brand-500/60 transition-all backdrop-blur-sm">
-                                            <option value="All" ${UI.rankingPartVal === 'All' ? 'selected' : ''}>All Parts</option>
-                                            <option value="A" ${UI.rankingPartVal === 'A' ? 'selected' : ''}>Part A</option>
-                                            <option value="B" ${UI.rankingPartVal === 'B' ? 'selected' : ''}>Part B</option>
+                                            <option class="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200" value="All" ${UI.rankingPartVal === 'All' ? 'selected' : ''}>All Parts</option>
+                                            <option class="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200" value="A" ${UI.rankingPartVal === 'A' ? 'selected' : ''}>Part A</option>
+                                            <option class="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200" value="B" ${UI.rankingPartVal === 'B' ? 'selected' : ''}>Part B</option>
                                         </select>
                                         <span class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-slate-400 text-[9px]">
                                             <i class="fa-solid fa-chevron-down"></i>
