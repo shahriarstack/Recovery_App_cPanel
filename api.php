@@ -22,52 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $pdo = getDbConnection();
 
-// Ensure customers table exists with vehicle_reg_no column
-$pdo->exec("CREATE TABLE IF NOT EXISTS customers (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    customer_id VARCHAR(100) NOT NULL,
-    customer_name VARCHAR(255),
-    vehicle_reg_no VARCHAR(100),
-    phone VARCHAR(50),
-    first_inst_date VARCHAR(50),
-    inst_size DECIMAL(15, 2),
-    overdue_inst_no INT,
-    overdue_taka DECIMAL(15, 2),
-    total_outstanding DECIMAL(15, 2),
-    last_payment_date VARCHAR(50),
-    last_3_month_1 DECIMAL(15, 2),
-    last_3_month_2 DECIMAL(15, 2),
-    last_3_month_3 DECIMAL(15, 2),
-    upazila_code VARCHAR(100),
-    upazila_name VARCHAR(255),
-    territory_name VARCHAR(100),
-    district VARCHAR(100),
-    INDEX idx_customer_id (customer_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-
-try {
-    $pdo->exec("ALTER TABLE customers ADD COLUMN vehicle_reg_no VARCHAR(100) AFTER customer_name");
-} catch (Exception $e) {
-    // Column already exists, ignore
-}
-
-try {
-    $pdo->exec("ALTER TABLE customers ADD COLUMN district VARCHAR(100) AFTER territory_name");
-} catch (Exception $e) {
-    // Column already exists, ignore
-}
-
-try {
-    $pdo->exec("ALTER TABLE users ADD COLUMN officer_name VARCHAR(255) AFTER username");
-} catch (Exception $e) {
-    // Column already exists, ignore
-}
-
-try {
-    $pdo->exec("ALTER TABLE users ADD COLUMN requested_territories VARCHAR(1000) AFTER territory_id");
-} catch (Exception $e) {
-    // Column already exists, ignore
-}
+// Database connection established successfully
 
 
 // Cache management helper
